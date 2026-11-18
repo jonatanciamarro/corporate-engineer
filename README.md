@@ -1,0 +1,51 @@
+# Enterprise AI Software Engineering Framework
+
+Repositório padronizado com governança corporativa para ciclo de vida de desenvolvimento de software impulsionado por IA (Agentic Software Engineering).
+
+---
+
+## 🧭 Skills Corporativas Integradas
+
+Este repositório possui as seguintes skills ativas em `.agents/skills/`:
+
+### 1. `corp-pipeline` (`/corp-pipeline`)
+Pipeline determinístico de 5 fases para entrega corporativa:
+- **Fase 1**: Alinhamento de Escopo, DTOs & ADR (🔴 **Gate 1: Aprovação Humana**)
+- **Fase 2**: Shift-Left TDD com `stack_detector.py` (Certificação **RED**)
+- **Fase 3**: Implementação Cirúrgica & Auto-recuperação (Certificação **GREEN**, máx 3 retentativas)
+- **Fase 4**: Pre-Flight Gate & Auditoria Local (Linter, Typecheck, `secret_scanner.py`, Regressão Global)
+- **Fase 5**: Entrega Corporativa (🔴 **Gate 2: Aprovação Final** → Branch `feat/<ID>-<slug>` & PR padronizado)
+
+### 2. `plan_v2` (`/plan_v2`)
+Protocolo de planejamento avançado com:
+- Matriz de Trade-offs de Arquitetura (Mínimo 2 alternativas)
+- Modelagem de Ameaças (STRIDE / OWASP)
+- Estratégia de Rollback & Análise de Blast Radius
+- Especificação formal de Contratos DTOs
+
+### 3. `grill-me_v2` (`/grill-me_v2`)
+Protocolo de entrevista investigativa baseado em:
+- Árvore de Decisão Hierárquica
+- Extração de Requisitos Não-Funcionais (SLAs, Throughput, Resiliência)
+- Síntese Automática de **ADR (Architecture Decision Record)** formal
+
+---
+
+## 🛠️ Scripts Utilitários
+
+- **Detector de Stack**:
+  ```powershell
+  python .agents/skills/corp-pipeline/scripts/stack_detector.py [caminho]
+  ```
+  Identifica a stack técnica (Python, TS/Node, Go, Java/Kotlin, C#/.NET, Rust, PHP) e sugere os comandos adequados de teste, lint e typecheck.
+
+- **Scanner de Segredos (Pre-Flight)**:
+  ```powershell
+  python .agents/skills/corp-pipeline/scripts/secret_scanner.py [caminho]
+  ```
+  Audita arquivos contra vazamento de credenciais, chaves de API e tokens sensíveis antes de qualquer commit.
+
+---
+
+## 📚 Documentação Adicional
+- [Relatório Deep Research 2026](./deep-research-ai-software-engineering-2026.md): Estado da arte em agentes autônomos, MCP, A2A, segurança AI e testes mutation/PBT.

@@ -11,28 +11,28 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
+| **Branch Ativa** | `feat/CORP-001-autonomous-corporate-engineer` | Pronto para merge/PR após validação final |
 | **Testes (Pytest + Hypothesis)** |  **16/16 PASS** | `test_models.py`, `test_mcp_client.py`, `test_ast_indexer.py`, `test_orchestrator.py`, `test_quality_gate.py` |
 | **Linter & Formatação (Ruff)** |  **0 Erros** | Configurado com line-length 100, regras py311 |
 | **Tipagem Estática (Mypy)** |  **0 Erros** | 16 arquivos validados estritamente |
 | **Scanner de Segredos** |  **0 Vazamentos** | Validado pelo `secret_scanner.py` |
-| **Ecossistema ECC** |  **Ativo & Configurado** | 331 skills, 10 regras, 16 workflows, 9 subagentes |
+| **Ecossistema ECC** |  **Ativo & Commitado** | 331 skills, 11 regras, 16 workflows, 9 subagentes |
 
 ---
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Configuração do ECC & Governança Antigravity):
-- **Instalação das ECC Skills**: 328 skills do ecossistema ECC (v2.2.3) instaladas no workspace (`.agents/skills/`) e nos perfis globais (`~/.gemini/antigravity/skills/` e `~/.gemini/config/skills/`), somando 331 skills com as 3 nativas (`corp-pipeline`, `grill-me_v2`, `plan_v2`).
-- **Configuração Sob Medida do ECC para o Projeto**:
-  - Implementado classificador `agent-sort` separando 13 skills essenciais em **DAILY** e 318 em **LIBRARY** sob demanda.
-  - Criadas 10 regras ativas em [`.agents/rules/`](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/.agents/rules) com gatilhos automáticos para Python (`**/*.py`) e governança global (`always_on`).
-  - Configurados 16 workflows slash em [`.agents/workflows/`](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/.agents/workflows) (`/corp-pipeline`, `/preflight`, `/plan`, `/tdd`, `/review`, `/python-review`, etc.).
-  - Configurados 9 subagentes especializados em [`.agents/agents/`](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/.agents/agents) (`architect`, `python-reviewer`, `security-reviewer`, `tdd-guide`, etc.).
-  - Ajustado [pyproject.toml](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/pyproject.toml) com `extend-exclude = [".agents"]` para garantir isolamento limpo das ferramentas de lint/typecheck.
+### Commit Recente:
+- **`4433875`**: `chore(ecc): configure project-tailored ECC rules, workflows, agents and state tracking protocol`
+  - Instalação e classificação de 331 skills (13 DAILY, 318 LIBRARY via progressive disclosure).
+  - 11 regras Antigravity com triggers glob/always_on (incluindo `state-tracking.md` e `corporate-quality-gate.md`).
+  - 16 workflows slash (`/corp-pipeline`, `/preflight`, `/plan`, `/tdd`, `/test-coverage`, `/quality-gate`, etc.).
+  - 9 subagentes especializados (`architect`, `python-reviewer`, `security-reviewer`, `tdd-guide`, etc.).
+  - Configuração do `pyproject.toml` isolando `.agents` das ferramentas de lint/typecheck.
   - Documentação mestra gerada em [GEMINI.md](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/GEMINI.md) e [AGENTS.md](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/AGENTS.md).
-  - Criada regra mandatória de continuidade e rastreamento via `state.md`.
+  - Protocolo vivo de inicialização e entrega com `state.md`.
 
-### Últimos Commits Git Registrados:
+### Commits Anteriores:
 - `8624684`: `feat(engineer): implement autonomous corporate engineer with langgraph, mcp adapter and quality gate`
 - `850768b`: `docs(pr): add formal pull request documentation for CORP-001`
 - `1172e3a`: `ci(github): add corporate CI workflow, PR template, CODEOWNERS, license and pr_automator`
@@ -41,28 +41,40 @@
 
 ---
 
-## 3. O Que Ainda Falta Acabar (Backlog & Pendências)
+## 3. Roteiro de Evolução do Framework (Roadmap)
 
-1. **Expansão dos Subcomandos da CLI (`src/corporate_engineer/cli.py`)**:
-   - Integrar comandos para invocar diretamente os quality gates e auditorias locais via linha de comando do framework.
-2. **Cobertura PBT Avançada (Hypothesis)**:
-   - Adicionar mais propriedades invariantes para o `ast_indexer.py` (estruturas sintáticas complexas e decoradores) e `client.py` do MCP.
-3. **Resiliência e Conectores Remotos MCP**:
-   - Adicionar transporte SSE e autenticação por cabeçalho no `client.py`.
-4. **Pipeline GitHub Actions (`.github/workflows/ci.yml`)**:
-   - Validar execução do CI com o novo pre-flight gate e checagens estáticas do ECC.
+O desenvolvimento segue estruturado em quatro trilhas técnicas prioritárias:
+
+### 🎯 Trilha 1: Expansão da CLI Corporativa (`src/corporate_engineer/cli.py`)
+- `[ ]` Adicionar subcomando `audit`: executa pre-flight de qualidade diretamente pela CLI.
+- `[ ]` Adicionar subcomando `dag`: executa e visualiza grafos de tarefas/agentes definidos em YAML/JSON.
+- `[ ]` Adicionar subcomando `index`: indexa uma base de código via AST e exporta o grafo semântico.
+- `[ ]` Adicionar subcomando `mcp`: testa conectividade e inspeciona schemas de servidores MCP stdio/SSE.
+
+### 🔌 Trilha 2: Conectores e Transporte Remoto MCP (`src/corporate_engineer/mcp/`)
+- `[ ]` Suporte a transporte Server-Sent Events (SSE) para servidores MCP em nuvem/VPC.
+- `[ ]` Autenticação corporativa: Bearer Tokens, mTLS e validação de permissões por escopo.
+- `[ ]` Testes de resiliência: reconexão automática com backoff exponencial e circuit breaker.
+
+### 🧠 Trilha 3: AST Indexing & Code Intelligence (`src/corporate_engineer/rag/`)
+- `[ ]` Extração semântica de hierarquia de herança e relacionamentos entre classes/funções.
+- `[ ]` Testes baseados em propriedades (PBT com Hypothesis) cobrindo estruturas de sintaxe complexas do Python 3.11+.
+
+### ⚙️ Trilha 4: Orquestração e DAGs de Agentes (`src/corporate_engineer/orchestrator/`)
+- `[ ]` Paralelização de nós de agentes independentes.
+- `[ ]` Persistência de checkpoints de execução e recuperação de falhas.
 
 ---
 
-## 4. Próximos Passos Imediatos
+## 4. Próximos Passos Imediatos para a Próxima Sessão
 
-1. `[ ]` **Commit das Configurações do ECC & `state.md`**:
-   - Commitar as novas regras, workflows, subagentes, documentação (`GEMINI.md`, `AGENTS.md`, `state.md`) sob a convenção:
-     `chore(ecc): configure project-tailored ECC rules, workflows, agents and state tracking protocol`
-2. `[ ]` **Implementação de Melhorias na CLI**:
-   - Conduzir via `/corp-pipeline` ou `/tdd` a adição de novos comandos na CLI do `corporate-engineer`.
-3. `[ ]` **Manutenção Contínua**:
-   - A cada nova funcionalidade ou correção de bug, ler `state.md` no início e atualizar este arquivo na entrega.
+1. `[ ]` **Implementar Subcomandos na CLI via TDD**:
+   - Iniciar com `/tdd` para escrever testes de aceitação em `tests/test_cli.py` cobrindo subcomandos `audit` e `index`.
+   - Implementar os comandos no `cli.py` com validação estrita via Pydantic v2.
+2. `[ ]` **Executar Pre-Flight**:
+   - Rodar `/preflight` garantindo 0 erros em `ruff`, `mypy`, `pytest` e `secret_scanner.py`.
+3. `[ ]` **Atualizar `state.md`**:
+   - Concluir a entrega registrando a versão e os testes adicionados.
 
 ---
 
@@ -70,4 +82,5 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-18T03:19:00-03:00` | Antigravity AI | Concluído commit `4433875` com toda infraestrutura ECC e estruturado o Roteiro de Evolução formal. |
 | `2026-11-18T02:55:00-03:00` | Antigravity AI | Criação inicial do `state.md`, documentando stack, ECC instalado, status dos testes e backlog. |

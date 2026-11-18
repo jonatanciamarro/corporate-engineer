@@ -12,29 +12,32 @@
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
 | **Branch Ativa** | `feat/CORP-001-autonomous-corporate-engineer` | Pronto para merge/PR após validação final |
-| **Testes (Pytest + Hypothesis)** |  **37/37 PASS** | Suíte expandida com 9 novos testes para MCP SSE e CLI subcommands |
-| **Linter & Formatação (Ruff)** |  **0 Erros** | Configurado com line-length 100, regras py311 |
-| **Tipagem Estática (Mypy)** |  **0 Erros** | 17 arquivos validados estritamente |
-| **Scanner de Segredos** |  **0 Vazamentos** | Validado pelo `secret_scanner.py` |
-| **Ecossistema ECC** |  **Ativo & Commitado** | 331 skills, 11 regras, 16 workflows, 9 subagentes |
+| **Testes (Pytest + Hypothesis)** | 🟢 **41/41 PASS** | Suíte expandida com testes de herança AST, decorators, imports, call graph e PBT com Hypothesis |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Configurado com line-length 100, regras py311 |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 17 arquivos validados estritamente |
+| **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
+| **Ecossistema ECC** | 🟢 **Ativo & Commitado** | 331 skills, 11 regras, 16 workflows, 9 subagentes |
 
 ---
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação do Cliente MCP Remoto SSE e Subcomando CLI `mcp` via TDD):
+### Sessão Atual (AST Indexing, Code Intelligence & Property-Based Testing via TDD):
 - **Ciclo TDD RED-GREEN-REFACTOR**:
-  - **Fase RED**: Criação de testes de conectividade remota SSE, autenticação por Bearer Token, mocks JSON-RPC 2.0 e subcomandos CLI `mcp ping`, `mcp list-tools` e `mcp call`.
+  - **Fase RED**: Criação de testes para extração de herança (`bases`), decoradores (`decorators`), métodos síncronos e assíncronos (`async_methods`), grafo de chamadas (`calls`), importações (`extract_imports`), mapa de hierarquia da base de código (`build_hierarchy_map`) e testes baseados em propriedades com `hypothesis` (`test_pbt_ast_indexer_properties`).
   - **Fase GREEN**:
-    - Implementação da classe [`RemoteMCPSSEClient`](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/src/corporate_engineer/mcp/client.py) com suporte a SSE/HTTP, JSON-RPC 2.0, Bearer token corporativo, `ping()`, `list_tools()` e `call_tool()`.
-    - Enriquecimento do [`LocalMCPToolAdapter`](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/src/corporate_engineer/mcp/client.py) com introspecção de schemas (`list_tools()`) e `ping()`.
-    - Adicionado subcomando `mcp` ao [`cli.py`](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/src/corporate_engineer/cli.py) suportando os subcomandos `ping`, `list-tools` e `call` em modos local e remoto (com flags `--server`, `--url`, `--token`, `--args`, `--format`).
+    - Implementação no [`ast_indexer.py`](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/src/corporate_engineer/rag/ast_indexer.py) da extração de `bases`, `decorators`, `methods`, `async_methods` e `calls` no `index_file`.
+    - Implementação do método `extract_imports(file_path: Path)` para mapear módulos importados e `from_imports`.
+    - Implementação do método `build_hierarchy_map()` que percorre todo o repositório e mapeia cada classe base para suas subclasses diretas.
+    - Suporte a geração robusta de docstrings e identificadores no teste PBT com `hypothesis`, validando invariantes estruturais de classes e métodos.
   - **Fase REFACTOR & Pre-Flight**:
-    - 37 testes executados com 100% de aprovação no Pytest.
-    - Ruff e Mypy validados com 0 erros e 0 warnings.
-    - Scanner de credenciais aprovado com 0 achados.
+    - 41 testes executados com 100% de aprovação no Pytest.
+    - Ruff check e format validados com 0 erros e 0 warnings.
+    - Mypy estrito aprovado sem nenhum erro em todos os 17 arquivos fonte.
+    - Scanner de credenciais corporativo aprovado com 0 achados.
 
 ### Commits Git Recentes:
+- `3fd7c8b`: `feat(mcp): implement remote SSE client and mcp CLI subcommands`
 - `e1f7b80`: `feat(cli): add audit, index, and dag subcommands with JSON output and strict verification`
 - `72a67ee`: `docs(state): update state.md with commit hash 4433875 and formal evolution roadmap`
 - `4433875`: `chore(ecc): configure project-tailored ECC rules, workflows, agents and state tracking protocol`
@@ -56,24 +59,25 @@
 - `[ ]` Testes de resiliência: reconexão automática com backoff exponencial e circuit breaker.
 
 ### 🧠 Trilha 3: AST Indexing & Code Intelligence (`src/corporate_engineer/rag/`)
-- `[ ]` Extração semântica de hierarquia de herança e relacionamentos entre classes/funções.
-- `[ ]` Testes baseados em propriedades (PBT com Hypothesis) cobrindo estruturas de sintaxe complexas do Python 3.11+.
+- `[x]` Extração semântica de hierarquia de herança e relacionamentos entre classes/funções.
+- `[x]` Grafo de chamadas de funções e métodos e mapeamento estruturado de importações.
+- `[x]` Testes baseados em propriedades (PBT com Hypothesis) cobrindo estruturas de sintaxe do Python 3.11+.
 
 ### ⚙️ Trilha 4: Orquestração e DAGs de Agentes (`src/corporate_engineer/orchestrator/`)
-- `[ ]` Paralelização de nós de agentes independentes.
-- `[ ]` Persistência de checkpoints de execução e recuperação de falhas.
+- `[ ]` Paralelização de nós de agentes independentes no grafo de engenharia.
+- `[ ]` Persistência de checkpoints de execução e mecanismo determinístico de recuperação de falhas.
 
 ---
 
 ## 4. Próximos Passos Imediatos para a Próxima Sessão
 
-1. `[ ]` **Commit da Entrega do MCP Remoto**:
+1. `[ ]` **Commit da Trilha 3**:
    - Commitar os testes e a implementação:
-     `feat(mcp): implement remote SSE client and mcp CLI subcommands`
-2. `[ ]` **Avançar para Trilha 3 (AST Indexing & Code Intelligence)**:
-   - Expandir `ASTCodebaseIndexer` para mapear hierarquia de herança e chamadas de método via TDD em `tests/test_ast_indexer.py`.
-3. `[ ]` **Adicionar Testes Baseados em Propriedades (Hypothesis)**:
-   - Escrever geradores Hypothesis para código Python sintaticamente válido e verificar invariantes do parser.
+     `feat(rag): enhance AST codebase indexer with inheritance hierarchy, imports, call graph and PBT`
+2. `[ ]` **Iniciar Trilha 4 (Orquestração e DAGs de Agentes)**:
+   - Expandir `AutonomousEngineeringGraph` em `src/corporate_engineer/orchestrator/graph.py` para suportar execução paralela de tarefas independentes (ex: nós de lint, testes e análise de segurança rodando concorrentemente).
+3. `[ ]` **Adicionar Persistência de Checkpoints**:
+   - Permitir salvar e retomar o estado do grafo FSM a partir de checkpoints em disco/JSON.
 
 ---
 
@@ -81,6 +85,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-18T05:15:00-03:00` | Antigravity AI | Conclusão da Trilha 3 (AST Indexing, herança, decorators, imports, call graph e PBT com Hypothesis), totalizando 41 testes passing. |
 | `2026-11-18T04:30:00-03:00` | Antigravity AI | Conclusão do ciclo TDD do RemoteMCPSSEClient e subcomando `mcp`, totalizando 37 testes passing. |
 | `2026-11-18T03:53:00-03:00` | Antigravity AI | Conclusão do ciclo TDD da CLI (audit, index, dag), totalizando 28 testes passing e atualização do Roadmap. |
 | `2026-11-18T03:19:00-03:00` | Antigravity AI | Concluído commit `4433875` com toda infraestrutura ECC e estruturado o Roteiro de Evolução formal. |

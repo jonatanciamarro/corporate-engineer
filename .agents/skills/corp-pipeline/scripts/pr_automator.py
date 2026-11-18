@@ -11,13 +11,27 @@ import sys
 from pathlib import Path
 
 
+import os
+
+
 def run_cmd(cmd: list[str], cwd: Path, check: bool = True) -> subprocess.CompletedProcess:
+    env = os.environ.copy()
+    git_dir = r"C:\Program Files\Git\cmd"
+    gh_dir = r"C:\Program Files\GitHub CLI"
+    curr_path = env.get("PATH", "")
+    if git_dir not in curr_path:
+        curr_path = f"{git_dir};{curr_path}"
+    if gh_dir not in curr_path:
+        curr_path = f"{gh_dir};{curr_path}"
+    env["PATH"] = curr_path
+
     return subprocess.run(
         cmd,
         cwd=str(cwd),
         capture_output=True,
         text=True,
         check=check,
+        env=env,
     )
 
 

@@ -10,11 +10,14 @@ Este repositório possui as seguintes skills ativas em `.agents/skills/`:
 
 ### 1. `corp-pipeline` (`/corp-pipeline`)
 Pipeline determinístico de 5 fases para entrega corporativa:
-- **Fase 1**: Alinhamento de Escopo, DTOs & ADR (🔴 **Gate 1: Aprovação Humana**)
-- **Fase 2**: Shift-Left TDD com `stack_detector.py` (Certificação **RED**)
-- **Fase 3**: Implementação Cirúrgica & Auto-recuperação (Certificação **GREEN**, máx 3 retentativas)
-- **Fase 4**: Pre-Flight Gate & Auditoria Local (Linter, Typecheck, `secret_scanner.py`, Regressão Global)
-- **Fase 5**: Entrega Corporativa (🔴 **Gate 2: Aprovação Final** → Branch `feat/<ID>-<slug>` & PR padronizado)
+- **Fase 1: Governança, Contratos & Escopo (Gate 1)**
+  - **1.1 (`/grill-me_v2`)**: Entrevista adaptativa, extração de SLAs/NFRs e síntese de ADR em `docs/adr/ADR-<NUM>-<slug>.md`.
+  - **1.2 (`/plan_v2`)**: Matriz de Trade-offs, Threat Modeling (STRIDE/OWASP), Rollback & Blast Radius e Contratos DTOs.
+  - **1.3 (🔴 Gate 1)**: Validação humana explícita obrigatória antes do código.
+- **Fase 2**: Shift-Left TDD com `stack_detector.py` (Certificação **RED**).
+- **Fase 3**: Implementação Cirúrgica & Auto-recuperação (Certificação **GREEN**, máx 3 retentativas).
+- **Fase 4**: Pre-Flight Gate & Auditoria Local (Linter, Typecheck, `secret_scanner.py`, Regressão Global).
+- **Fase 5**: Entrega Corporativa (🔴 **Gate 2: Aprovação Final** → Branch `feat/<ID>-<slug>` & PR padronizado).
 
 ### 2. `plan_v2` (`/plan_v2`)
 Protocolo de planejamento avançado com:
@@ -27,7 +30,7 @@ Protocolo de planejamento avançado com:
 Protocolo de entrevista investigativa baseado em:
 - Árvore de Decisão Hierárquica
 - Extração de Requisitos Não-Funcionais (SLAs, Throughput, Resiliência)
-- Síntese Automática de **ADR (Architecture Decision Record)** formal
+- Síntese Automática de **ADR (Architecture Decision Record)** formal em `docs/adr/`
 
 ---
 
@@ -49,3 +52,4 @@ Protocolo de entrevista investigativa baseado em:
 
 ## 📚 Documentação Adicional
 - [Relatório Deep Research 2026](./deep-research-ai-software-engineering-2026.md): Estado da arte em agentes autônomos, MCP, A2A, segurança AI e testes mutation/PBT.
+- [Decisões de Arquitetura (ADRs)](./docs/adr/): Histórico imutável de decisões de engenharia do projeto.

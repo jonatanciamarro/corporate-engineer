@@ -1,0 +1,2 @@
+[console_scripts]
+corporate-engineer = corporate_engineer.cli:main

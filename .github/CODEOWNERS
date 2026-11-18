@@ -1,0 +1,8 @@
+# Corporate Codeowners
+# Global fallback owner
+* @jonatanciamarro
+
+# Skills and compliance scripts
+/.agents/ @jonatanciamarro
+/.github/ @jonatanciamarro
+/docs/adr/ @jonatanciamarro

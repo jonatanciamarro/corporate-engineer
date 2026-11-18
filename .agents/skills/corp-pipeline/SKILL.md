@@ -112,19 +112,23 @@ Execute a suíte de conformidade corporativa:
 
 ---
 
-## 🔹 Fase 5: Entrega Corporativa (Gate 2)
+## 🔹 Fase 5: Entrega Corporativa (Gate 2 & Automação de PR)
 
 1. **🔴 GATE 2 (Confirmação Final)**:
    - Apresente o diff resumido, status de todos os testes e proposta de mensagem de commit semântico.
-   - Aguarde o `proceed` do usuário.
-2. **Branching & Git Governance**:
-   - Verifique a branch atual: **NUNCA realize push ou commits diretos na `main` ou `master`**.
-   - Crie branch de feature:
-     ```bash
-     git checkout -b feat/<TICKET_ID>-<slug>
+   - Aguarde o `proceed` / `sim` do usuário.
+2. **Execução Automatizada via `pr_automator.py`**:
+   - Uma vez aprovado no Gate 2, a automação executa o script oficial:
+     ```powershell
+     python .agents/skills/corp-pipeline/scripts/pr_automator.py `
+       --ticket-id "<TICKET_ID>" `
+       --slug "<slug>" `
+       --title "<conventional_commit_title>" `
+       --body-file "docs/pull_requests/PR-<TICKET_ID>.md"
      ```
-3. **Commits Semânticos**:
-   - Realize commits atômicos no padrão Conventional Commits (`feat:`, `fix:`, `refactor:`, `test:`).
-4. **Geração de Pull Request**:
-   - Gere o resumo do PR preenchido com o template em `.agents/skills/corp-pipeline/templates/pr_template.md`.
-   - Se o GitHub CLI (`gh`) estiver disponível, sugira ou dispare `gh pr create`. Caso contrário, forneça o markdown completo pronto para abertura na interface web corporativa.
+   - O script executa de forma determinística:
+     1. Cria e alterna para a branch de feature: `feat/<TICKET_ID>-<slug>` (impedindo commits diretos na `main`).
+     2. Realiza o commit atômico no padrão Conventional Commits.
+     3. Efetua o push automático para o remote (`origin`).
+     4. Dispara a abertura do Pull Request via GitHub CLI (`gh pr create`) utilizando o corpo completo gravado em `docs/pull_requests/PR-<TICKET_ID>.md`.
+     5. Retorna o link web direto do Pull Request gerado.

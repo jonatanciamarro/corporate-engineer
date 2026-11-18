@@ -55,3 +55,11 @@ class MCPToolResult(BaseModel):
     tool_name: str
     is_error: bool
     content: str
+
+
+class NodeExecutionResult(BaseModel):
+    node_name: str
+    success: bool
+    result: Any = None
+    error: str | None = None
+    duration_seconds: float = 0.0

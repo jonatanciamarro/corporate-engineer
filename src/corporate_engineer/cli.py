@@ -9,7 +9,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from corporate_engineer.models import TaskInput
+from corporate_engineer.mcp.client import LocalMCPToolAdapter, RemoteMCPSSEClient
+from corporate_engineer.models import MCPToolCall, TaskInput
 from corporate_engineer.orchestrator.graph import AutonomousEngineeringGraph
 from corporate_engineer.quality.gate import QualityGateRunner
 from corporate_engineer.rag.ast_indexer import ASTCodebaseIndexer
@@ -64,6 +65,44 @@ def build_parser() -> argparse.ArgumentParser:
     dag_parser.add_argument(
         "--format", choices=["text", "json"], default="text", help="Output format"
     )
+
+    # Command: mcp
+    mcp_parser = subparsers.add_parser("mcp", help="Inspect and execute tools via MCP protocol")
+    mcp_subparsers = mcp_parser.add_subparsers(dest="mcp_action", help="MCP action")
+
+    # mcp ping
+    ping_parser = mcp_subparsers.add_parser("ping", help="Ping MCP server (local or remote)")
+    ping_parser.add_argument("--server", choices=["local", "remote"], default="local")
+    ping_parser.add_argument("--workspace", default=".", help="Workspace path for local mode")
+    ping_parser.add_argument(
+        "--url", default="http://localhost:8000/sse", help="Remote MCP endpoint"
+    )
+    ping_parser.add_argument("--token", default=None, help="Bearer auth token for remote MCP")
+    ping_parser.add_argument("--format", choices=["text", "json"], default="text")
+
+    # mcp list-tools
+    list_parser = mcp_subparsers.add_parser(
+        "list-tools", help="List available tools from MCP server"
+    )
+    list_parser.add_argument("--server", choices=["local", "remote"], default="local")
+    list_parser.add_argument("--workspace", default=".", help="Workspace path for local mode")
+    list_parser.add_argument(
+        "--url", default="http://localhost:8000/sse", help="Remote MCP endpoint"
+    )
+    list_parser.add_argument("--token", default=None, help="Bearer auth token for remote MCP")
+    list_parser.add_argument("--format", choices=["text", "json"], default="text")
+
+    # mcp call
+    call_parser = mcp_subparsers.add_parser("call", help="Execute an MCP tool")
+    call_parser.add_argument("--tool", required=True, help="Tool name")
+    call_parser.add_argument("--server", choices=["local", "remote"], default="local")
+    call_parser.add_argument("--args", default="{}", help="Tool arguments in JSON format")
+    call_parser.add_argument("--workspace", default=".", help="Workspace path for local mode")
+    call_parser.add_argument(
+        "--url", default="http://localhost:8000/sse", help="Remote MCP endpoint"
+    )
+    call_parser.add_argument("--token", default=None, help="Bearer auth token for remote MCP")
+    call_parser.add_argument("--format", choices=["text", "json"], default="text")
 
     return parser
 
@@ -173,6 +212,73 @@ def handle_dag(args: argparse.Namespace) -> int:
     return 0
 
 
+def handle_mcp(args: argparse.Namespace) -> int:
+    is_remote = args.server == "remote"
+
+    if is_remote:
+        client = RemoteMCPSSEClient(endpoint=args.url, auth_token=args.token)
+    else:
+        ws_root = Path(getattr(args, "workspace", ".")).resolve()
+        adapter = LocalMCPToolAdapter(workspace_root=ws_root)
+
+    if args.mcp_action == "ping":
+        status = client.ping() if is_remote else adapter.ping()
+        if args.format == "json":
+            print(json.dumps(status, indent=2))
+        else:
+            mode_lbl = status.get("mode", args.server)
+            st_lbl = status.get("status", "unknown")
+            print(f"📡 MCP Ping [{mode_lbl}]: {st_lbl.upper()}")
+        return 0 if status.get("status") == "ok" else 1
+
+    elif args.mcp_action == "list-tools":
+        tools = client.list_tools() if is_remote else adapter.list_tools()
+        if args.format == "json":
+            print(json.dumps({"server": args.server, "tools": tools}, indent=2))
+        else:
+            print(f"🛠️  Ferramentas MCP Disponíveis [{args.server}]:")
+            for t in tools:
+                print(f"  - {t['name']}: {t.get('description', '')}")
+        return 0
+
+    elif args.mcp_action == "call":
+        try:
+            parsed_args = json.loads(args.args)
+        except json.JSONDecodeError as e:
+            print(f"❌ Argumentos JSON inválidos: {e}", file=sys.stderr)
+            return 1
+
+        if is_remote:
+            res = client.call_tool(args.tool, parsed_args)
+        else:
+            server_name = "filesystem" if args.tool in ("read_file", "write_file") else "shell"
+            call = MCPToolCall(
+                server_name=server_name,
+                tool_name=args.tool,
+                arguments=parsed_args,
+            )
+            res = adapter.execute(call)
+
+        if args.format == "json":
+            print(
+                json.dumps(
+                    {
+                        "tool": res.tool_name,
+                        "is_error": res.is_error,
+                        "content": res.content,
+                    },
+                    indent=2,
+                )
+            )
+        else:
+            status_icon = "❌ Erro:" if res.is_error else "✅ Resultado:"
+            print(f"{status_icon}\n{res.content}")
+
+        return 1 if res.is_error else 0
+
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -185,6 +291,8 @@ def main(argv: list[str] | None = None) -> int:
         return handle_audit(args)
     elif args.command == "dag":
         return handle_dag(args)
+    elif args.command == "mcp":
+        return handle_mcp(args)
     else:
         parser.print_help()
         return 0

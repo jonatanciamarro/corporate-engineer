@@ -1,11 +1,15 @@
 """
-Local MCP Tool Adapter for sandboxed execution of tools inside corporate workspaces.
+Local and Remote MCP Tool Adapters for sandboxed execution and remote SSE connectivity.
 """
 
+import json
 import os
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
+from typing import Any
 
 from corporate_engineer.models import MCPToolCall, MCPToolResult
 
@@ -55,6 +59,50 @@ class LocalMCPToolAdapter:
                 f"Path traversal detected: {relative_path} escapes workspace root."
             )
         return resolved
+
+    def ping(self) -> dict[str, Any]:
+        return {
+            "status": "ok",
+            "mode": "local",
+            "workspace": str(self.workspace_root),
+        }
+
+    def list_tools(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "name": "read_file",
+                "server_name": "filesystem",
+                "description": "Read contents of a file within the workspace",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {"path": {"type": "string"}},
+                    "required": ["path"],
+                },
+            },
+            {
+                "name": "write_file",
+                "server_name": "filesystem",
+                "description": "Write contents to a file safely within the workspace",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string"},
+                        "content": {"type": "string"},
+                    },
+                    "required": ["path", "content"],
+                },
+            },
+            {
+                "name": "run_command",
+                "server_name": "shell",
+                "description": "Run an authorized developer command in the workspace",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {"command": {"type": "string"}},
+                    "required": ["command"],
+                },
+            },
+        ]
 
     def execute(self, tool_call: MCPToolCall) -> MCPToolResult:
         try:
@@ -153,3 +201,87 @@ class LocalMCPToolAdapter:
             )
         except (subprocess.SubprocessError, OSError) as e:
             return MCPToolResult(tool_name="run_command", is_error=True, content=str(e))
+
+
+class RemoteMCPSSEClient:
+    """
+    Client for remote MCP servers using Server-Sent Events (SSE) / JSON-RPC over HTTP.
+    Supports corporate Bearer authentication and enterprise endpoint connectivity.
+    """
+
+    def __init__(self, endpoint: str, auth_token: str | None = None, timeout: float = 10.0):
+        self.endpoint = endpoint.rstrip("/")
+        self.auth_token = auth_token
+        self.timeout = timeout
+        self.headers: dict[str, str] = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+            "User-Agent": "CorporateEngineer-MCPClient/0.1.0",
+        }
+        if auth_token:
+            self.headers["Authorization"] = f"Bearer {auth_token}"
+
+    def _send_request(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": method,
+            "params": params or {},
+        }
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(self.endpoint, data=data, headers=self.headers, method="POST")
+
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                raw_bytes = resp.read()
+                return json.loads(raw_bytes.decode("utf-8"))
+        except Exception as e:
+            raise ConnectionError(
+                f"Connection error reaching MCP endpoint '{self.endpoint}': {e}"
+            ) from e
+
+    def ping(self) -> dict[str, Any]:
+        try:
+            res = self._send_request("ping")
+            return {
+                "status": "ok",
+                "mode": "remote-sse",
+                "endpoint": self.endpoint,
+                "response": res.get("result", {}),
+            }
+        except ConnectionError as e:
+            return {
+                "status": "error",
+                "mode": "remote-sse",
+                "endpoint": self.endpoint,
+                "error": str(e),
+            }
+
+    def list_tools(self) -> list[dict[str, Any]]:
+        try:
+            res = self._send_request("tools/list")
+            tools = res.get("result", {}).get("tools", [])
+            return list(tools)
+        except ConnectionError:
+            return []
+
+    def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> MCPToolResult:
+        try:
+            res = self._send_request("tools/call", {"name": tool_name, "arguments": arguments})
+            result_data = res.get("result", {})
+            content_list = result_data.get("content", [])
+            is_error = bool(result_data.get("isError", False))
+
+            text_parts = [
+                item.get("text", "")
+                for item in content_list
+                if isinstance(item, dict) and item.get("type") == "text"
+            ]
+            content = "\n".join(text_parts) if text_parts else str(result_data)
+            return MCPToolResult(tool_name=tool_name, is_error=is_error, content=content)
+        except ConnectionError as e:
+            return MCPToolResult(
+                tool_name=tool_name,
+                is_error=True,
+                content=f"Connection error calling remote tool '{tool_name}': {e}",
+            )

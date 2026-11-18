@@ -134,3 +134,54 @@ def test_cli_dag_phases_json(capsys):
     assert "phases" in data
     assert "PLANNING" in data["phases"]
     assert "DELIVER" in data["phases"]
+
+
+def test_cli_mcp_ping_local(capsys, tmp_path):
+    ret = main(["mcp", "ping", "--server", "local", "--workspace", str(tmp_path)])
+    captured = capsys.readouterr()
+    assert ret == 0
+    assert "ok" in captured.out.lower()
+
+
+def test_cli_mcp_list_tools_json(capsys, tmp_path):
+    ret = main(
+        [
+            "mcp",
+            "list-tools",
+            "--server",
+            "local",
+            "--workspace",
+            str(tmp_path),
+            "--format",
+            "json",
+        ]
+    )
+    captured = capsys.readouterr()
+    assert ret == 0
+    data = json.loads(captured.out)
+    assert "tools" in data
+    tool_names = [t["name"] for t in data["tools"]]
+    assert "read_file" in tool_names
+    assert "write_file" in tool_names
+
+
+def test_cli_mcp_call_local(capsys, tmp_path):
+    args_json = json.dumps({"path": "created_by_cli.txt", "content": "MCP CLI rocks"})
+    ret = main(
+        [
+            "mcp",
+            "call",
+            "--server",
+            "local",
+            "--tool",
+            "write_file",
+            "--args",
+            args_json,
+            "--workspace",
+            str(tmp_path),
+        ]
+    )
+    capsys.readouterr()
+    assert ret == 0
+    assert (tmp_path / "created_by_cli.txt").exists()
+    assert (tmp_path / "created_by_cli.txt").read_text(encoding="utf-8") == "MCP CLI rocks"

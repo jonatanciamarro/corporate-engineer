@@ -6,6 +6,7 @@ from corporate_engineer.models import (
     CodeDiff,
     MCPToolCall,
     MCPToolResult,
+    NodeExecutionResult,
     TaskInput,
     TestResult,
 )
@@ -95,3 +96,17 @@ def test_mcp_contracts():
     )
     assert result.is_error is False
     assert result.content == "# Project Docs"
+
+
+def test_node_execution_result_contract():
+    res = NodeExecutionResult(
+        node_name="lint_node",
+        success=True,
+        result={"violations": 0},
+        duration_seconds=0.12,
+    )
+    assert res.node_name == "lint_node"
+    assert res.success is True
+    assert res.result == {"violations": 0}
+    assert res.error is None
+    assert res.duration_seconds == 0.12

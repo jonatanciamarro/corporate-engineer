@@ -3,6 +3,7 @@ Tests for Corporate Autonomous Engineer CLI.
 """
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -185,3 +186,31 @@ def test_cli_mcp_call_local(capsys, tmp_path):
     assert ret == 0
     assert (tmp_path / "created_by_cli.txt").exists()
     assert (tmp_path / "created_by_cli.txt").read_text(encoding="utf-8") == "MCP CLI rocks"
+
+
+def test_cli_dag_checkpoints(capsys, tmp_path: Path):
+    from corporate_engineer.models import TaskInput
+    from corporate_engineer.orchestrator.graph import AutonomousEngineeringGraph
+
+    task = TaskInput(
+        ticket_id="CORP-CLI-CP",
+        description="CLI Checkpoint listing",
+        workspace_path=str(tmp_path),
+    )
+    graph = AutonomousEngineeringGraph(task=task)
+    graph.step_plan("Plan 1")
+    graph.save_checkpoint()
+
+    # Text format
+    ret = main(["dag", "--checkpoints", "--workspace", str(tmp_path)])
+    out = capsys.readouterr().out
+    assert ret == 0
+    assert "CORP-CLI-CP" in out
+
+    # JSON format
+    ret = main(["dag", "--checkpoints", "--workspace", str(tmp_path), "--format", "json"])
+    out = capsys.readouterr().out
+    assert ret == 0
+    data = json.loads(out)
+    assert "checkpoints" in data
+    assert any(c["ticket_id"] == "CORP-CLI-CP" for c in data["checkpoints"])

@@ -12,7 +12,7 @@
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
 | **Branch Ativa** | `feat/CORP-001-autonomous-corporate-engineer` | Pronto para merge/PR após validação final |
-| **Testes (Pytest + Hypothesis)** | 🟢 **41/41 PASS** | Suíte expandida com testes de herança AST, decorators, imports, call graph e PBT com Hypothesis |
+| **Testes (Pytest + Hypothesis)** | 🟢 **48/48 PASS** | Suíte expandida com paralelização de nós, checkpoints determinísticos, rollback e CLI DAG |
 | **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Configurado com line-length 100, regras py311 |
 | **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 17 arquivos validados estritamente |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
@@ -22,21 +22,28 @@
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (AST Indexing, Code Intelligence & Property-Based Testing via TDD):
+### Sessão Atual (Trilha 4: Orquestração de Agentes, DAGs Concorrentes & Checkpointing via TDD):
 - **Ciclo TDD RED-GREEN-REFACTOR**:
-  - **Fase RED**: Criação de testes para extração de herança (`bases`), decoradores (`decorators`), métodos síncronos e assíncronos (`async_methods`), grafo de chamadas (`calls`), importações (`extract_imports`), mapa de hierarquia da base de código (`build_hierarchy_map`) e testes baseados em propriedades com `hypothesis` (`test_pbt_ast_indexer_properties`).
+  - **Fase RED**: Criação de testes em [test_orchestrator.py](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/tests/test_orchestrator.py) e [test_cli.py](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/tests/test_cli.py) para:
+    - Persistência e restauração de snapshots de estado (`save_checkpoint`, `load_checkpoint`).
+    - Nomenclatura automática de checkpoints com base no ticket e iteração (`cp_{ticket}_{phase}_{iteration}.json`).
+    - Listagem cronológica de checkpoints do workspace (`list_checkpoints`).
+    - Mecanismo determinístico de rollback de estado (`rollback_to_checkpoint`).
+    - Execução concorrente de múltiplos nós independentes com métricas de tempo (`execute_parallel_tasks`).
+    - Isolamento estrito de falhas de nós concorrentes (falha em um nó não afeta os demais).
+    - Subcomando CLI `dag --checkpoints [--workspace <path>] [--format json]`.
   - **Fase GREEN**:
-    - Implementação no [`ast_indexer.py`](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/src/corporate_engineer/rag/ast_indexer.py) da extração de `bases`, `decorators`, `methods`, `async_methods` e `calls` no `index_file`.
-    - Implementação do método `extract_imports(file_path: Path)` para mapear módulos importados e `from_imports`.
-    - Implementação do método `build_hierarchy_map()` que percorre todo o repositório e mapeia cada classe base para suas subclasses diretas.
-    - Suporte a geração robusta de docstrings e identificadores no teste PBT com `hypothesis`, validando invariantes estruturais de classes e métodos.
+    - Implementação no [graph.py](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/src/corporate_engineer/orchestrator/graph.py) dos métodos de checkpointing, rollback e `execute_parallel_tasks` com `concurrent.futures.ThreadPoolExecutor`.
+    - Adicionado contrato DTO [`NodeExecutionResult`](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/src/corporate_engineer/models.py) validado por Pydantic v2.
+    - Suporte a listagem e inspeção de checkpoints no [cli.py](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/src/corporate_engineer/cli.py) via subcomando `dag --checkpoints`.
   - **Fase REFACTOR & Pre-Flight**:
-    - 41 testes executados com 100% de aprovação no Pytest.
+    - 48 testes executados com 100% de aprovação no Pytest.
     - Ruff check e format validados com 0 erros e 0 warnings.
     - Mypy estrito aprovado sem nenhum erro em todos os 17 arquivos fonte.
     - Scanner de credenciais corporativo aprovado com 0 achados.
 
 ### Commits Git Recentes:
+- `d727bfb`: `feat(rag): enhance AST codebase indexer with inheritance hierarchy, imports, call graph and PBT`
 - `3fd7c8b`: `feat(mcp): implement remote SSE client and mcp CLI subcommands`
 - `e1f7b80`: `feat(cli): add audit, index, and dag subcommands with JSON output and strict verification`
 - `72a67ee`: `docs(state): update state.md with commit hash 4433875 and formal evolution roadmap`
@@ -50,7 +57,7 @@
 ### 🎯 Trilha 1: Expansão da CLI Corporativa (`src/corporate_engineer/cli.py`)
 - `[x]` Adicionar subcomando `audit`: executa pre-flight de qualidade diretamente pela CLI (com `--strict` e `--format json`).
 - `[x]` Adicionar subcomando `index`: indexa uma base de código via AST e exporta o grafo semântico (com `--format json` e `--output`).
-- `[x]` Adicionar subcomando `dag`: inspeciona ciclo de vida FSM e transições (com `--show-phases` e `--format json`).
+- `[x]` Adicionar subcomando `dag`: inspeciona ciclo de vida FSM, transições e checkpoints (`--show-phases`, `--checkpoints` e `--format json`).
 - `[x]` Adicionar subcomando `mcp`: testa conectividade e inspeciona schemas de servidores MCP stdio/SSE (`ping`, `list-tools`, `call`).
 
 ### 🔌 Trilha 2: Conectores e Transporte Remoto MCP (`src/corporate_engineer/mcp/`)
@@ -64,20 +71,21 @@
 - `[x]` Testes baseados em propriedades (PBT com Hypothesis) cobrindo estruturas de sintaxe do Python 3.11+.
 
 ### ⚙️ Trilha 4: Orquestração e DAGs de Agentes (`src/corporate_engineer/orchestrator/`)
-- `[ ]` Paralelização de nós de agentes independentes no grafo de engenharia.
-- `[ ]` Persistência de checkpoints de execução e mecanismo determinístico de recuperação de falhas.
+- `[x]` Paralelização de nós de agentes independentes no grafo de engenharia (`execute_parallel_tasks`).
+- `[x]` Persistência de checkpoints de execução (`save_checkpoint`, `load_checkpoint`, `list_checkpoints`).
+- `[x]` Mecanismo determinístico de recuperação de falhas e rollback (`rollback_to_checkpoint`).
 
 ---
 
 ## 4. Próximos Passos Imediatos para a Próxima Sessão
 
-1. `[ ]` **Commit da Trilha 3**:
+1. `[ ]` **Commit da Trilha 4**:
    - Commitar os testes e a implementação:
-     `feat(rag): enhance AST codebase indexer with inheritance hierarchy, imports, call graph and PBT`
-2. `[ ]` **Iniciar Trilha 4 (Orquestração e DAGs de Agentes)**:
-   - Expandir `AutonomousEngineeringGraph` em `src/corporate_engineer/orchestrator/graph.py` para suportar execução paralela de tarefas independentes (ex: nós de lint, testes e análise de segurança rodando concorrentemente).
-3. `[ ]` **Adicionar Persistência de Checkpoints**:
-   - Permitir salvar e retomar o estado do grafo FSM a partir de checkpoints em disco/JSON.
+     `feat(orchestrator): add parallel task execution, deterministic checkpoints and state rollback`
+2. `[ ]` **Trilha 2 - Resiliência MCP**:
+   - Implementar circuit breaker e reconexão com backoff exponencial no cliente MCP.
+3. `[ ]` **Preparação para Pull Request (PR-CORP-001)**:
+   - Executar `/preflight` completo, empacotar artefatos e preparar PR final de entrega.
 
 ---
 
@@ -85,6 +93,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-18T05:35:00-03:00` | Antigravity AI | Conclusão da Trilha 4 (Orquestração Concorrente, Checkpoints, Rollback e CLI DAG checkpoints), totalizando 48 testes passing. |
 | `2026-11-18T05:15:00-03:00` | Antigravity AI | Conclusão da Trilha 3 (AST Indexing, herança, decorators, imports, call graph e PBT com Hypothesis), totalizando 41 testes passing. |
 | `2026-11-18T04:30:00-03:00` | Antigravity AI | Conclusão do ciclo TDD do RemoteMCPSSEClient e subcomando `mcp`, totalizando 37 testes passing. |
 | `2026-11-18T03:53:00-03:00` | Antigravity AI | Conclusão do ciclo TDD da CLI (audit, index, dag), totalizando 28 testes passing e atualização do Roadmap. |

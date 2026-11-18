@@ -63,6 +63,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--show-phases", action="store_true", help="Display FSM lifecycle phases and transitions"
     )
     dag_parser.add_argument(
+        "--checkpoints", action="store_true", help="List saved state checkpoints in workspace"
+    )
+    dag_parser.add_argument(
+        "--workspace", default=".", help="Workspace path to inspect checkpoints"
+    )
+    dag_parser.add_argument(
         "--format", choices=["text", "json"], default="text", help="Output format"
     )
 
@@ -196,6 +202,22 @@ def handle_audit(args: argparse.Namespace) -> int:
 
 
 def handle_dag(args: argparse.Namespace) -> int:
+    if getattr(args, "checkpoints", False):
+        ws = Path(getattr(args, "workspace", ".")).resolve()
+        checkpoints = AutonomousEngineeringGraph.list_checkpoints(ws)
+        if args.format == "json":
+            print(json.dumps({"workspace": str(ws), "checkpoints": checkpoints}, indent=2))
+        else:
+            print(f"📦 Checkpoints salvos em: {ws}")
+            if not checkpoints:
+                print("  (Nenhum checkpoint encontrado)")
+            for cp in checkpoints:
+                ticket = cp.get("ticket_id") or "N/A"
+                phase = cp.get("phase") or "N/A"
+                iter_cnt = cp.get("iteration_count", 0)
+                print(f"  - [{ticket}] {cp['filename']} (Fase: {phase}, Iteração: {iter_cnt})")
+        return 0
+
     if args.format == "json":
         payload = {
             "phases": DAG_PHASES,

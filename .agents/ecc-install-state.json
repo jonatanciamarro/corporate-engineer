@@ -1,0 +1,75 @@
+{
+  "version": "2.2.3",
+  "target": "antigravity",
+  "profile": "corporate-engineer",
+  "stack": "python",
+  "python_version": ">=3.10",
+  "configured_at": "2026-11-18T02:45:00-03:00",
+  "components": {
+    "rules": [
+      "common-coding-style.md",
+      "common-development-workflow.md",
+      "common-git-workflow.md",
+      "common-security.md",
+      "common-testing.md",
+      "corporate-quality-gate.md",
+      "state-tracking.md",
+      "python-coding-style.md",
+      "python-patterns.md",
+      "python-security.md",
+      "python-testing.md"
+    ],
+    "workflows": [
+      "build-fix.md",
+      "checkpoint.md",
+      "ecc-guide.md",
+      "feature-dev.md",
+      "orch-add-feature.md",
+      "orch-fix-defect.md",
+      "orch-refine-code.md",
+      "plan.md",
+      "preflight.md",
+      "python-review.md",
+      "quality-gate.md",
+      "refactor-clean.md",
+      "review.md",
+      "security-scan.md",
+      "test-coverage.md",
+      "update-docs.md"
+    ],
+    "agents": [
+      "architect.md",
+      "build-error-resolver.md",
+      "code-reviewer.md",
+      "planner.md",
+      "python-reviewer.md",
+      "rag-pipeline-reviewer.md",
+      "refactor-cleaner.md",
+      "security-reviewer.md",
+      "tdd-guide.md"
+    ],
+    "daily_skills": [
+      "corp-pipeline",
+      "grill-me_v2",
+      "plan_v2",
+      "python-patterns",
+      "python-testing",
+      "tdd-workflow",
+      "security-review",
+      "api-design",
+      "mcp-server-patterns",
+      "agentic-engineering",
+      "conventional-commit-review",
+      "verification-loop",
+      "agent-sort"
+    ],
+    "library_skills_count": 318
+  },
+  "verification_commands": {
+    "test": "pytest",
+    "coverage": "pytest --cov=src --cov-report=term-missing",
+    "lint": "ruff check .",
+    "typecheck": "mypy .",
+    "secret_scan": "python .agents/skills/corp-pipeline/scripts/secret_scanner.py ."
+  }
+}

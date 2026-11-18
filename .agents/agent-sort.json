@@ -1,0 +1,84 @@
+{
+  "repo": "corporate-engineer",
+  "timestamp": "2026-11-18T02:45:00-03:00",
+  "evidence": {
+    "stack": "python",
+    "detected_package_manager": "pip/pyproject.toml",
+    "frameworks": [
+      "pydantic",
+      "pyyaml",
+      "pytest",
+      "hypothesis",
+      "ruff",
+      "mypy"
+    ],
+    "architecture": "corporate agentic framework (mcp client, orchestrator dag, quality gates, rag ast indexer)",
+    "governance": "adr records in docs/adr, 5-phase corporate pipeline, pre-flight gates"
+  },
+  "classification": {
+    "DAILY": {
+      "description": "Loaded/highlighted for daily operations in this repository",
+      "skills": [
+        "corp-pipeline",
+        "grill-me_v2",
+        "plan_v2",
+        "python-patterns",
+        "python-testing",
+        "tdd-workflow",
+        "security-review",
+        "api-design",
+        "mcp-server-patterns",
+        "agentic-engineering",
+        "conventional-commit-review",
+        "verification-loop",
+        "agent-sort"
+      ],
+      "rules": [
+        "common-coding-style.md",
+        "common-development-workflow.md",
+        "common-git-workflow.md",
+        "common-security.md",
+        "common-testing.md",
+        "corporate-quality-gate.md",
+        "state-tracking.md",
+        "python-coding-style.md",
+        "python-patterns.md",
+        "python-security.md",
+        "python-testing.md"
+      ],
+      "workflows": [
+        "build-fix.md",
+        "checkpoint.md",
+        "ecc-guide.md",
+        "feature-dev.md",
+        "orch-add-feature.md",
+        "orch-fix-defect.md",
+        "orch-refine-code.md",
+        "plan.md",
+        "preflight.md",
+        "python-review.md",
+        "quality-gate.md",
+        "refactor-clean.md",
+        "review.md",
+        "security-scan.md",
+        "test-coverage.md",
+        "update-docs.md"
+      ],
+      "agents": [
+        "architect.md",
+        "build-error-resolver.md",
+        "code-reviewer.md",
+        "planner.md",
+        "python-reviewer.md",
+        "rag-pipeline-reviewer.md",
+        "refactor-cleaner.md",
+        "security-reviewer.md",
+        "tdd-guide.md"
+      ]
+    },
+    "LIBRARY": {
+      "description": "On-demand progressive disclosure repository available across 318+ additional skills",
+      "total_skills": 331
+    }
+  }
+}

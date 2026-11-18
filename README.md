@@ -48,6 +48,11 @@ Protocolo de entrevista investigativa baseado em:
   ```
   Audita arquivos contra vazamento de credenciais, chaves de API e tokens sensíveis antes de qualquer commit.
 
+
+  [corp-pipeline](slashCommand;corp-pipeline) agora me explique sobre os agentes, skills e workflows de orquestradores, ensine o antigravity a usalos em cada caso adequado, as melhores praticas nivel senior devem ser incorporadas nas regras do projeto, em todas as categorias [Quote](textBlock;label:Quote:Principais%20Categorias%20Instaladas%0AAgentic%20%26%20AI%20Engineering%3A%20agentic-engineering%2C%20agent-introspection-debugging%2C%20agent-architecture-audit%2C%20ai-regression-testing%2C%20unified-memory%2C%20verification-loop.%0ATesting%20%26%20TDD%3A%20tdd-workflow%2C%20test-collaboration%2C%20benchmark-methodology%2C%20module-regression.%0ASecurity%20%26%20Auditing%3A%20security-review%2C%20agent-security-hardening%2C%20web-perimeter-owasp-2025-audit.%0AArchitecture%20%26%20Standards%3A%20coding-standards%2C%20context-and-decisions%2C%20api-design%2C%20change-impact.%0AFrontend%20%26%20Backend%20Stacks%3A%20frontend-patterns%2C%20backend-patterns%2C%20bun-runtime%2C%20nextjs-turbopack%2C%20vue-patterns.%0AConsulte%20o%20documento%20completo%20com%20o%20%C3%ADndice%20de%20todas%20as%20skills%20em%20ecc-skills-catalog.md.) 
+a minha ideia é criar um orquestrador que conhece todos os agentes, skills, apis, regras, workflows, plugins, mcp, conectores e ferramentas do projeto. esse orquestrador estará sempre ativo, e ele mantem/usa o padrao [corp-pipeline](slashCommand;corp-pipeline) sempre que eu mandar um prompt. portanto isso tudo sera feito de forma automatica nas regras, hooks, etc.. do projeto
+ele é tambem pro ativo e se ele ver alguma possibilidade de melhoria ou transcendencia de alguma coisa ele sugere a melhoria, com a opção de salva-la para se quisermos implementar depois nao ser perdida.
+
 ---
 
 ## 📚 Documentação Adicional

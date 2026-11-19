@@ -9,36 +9,41 @@
 
 | Métrica / Aspecto | Status Atual | Detalhes |
 |---|---|---|
-| **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI |
+| **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `main` | 🟢 Sincronizada com o GitHub remoto (`origin/main`) |
-| **Ambiente Local** | `.venv` (Python 3.10.6) | 🟢 Ambiente virtual criado e dependências instaladas (`-e .[dev]`) |
+| **Branch Ativa** | `main` | 🟢 Sincronizada localmente; commit pendente com a infraestrutura do orquestrador |
+| **Ambiente Local** | `.venv` (Python 3.10.6) | 🟢 Ambiente virtual ativo e dependências instaladas (`-e .[dev]`) |
 | **Testes (Pytest + Hypothesis)** | 🟢 **48/48 PASS** | Cobertura global de 92% (`pytest-cov`) |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Configurado com line-length 100, regras py311 |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 17 arquivos validados estritamente |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Linha max 100, regras py311, hook verificado |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 17 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
-| **Ecossistema ECC** | 🟢 **Ativo & Commitado** | 331 skills, 11 regras, 16 workflows, 9 subagentes |
+| **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
+| **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
+| **Lifecycle Hooks** | 🟢 **SessionStart Ativo** | `.agents/hooks.json` integrado ao script `session_start.py` via protojson nativo |
 
 ---
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Push da Branch de Feature e Consolidação do PR):
-- **Push Remoto no GitHub**:
-  - Envio dos 7 commits da branch `feat/CORP-001-autonomous-corporate-engineer` para o repositório remoto `origin` (`https://github.com/jonatanciamarro/corporate-engineer.git`).
-  - Branch perfeitamente atualizada (`Your branch is up to date with 'origin/feat/CORP-001-autonomous-corporate-engineer'`).
-- **Consolidação do Pull Request**:
-  - Documentação formal detalhada em [PR-CORP-001.md](file:///c:/Users/WDAGUtilityAccount/Downloads/projeto/docs/pull_requests/PR-CORP-001.md) com evidências dos 48 testes, 4 quality gates e 4 trilhas de engenharia.
-
-### Commits Git Recentes:
-- `6d50e5b`: `docs(pr): update PR-CORP-001 with complete test evidence, 4-track implementation and state tracking`
-- `5836a68`: `feat(orchestrator): add parallel task execution, deterministic checkpoints and state rollback`
-- `d727bfb`: `feat(rag): enhance AST codebase indexer with inheritance hierarchy, imports, call graph and PBT`
-- `3fd7c8b`: `feat(mcp): implement remote SSE client and mcp CLI subcommands`
-- `e1f7b80`: `feat(cli): add audit, index, and dag subcommands with JSON output and strict verification`
-- `72a67ee`: `docs(state): update state.md with commit hash 4433875 and formal evolution roadmap`
-- `4433875`: `chore(ecc): configure project-tailored ECC rules, workflows, agents and state tracking protocol`
-- `8624684`: `feat(engineer): implement autonomous corporate engineer with langgraph, mcp adapter and quality gate`
+### Sessão Atual (Implementação do Corp-Pipeline Master Orchestrator):
+1. **Missão First-Run Implementation Executada com Sucesso**:
+   - Auditoria completa do ambiente real do workspace (descoberta de 331 skills, 9 agentes, 16 workflows, 11 regras e CLI do projeto).
+2. **Camada 1 — Core Orchestrator (Always-On)**:
+   - Criação da regra mestre `.agents/rules/corp-pipeline-orchestrator.md` (`always_on`), estabelecendo o protocolo de 6 fases em todas as requisições.
+   - Atualização mandatória de [GEMINI.md](file:///e:/projcts/corporate%20engineer/GEMINI.md) e [AGENTS.md](file:///e:/projcts/corporate%20engineer/AGENTS.md).
+3. **Camada 2 — Capability Intelligence (Registros Canônicos em `.agents/orchestration/`)**:
+   - [capability-registry.md](file:///e:/projcts/corporate%20engineer/.agents/orchestration/capability-registry.md): Matriz de roteamento e mapeamento geral de capacidades.
+   - [agent-registry.md](file:///e:/projcts/corporate%20engineer/.agents/orchestration/agent-registry.md): 9 subagentes especialistas + subagentes nativos (`self`, `research`, `browser`, `swarm`).
+   - [skills-registry.md](file:///e:/projcts/corporate%20engineer/.agents/orchestration/skills-registry.md): 13 skills diárias (DAILY) e catálogo de 318 skills na biblioteca sob demanda (LIBRARY).
+   - [workflow-registry.md](file:///e:/projcts/corporate%20engineer/.agents/orchestration/workflow-registry.md): Mapeamento dos 16 workflows determinísticos do workspace.
+   - [tool-registry.md](file:///e:/projcts/corporate%20engineer/.agents/orchestration/tool-registry.md): Ferramentas nativas do Antigravity, CLI `corporate-engineer` e scripts utilitários.
+   - [integration-registry.md](file:///e:/projcts/corporate%20engineer/.agents/orchestration/integration-registry.md): Clientes MCP (stdio & SSE), plugins do marketplace e Git remote.
+   - [improvement-backlog.md](file:///e:/projcts/corporate%20engineer/.agents/orchestration/improvement-backlog.md): Catálogo de evolução com 5 propostas iniciais seminais (`IMP-0001` a `IMP-0005`).
+4. **Camada 3 — Execution & Governance**:
+   - Criação de [.agents/hooks.json](file:///e:/projcts/corporate%20engineer/.agents/hooks.json) com hook `SessionStart`.
+   - Implementação de [.agents/orchestration/hooks/session_start.py](file:///e:/projcts/corporate%20engineer/.agents/orchestration/hooks/session_start.py), testado com `0` erros no Ruff e protojson em stdout.
+   - Elaboração formal do [ADR-002](file:///e:/projcts/corporate%20engineer/docs/adr/ADR-002-corp-pipeline-master-orchestration-system.md), [architecture.md](file:///e:/projcts/corporate%20engineer/docs/orchestration/architecture.md) e [operating-manual.md](file:///e:/projcts/corporate%20engineer/docs/orchestration/operating-manual.md).
+   - Auditoria Pre-Flight completa: 48 testes unitários passando, 0 erros no Ruff, 0 erros no Mypy e 0 vazamentos de segredos.
 
 ---
 
@@ -53,29 +58,34 @@
 ### 🔌 Trilha 2: Conectores e Transporte Remoto MCP (`src/corporate_engineer/mcp/`)
 - `[x]` Suporte a transporte Server-Sent Events (SSE) / JSON-RPC 2.0 para servidores MCP remotos.
 - `[x]` Autenticação corporativa: Bearer Tokens e injeção padronizada de cabeçalhos de segurança.
-- `[ ]` Testes de resiliência: reconexão automática com backoff exponencial e circuit breaker.
+- `[ ]` Testes de resiliência: reconexão automática com backoff exponencial e circuit breaker (`IMP-0002`).
 
 ### 🧠 Trilha 3: AST Indexing & Code Intelligence (`src/corporate_engineer/rag/`)
 - `[x]` Extração semântica de hierarquia de herança e relacionamentos entre classes/funções.
 - `[x]` Grafo de chamadas de funções e métodos e mapeamento estruturado de importações.
 - `[x]` Testes baseados em propriedades (PBT com Hypothesis) cobrindo estruturas de sintaxe do Python 3.11+.
+- `[ ]` Cache de indexação baseado em SHA-256 (`IMP-0004`).
 
 ### ⚙️ Trilha 4: Orquestração e DAGs de Agentes (`src/corporate_engineer/orchestrator/`)
 - `[x]` Paralelização de nós de agentes independentes no grafo de engenharia (`execute_parallel_tasks`).
 - `[x]` Persistência de checkpoints de execução (`save_checkpoint`, `load_checkpoint`, `list_checkpoints`).
 - `[x]` Mecanismo determinístico de recuperação de falhas e rollback (`rollback_to_checkpoint`).
 
+### 👑 Trilha 5: Corp-Pipeline Master Orchestrator (Sistema Central Permanente)
+- `[x]` Regra permanente Always-On `.agents/rules/corp-pipeline-orchestrator.md`.
+- `[x]` Registros canônicos `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog).
+- `[x]` Hook `SessionStart` em `.agents/hooks.json` com injeção de contexto via protojson nativo.
+- `[x]` Governança de melhorias: formato padronizado de recomendação e persistência no backlog.
+- `[x]` Formalização de ADR-002 e documentação técnica (`architecture.md` e `operating-manual.md`).
+
 ---
 
 ## 4. Próximos Passos Imediatos para a Próxima Sessão
 
-1. `[x]` **Commit da Trilha 4**: Concluído no commit `5836a68`.
-2. `[x]` **Preparação para Pull Request (PR-CORP-001)**: Concluído em `docs/pull_requests/PR-CORP-001.md`.
-3. `[x]` **Push da Branch de Feature no GitHub**: Concluído com sucesso no commit `6d50e5b`.
-4. `[ ]` **Abertura do Pull Request na interface do GitHub**:
-   - URL: `https://github.com/jonatanciamarro/corporate-engineer/pull/new/feat/CORP-001-autonomous-corporate-engineer`
-5. `[ ]` **Trilha 2 - Resiliência Avançada MCP (Opcional pós-merge)**:
-   - Adicionar circuit breaker e reconexão com backoff exponencial.
+1. `[ ]` **Commit da Arquitetura do Orquestrador Corp-Pipeline**:
+   - Commitar as modificações em `GEMINI.md`, `AGENTS.md`, `.agents/`, `docs/adr/ADR-002` e `docs/orchestration/`.
+2. `[ ]` **Apreciação das Melhorias Salvas no Backlog**:
+   - Analisar propostas `IMP-0001` (detecção do `.venv` no detector de stack) e `IMP-0002` (circuit breaker MCP).
 
 ---
 
@@ -83,6 +93,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-19T13:38:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão da missão FIRST-RUN IMPLEMENTATION: arquitetura em 3 camadas (Core, Intelligence, Governance), 7 registros canônicos em `.agents/orchestration/`, hook `SessionStart`, ADR-002, manual de operação e aprovação em pre-flight audit. |
 | `2026-11-19T10:28:00-03:00` | Antigravity AI | Clonagem do repositório, criação do ambiente virtual `.venv` e instalação completa de todas as dependências (`pydantic`, `pyyaml`, `pytest`, `hypothesis`, `pytest-cov`, `ruff`, `mypy`). Execução de auditoria completa com 48/48 testes PASS e 92% de cobertura. |
 | `2026-11-18T05:47:00-03:00` | Antigravity AI | Concluído push da branch de feature para origin no GitHub com 7 commits e working tree clean. |
 | `2026-11-18T05:45:00-03:00` | Antigravity AI | Consolidação do PR-CORP-001.md com evidências das 4 trilhas, 48 testes e aprovação no Pre-Flight. |

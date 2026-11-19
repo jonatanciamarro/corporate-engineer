@@ -1,33 +1,34 @@
-# Agent Guidelines: Corporate Software Engineer
+# Agent Guidelines: Corporate Software Engineer & Corp-Pipeline Master Orchestrator
 
 Repository-wide operating standards and instructions for AI agents working in `corporate-engineer`.
 
 ## Architecture & Codebase Map
 
 - `src/corporate_engineer/models.py`: Strongly typed Pydantic v2 data models.
-- `src/corporate_engineer/mcp/`: MCP client and protocol handling.
-- `src/corporate_engineer/orchestrator/`: DAG orchestrator and graph runtime.
-- `src/corporate_engineer/quality/`: Static and runtime quality enforcement.
-- `src/corporate_engineer/rag/`: AST indexing and code intelligence.
-- `src/corporate_engineer/cli.py`: CLI commands and argument parsing.
+- `src/corporate_engineer/mcp/`: MCP client (stdio & SSE) and protocol handling.
+- `src/corporate_engineer/orchestrator/`: DAG orchestrator, parallel execution, and graph runtime.
+- `src/corporate_engineer/quality/`: Static and runtime quality enforcement (pre-flight).
+- `src/corporate_engineer/rag/`: AST indexing and code intelligence (classes, inheritance, calls).
+- `src/corporate_engineer/cli.py`: CLI commands (`audit`, `index`, `dag`, `mcp`).
 - `tests/`: Pytest suite and Hypothesis property-based tests.
 - `docs/adr/`: Formal Architecture Decision Records (ADR).
+- `.agents/orchestration/`: Authoritative registries (capabilities, agents, skills, workflows, tools, integrations, improvement backlog).
 
-## Commands
+## Commands (Recommended in Virtual Environment `.venv`)
 
-- Run Tests: `pytest`
-- Run Coverage: `pytest --cov=src --cov-report=term-missing`
-- Lint: `ruff check .`
-- Format Check: `ruff format --check .`
-- Type Check: `mypy .`
-- Pre-Flight Secret Scanner: `python .agents/skills/corp-pipeline/scripts/secret_scanner.py .`
+- Run Tests: `.venv\Scripts\pytest` (or `pytest`)
+- Run Coverage: `.venv\Scripts\pytest --cov=src --cov-report=term-missing`
+- Lint: `.venv\Scripts\ruff check .`
+- Format Check: `.venv\Scripts\ruff format --check .`
+- Type Check: `.venv\Scripts\mypy .`
+- Pre-Flight Secret Scanner: `.venv\Scripts\python .agents/skills/corp-pipeline/scripts/secret_scanner.py .`
 
-## Standards
+## Standards & Operating Invariants
 
-1. Always read `state.md` at session start and update it before completing any session or work item.
-2. Use TDD: write a failing test in `tests/` before modifying implementation in `src/`.
-3. Follow PEP 8 and Python 3.11 idioms with explicit type hints everywhere.
-4. Validate all data models using Pydantic v2 models.
-5. Execute `/preflight` and verify 0 errors before submitting work.
-6. Create an ADR in `docs/adr/` for significant architectural modifications.
-7. Commit using Conventional Commits (`feat:`, `fix:`, `refactor:`, etc.).
+1. **Corp-Pipeline by Default**: All incoming tasks enter the Corp-Pipeline orchestration loop (Phases 0-6).
+2. **State Tracking**: Always read `state.md` at session start and update it before completing any session or work item.
+3. **Shift-Left TDD**: Write a failing test in `tests/` before modifying implementation in `src/`.
+4. **Strict Typing & Pydantic v2**: Follow PEP 8 and Python 3.11 idioms with explicit type hints everywhere.
+5. **Pre-Flight Mandatory**: Execute `/preflight` and verify 0 errors across all 4 checks before submitting work.
+6. **Improvement Governance**: Never apply unsolicited architectural modifications. Present proposals via `[CORP-PIPELINE / IMPROVEMENT DETECTED]` and offer saving to `.agents/orchestration/improvement-backlog.md`.
+7. **ADR & Git Conventions**: Create an ADR in `docs/adr/` for significant architectural modifications. Commit using Conventional Commits (`feat:`, `fix:`, `refactor:`, etc.).

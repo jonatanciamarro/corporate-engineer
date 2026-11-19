@@ -11,8 +11,9 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/CORP-001-autonomous-corporate-engineer` | 🟢 Sincronizada com o GitHub remoto (`origin`) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **48/48 PASS** | Suíte expandida com paralelização de nós, checkpoints determinísticos, rollback e CLI DAG |
+| **Branch Ativa** | `main` | 🟢 Sincronizada com o GitHub remoto (`origin/main`) |
+| **Ambiente Local** | `.venv` (Python 3.10.6) | 🟢 Ambiente virtual criado e dependências instaladas (`-e .[dev]`) |
+| **Testes (Pytest + Hypothesis)** | 🟢 **48/48 PASS** | Cobertura global de 92% (`pytest-cov`) |
 | **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Configurado com line-length 100, regras py311 |
 | **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 17 arquivos validados estritamente |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
@@ -82,6 +83,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-19T10:28:00-03:00` | Antigravity AI | Clonagem do repositório, criação do ambiente virtual `.venv` e instalação completa de todas as dependências (`pydantic`, `pyyaml`, `pytest`, `hypothesis`, `pytest-cov`, `ruff`, `mypy`). Execução de auditoria completa com 48/48 testes PASS e 92% de cobertura. |
 | `2026-11-18T05:47:00-03:00` | Antigravity AI | Concluído push da branch de feature para origin no GitHub com 7 commits e working tree clean. |
 | `2026-11-18T05:45:00-03:00` | Antigravity AI | Consolidação do PR-CORP-001.md com evidências das 4 trilhas, 48 testes e aprovação no Pre-Flight. |
 | `2026-11-18T05:35:00-03:00` | Antigravity AI | Conclusão da Trilha 4 (Orquestração Concorrente, Checkpoints, Rollback e CLI DAG checkpoints), totalizando 48 testes passing. |

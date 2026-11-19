@@ -11,11 +11,11 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `main` | 🟢 Sincronizada com o GitHub remoto (`origin/main`, commit `671b4ce`) |
-| **Ambiente Local** | `.venv` (Python 3.10.6) | 🟢 Ambiente virtual ativo e dependências instaladas (`-e .[dev]`) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **48/48 PASS** | Cobertura global de 92% (`pytest-cov`) |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Linha max 100, regras py311, hook verificado |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 17 arquivos validados estritamente no root |
+| **Branch Ativa** | `feat/corp-pipeline-enhancements-imp001-002-004` | 🟢 Branch de feature com melhorias IMP-0001, IMP-0002 e IMP-0004 |
+| **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual configurado e dependências instaladas (`-e .[dev]`, `ruff`, `mypy`, `pytest-cov`) |
+| **Testes (Pytest + Hypothesis)** | 🟢 **62/62 PASS** | Cobertura global de 92% (`pytest-cov`) em 9.96s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (34 arquivos formatados e verificados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 22 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -58,13 +58,13 @@
 ### 🔌 Trilha 2: Conectores e Transporte Remoto MCP (`src/corporate_engineer/mcp/`)
 - `[x]` Suporte a transporte Server-Sent Events (SSE) / JSON-RPC 2.0 para servidores MCP remotos.
 - `[x]` Autenticação corporativa: Bearer Tokens e injeção padronizada de cabeçalhos de segurança.
-- `[ ]` Testes de resiliência: reconexão automática com backoff exponencial e circuit breaker (`IMP-0002`).
+- `[x]` Testes de resiliência: reconexão automática com backoff exponencial e circuit breaker (`IMP-0002`).
 
 ### 🧠 Trilha 3: AST Indexing & Code Intelligence (`src/corporate_engineer/rag/`)
 - `[x]` Extração semântica de hierarquia de herança e relacionamentos entre classes/funções.
 - `[x]` Grafo de chamadas de funções e métodos e mapeamento estruturado de importações.
 - `[x]` Testes baseados em propriedades (PBT com Hypothesis) cobrindo estruturas de sintaxe do Python 3.11+.
-- `[ ]` Cache de indexação baseado em SHA-256 (`IMP-0004`).
+- `[x]` Cache de indexação baseado em SHA-256 (`IMP-0004`).
 
 ### ⚙️ Trilha 4: Orquestração e DAGs de Agentes (`src/corporate_engineer/orchestrator/`)
 - `[x]` Paralelização de nós de agentes independentes no grafo de engenharia (`execute_parallel_tasks`).
@@ -82,10 +82,10 @@
 
 ## 4. Próximos Passos Imediatos para a Próxima Sessão
 
-1. `[x]` **Commit e Push da Arquitetura do Orquestrador Corp-Pipeline**:
-   - Concluído com sucesso nos commits `671b4ce` e push em `origin/main`.
-2. `[ ]` **Apreciação das Melhorias Salvas no Backlog**:
-   - Analisar propostas `IMP-0001` (detecção do `.venv` no detector de stack) e `IMP-0002` (circuit breaker MCP).
+1. `[x]` **Implementação e Testes das Melhorias do Backlog (IMP-0001, IMP-0002, IMP-0004)**:
+   - Concluído com sucesso na branch `feat/corp-pipeline-enhancements-imp001-002-004` com 62 testes passing e 92% de cobertura.
+2. `[ ]` **Apreciação de Propostas Futuras do Backlog**:
+   - Analisar proposta `IMP-0005` (exportação de diagramas Mermaid dinâmicos a partir da CLI `dag`).
 
 ---
 
@@ -93,6 +93,8 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-19T20:30:00-03:00` | Antigravity AI | Conclusão das melhorias IMP-0001 (detecção automática de venv no stack_detector), IMP-0002 (padrão Circuit Breaker CLOSED/OPEN/HALF_OPEN para clientes MCP) e IMP-0004 (cache SHA-256 de indexação AST). Criação da suíte de testes com total de 62/62 testes PASS, 92% de cobertura e auditoria pre-flight 100% limpa. |
+| `2026-11-19T19:21:00-03:00` | Antigravity AI | Clonagem do repositório, criação do ambiente virtual Python 3.11 (`.venv`), instalação de todas as dependências (`pydantic`, `pyyaml`, `pytest`, `hypothesis`, `pytest-cov`, `ruff`, `mypy`), registro da CLI `corporate-engineer` e validação completa (48/48 testes passando, 0 erros Ruff/Mypy, 0 segredos expostos). |
 | `2026-11-19T17:05:00-03:00` | Corp-Pipeline Master Orchestrator | Push dos commits da arquitetura Corp-Pipeline para origin/main (`671b4ce`) e sincronização do status do repositório remoto. |
 | `2026-11-19T13:38:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão da missão FIRST-RUN IMPLEMENTATION: arquitetura em 3 camadas (Core, Intelligence, Governance), 7 registros canônicos em `.agents/orchestration/`, hook `SessionStart`, ADR-002, manual de operação e aprovação em pre-flight audit. |
 | `2026-11-19T10:28:00-03:00` | Antigravity AI | Clonagem do repositório, criação do ambiente virtual `.venv` e instalação completa de todas as dependências (`pydantic`, `pyyaml`, `pytest`, `hypothesis`, `pytest-cov`, `ruff`, `mypy`). Execução de auditoria completa com 48/48 testes PASS e 92% de cobertura. |

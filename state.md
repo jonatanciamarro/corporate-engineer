@@ -11,7 +11,7 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0008-blast-radius-impact` | 🟢 Branch de feature com implementação do IMP-0008 (Code GraphRAG & Blast Radius Impact Analysis) |
+| **Branch Ativa** | `main` | 🟢 Branch principal sincronizada (88/88 testes PASS, 90% cobertura, IMP-0001 a IMP-0008 implementados) |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual configurado e dependências instaladas (`-e .[dev]`, `ruff`, `mypy`, `pytest-cov`) |
 | **Testes (Pytest + Hypothesis)** | 🟢 **88/88 PASS** | Cobertura global de 90% (`pytest-cov`) em 6.13s |
 | **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (51 arquivos formatados e verificados) |

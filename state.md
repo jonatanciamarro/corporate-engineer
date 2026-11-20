@@ -93,6 +93,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-19T21:42:00-03:00` | Antigravity AI | Correção de CI: adição explícita de `hypothesis` e `pytest-cov` nos dependency-groups e optional-dependencies de teste/dev do `pyproject.toml`, e atualização do workflow `.github/workflows/ci.yml` para instalar `.[dev,test]`. Suíte de 62 testes validada localmente. |
 | `2026-11-19T20:30:00-03:00` | Antigravity AI | Conclusão das melhorias IMP-0001 (detecção automática de venv no stack_detector), IMP-0002 (padrão Circuit Breaker CLOSED/OPEN/HALF_OPEN para clientes MCP) e IMP-0004 (cache SHA-256 de indexação AST). Criação da suíte de testes com total de 62/62 testes PASS, 92% de cobertura e auditoria pre-flight 100% limpa. |
 | `2026-11-19T19:21:00-03:00` | Antigravity AI | Clonagem do repositório, criação do ambiente virtual Python 3.11 (`.venv`), instalação de todas as dependências (`pydantic`, `pyyaml`, `pytest`, `hypothesis`, `pytest-cov`, `ruff`, `mypy`), registro da CLI `corporate-engineer` e validação completa (48/48 testes passando, 0 erros Ruff/Mypy, 0 segredos expostos). |
 | `2026-11-19T17:05:00-03:00` | Corp-Pipeline Master Orchestrator | Push dos commits da arquitetura Corp-Pipeline para origin/main (`671b4ce`) e sincronização do status do repositório remoto. |

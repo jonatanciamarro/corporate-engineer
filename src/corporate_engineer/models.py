@@ -63,3 +63,22 @@ class NodeExecutionResult(BaseModel):
     result: Any = None
     error: str | None = None
     duration_seconds: float = 0.0
+
+
+class Mutant(BaseModel):
+    id: str
+    file_path: str
+    line_number: int
+    original_op: str
+    mutated_op: str
+    status: str = "SURVIVED"  # KILLED | SURVIVED | ERROR
+    killed_by_test: str | None = None
+
+
+class MutationReport(BaseModel):
+    total_mutants: int
+    killed: int
+    survived: int
+    errors: int
+    mutation_score: float
+    mutants: list[Mutant] = Field(default_factory=list)

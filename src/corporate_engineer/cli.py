@@ -13,6 +13,7 @@ from corporate_engineer.mcp.client import LocalMCPToolAdapter, RemoteMCPSSEClien
 from corporate_engineer.models import MCPToolCall, TaskInput
 from corporate_engineer.orchestrator.graph import AutonomousEngineeringGraph
 from corporate_engineer.quality.gate import QualityGateRunner
+from corporate_engineer.quality.mutation import ASTMutationEngine
 from corporate_engineer.rag.ast_indexer import ASTCodebaseIndexer
 
 DAG_PHASES = ["PLANNING", "TDD", "IMPLEMENT", "AUDIT", "DELIVER"]
@@ -55,6 +56,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     audit_parser.add_argument(
         "--strict", action="store_true", help="Run strict checks including test suite verification"
+    )
+    audit_parser.add_argument(
+        "--mutation",
+        action="store_true",
+        help="Run AST mutation testing to evaluate test suite quality",
+    )
+    audit_parser.add_argument("--target-file", default=None, help="Specific source file to mutate")
+    audit_parser.add_argument(
+        "--max-mutants", type=int, default=10, help="Maximum number of mutants to test"
     )
 
     # Command: dag
@@ -179,6 +189,25 @@ def handle_audit(args: argparse.Namespace) -> int:
         test_res = runner.run_tests()
         strict_passed = bool(test_res.get("passed", False))
 
+    mutation_report = None
+    if getattr(args, "mutation", False):
+        engine = ASTMutationEngine(workspace_root=target)
+        target_f: Path | None = None
+        if getattr(args, "target_file", None):
+            target_f = Path(args.target_file).resolve()
+        else:
+            for p in sorted(target.rglob("*.py")):
+                if not any(
+                    part.startswith(".") or part in ("venv", ".venv", "__pycache__", "tests")
+                    for part in p.parts
+                ):
+                    target_f = p
+                    break
+        if target_f and target_f.exists():
+            mutation_report = engine.run_mutation_testing(
+                target_file=target_f, max_mutants=getattr(args, "max_mutants", 10)
+            )
+
     overall_passed = bool(secret_res["passed"] and strict_passed)
 
     if args.format == "json":
@@ -188,6 +217,7 @@ def handle_audit(args: argparse.Namespace) -> int:
             "findings": secret_res.get("findings", []),
             "strict_mode": args.strict,
             "test_verification": test_res,
+            "mutation_report": mutation_report.model_dump() if mutation_report else None,
         }
         print(json.dumps(payload, indent=2))
     else:
@@ -203,6 +233,16 @@ def handle_audit(args: argparse.Namespace) -> int:
                 print("✅ Strict Test Verification PASS: Todos os testes passaram.")
             else:
                 print("❌ Strict Test Verification FAIL.")
+
+        if mutation_report:
+            print("🧬 AST Mutation Testing:")
+            print(f"  - Total de Mutantes: {mutation_report.total_mutants}")
+            print(f"  - Mutantes Mortos (Killed): {mutation_report.killed}")
+            print(f"  - Mutantes Sobreviventes: {mutation_report.survived}")
+            print(f"  - Mutation Score: {mutation_report.mutation_score}%")
+            for m in mutation_report.mutants:
+                status_icon = "💀 KILLED" if m.status == "KILLED" else "⚠️ SURVIVED"
+                print(f"    [{status_icon}] L{m.line_number}: {m.original_op} -> {m.mutated_op}")
 
     return 0 if overall_passed else 1
 

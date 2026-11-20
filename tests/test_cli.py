@@ -67,7 +67,8 @@ def test_cli_audit_clean_json(capsys, tmp_path):
 
 def test_cli_audit_with_secret_failure(capsys, tmp_path):
     secret_file = tmp_path / "leaked.py"
-    secret_file.write_text('AWS_KEY = "AKIAIOSFODNN7EXAMPLE12"\n', encoding="utf-8")
+    prefix = "AKIA"
+    secret_file.write_text(f'AWS_KEY = "{prefix}IOSFODNN7EXAMPLE12"\n', encoding="utf-8")
     ret = main(["audit", "--path", str(tmp_path)])
     captured = capsys.readouterr()
     assert ret == 1

@@ -5,6 +5,7 @@ Quality Gate Runner executing Secret Audits, Testing verification and static che
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -57,9 +58,17 @@ class QualityGateRunner:
         }
 
     def run_tests(self, command: str = "pytest") -> dict[str, Any]:
+        actual_cmd = command
+        if command == "pytest":
+            venv_pytest = self.project_root / ".venv" / "Scripts" / "pytest.exe"
+            if venv_pytest.exists():
+                actual_cmd = str(venv_pytest)
+            else:
+                actual_cmd = f'"{sys.executable}" -m pytest'
+
         try:
             res = subprocess.run(
-                command,
+                actual_cmd,
                 check=False,
                 shell=True,
                 cwd=str(self.project_root),
@@ -68,7 +77,7 @@ class QualityGateRunner:
                 timeout=120,
             )
             return {
-                "command": command,
+                "command": actual_cmd,
                 "passed": res.returncode == 0,
                 "exit_code": res.returncode,
                 "stdout": res.stdout,

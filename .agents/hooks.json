@@ -7,6 +7,13 @@
         "command": "python orchestration/hooks/session_start.py",
         "timeout": 15
       }
+    ],
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "python orchestration/hooks/pr_link_generator.py",
+        "timeout": 15
+      }
     ]
   }
 }

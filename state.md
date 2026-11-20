@@ -11,11 +11,11 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0006-mutation-testing-engine` | 🟢 Branch de feature com implementação do IMP-0006 (Motor de Mutation Testing AST) |
+| **Branch Ativa** | `feat/IMP-0007-edd-semantic-scorecard` | 🟢 Branch de feature com implementação do IMP-0007 (Evaluation-Driven Development & Scorecard Semântico) |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual configurado e dependências instaladas (`-e .[dev]`, `ruff`, `mypy`, `pytest-cov`) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **79/79 PASS** | Cobertura global de 91% (`pytest-cov`) em 4.68s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (43 arquivos formatados e verificados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 26 arquivos validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **84/84 PASS** | Cobertura global de 89% (`pytest-cov`) em 5.02s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (47 arquivos formatados e verificados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 29 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -92,8 +92,13 @@
    - Implementado `src/corporate_engineer/git_utils.py` com resolução dinâmica de branch, ticket ID (`IMP-xxxx`), título e corpo completo codificados na URL (`quick_pull=1&title=...&body=...`).
    - Integrado novo subcomando `corporate-engineer pr-link` na CLI e hook automático em `.agents/hooks.json` (`pr_link_generator.py` e `session_start.py`).
    - Suíte de testes em `tests/test_pr_link.py` (5 testes novos) e regra `.agents/rules/common-git-workflow.md` atualizada.
-5. `[ ]` **Apreciação das Propostas Futuras do Backlog**:
-   - Analisar `IMP-0007` (Evaluation-Driven Development Scorecard Semântico) e `IMP-0008` (Blast Radius / Code GraphRAG).
+5. `[x]` **Implementação da Proposta IMP-0007 (Evaluation-Driven Development - EDD & Scorecard Semântico)**:
+   - Implementado motor de avaliação em `src/corporate_engineer/eval/scorecard.py` cobrindo 5 eixos corporativos de qualidade.
+   - Adicionado novo subcomando `corporate-engineer eval [path]` com barras de progresso visuais no formato texto e saída estruturada JSON.
+   - Definidos modelos Pydantic v2 `EvaluationAxisScore` e `SemanticEvaluationReport` em `src/corporate_engineer/models.py`.
+   - Formalizado [ADR-005](file:///c:/Users/WDAGUtilityAccount/Downloads/Nova%20pasta/corporate-engineer/docs/adr/ADR-005-evaluation-driven-development-scorecard.md), documentado [PR-CORP-005.md](file:///c:/Users/WDAGUtilityAccount/Downloads/Nova%20pasta/corporate-engineer/docs/pull_requests/PR-CORP-005.md) e suíte de testes expandida para 84/84 PASS.
+6. `[ ]` **Apreciação das Propostas Futuras do Backlog**:
+   - Analisar `IMP-0008` (Code GraphRAG & Análise de Blast Radius / Impacto de Mudanças).
 
 ---
 
@@ -101,6 +106,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-20T01:52:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0007: motor de avaliação semântica EDD (`src/corporate_engineer/eval/scorecard.py`), comando `corporate-engineer eval`, formalização do ADR-005, PR-CORP-005 e expansão da suíte para 84/84 testes PASS com 89% de cobertura. |
 | `2026-11-20T01:32:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão da automação padrão de Link de PR Pré-Preenchido: adição de `src/corporate_engineer/git_utils.py`, subcomando `corporate-engineer pr-link`, hook `pr_link_generator.py` registrado em `.agents/hooks.json`, 5 novos testes unitários (79/79 PASS) e atualização de `common-git-workflow.md`. |
 | `2026-11-20T00:59:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0006: motor de testes de mutação via AST (`src/corporate_engineer/quality/mutation.py`), flag `--mutation` e `--target-file` no subcomando `audit`, formalização do ADR-004, inclusão de IMP-0007 e IMP-0008 no backlog e total de 74/74 testes PASS com 91% de cobertura. |
 | `2026-11-19T23:18:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0005: adição de `--mermaid` e `--output` no subcomando `dag`, serialização de FSM (`fsm_to_mermaid`) e timeline de checkpoints (`checkpoints_to_mermaid`), formalização do ADR-003 e total de 69/69 testes PASS com 92% de cobertura. |

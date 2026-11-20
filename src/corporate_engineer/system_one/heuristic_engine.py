@@ -97,13 +97,79 @@ class HeuristicDecisionEngine(SystemOneEngine):
                 "remover",
                 "simplificar",
             ],
+            "feat": [
+                "feature",
+                "funcionalidade",
+                "novo",
+                "nova",
+                "adiciona",
+                "implementa",
+                "recurso",
+                "capacidade",
+                "endpoint",
+            ],
+            "fix": [
+                "bug",
+                "falha",
+                "defeito",
+                "erro",
+                "corrige",
+                "resolve",
+                "conserta",
+                "patch",
+                "hotfix",
+            ],
+            "refactor": [
+                "refatora",
+                "refatoração",
+                "limpeza",
+                "simplifica",
+                "extrai",
+                "renomeia",
+                "organiza",
+            ],
+            "test": [
+                "teste",
+                "testes",
+                "pytest",
+                "unitário",
+                "assert",
+                "coverage",
+                "mock",
+            ],
+            "docs": [
+                "doc",
+                "docs",
+                "documentação",
+                "readme",
+                "adr",
+                "manual",
+                "guia",
+                "comentário",
+            ],
+            "chore": [
+                "deps",
+                "dependência",
+                "build",
+                "ci",
+                "config",
+                "ruff",
+                "lint",
+                "tooling",
+                "pyproject",
+            ],
         }
 
     def is_available(self) -> bool:
         return True
 
     def _tokenize(self, text: str) -> set[str]:
-        return set(re.findall(r"\b\w+\b", text.lower()))
+        words = set(re.findall(r"\b\w+\b", text.lower()))
+        subwords: set[str] = set()
+        for w in words:
+            if "_" in w:
+                subwords.update(part for part in w.split("_") if part)
+        return words | subwords
 
     def decide_choice(
         self,

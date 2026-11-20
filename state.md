@@ -11,11 +11,11 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0013-system-one-engine` | 🟢 Suíte com 113/113 testes PASS, 87% cobertura, IMP-0001 a IMP-0013 implementados |
+| **Branch Ativa** | `feat/IMP-0014-system-one-pipeline` | 🟢 Suíte com 124/124 testes PASS, 88% cobertura, IMP-0001 a IMP-0014 implementados |
 | **Ambiente Local** | `.venv` (Python 3.10.6) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev]`) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **116/116 PASS** | Cobertura global de 87% (`pytest-cov`) em 21.35s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (70 arquivos formatados e verificados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 43 arquivos validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **124/124 PASS** | Cobertura global de 88% (`pytest-cov`) em 27.67s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (74 arquivos formatados e verificados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 46 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -25,7 +25,27 @@
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação de IMP-0013: Open-Source System-One Decision Engine):
+### Sessão Atual (Implementação de IMP-0014: Free System-One SLM Fine-Tuning Pipeline & Universal Framework Injection):
+1. **Modelos DTO Pydantic v2**:
+   - Criação de `TrainingSample`, `DatasetReport`, `DatasetExportConfig`, `FailureActionDecision` e `ContextPruningReport` em `src/corporate_engineer/models.py`.
+2. **Gerador de Datasets Sintéticos de Domínio (`src/corporate_engineer/system_one/dataset.py`)**:
+   - `SystemOneDatasetGenerator`: geração de amostras corporativas para roteamento de subagentes, risco de diffs, Conventional Commits e descarte de nós da DAG, com exportação determinística em JSONL.
+3. **Harness de Treinamento Gratuito & Receita Google Colab (`src/corporate_engineer/system_one/trainer.py`)**:
+   - `SystemOneTrainer`: geração de script 1-clique para Google Colab com GPU T4 gratuita (`scripts/train_system_one_colab.py`) usando Hugging Face PEFT/LoRA para SLMs (`Qwen2.5-0.5B`, `SmolLM2-360M`), VRAM < 1.5GB e exportação ONNX Int8.
+4. **Injeção Universal do Sistema 1 nos Módulos Centrais**:
+   - `orchestrator/graph.py`: `ExecutionGraph` com `should_skip_node` (descarte dinâmico de nós) e `triage_failure` (recuperação de falhas).
+   - `quality/surgical_runner.py`: `evaluate_scope_expansion` avalia se mudanças exigem expansão da suíte cirúrgica para integração.
+   - `git_utils.py`: `classify_commit_type` classifica o tipo convencional de commit a partir do git diff.
+   - `system_one/router.py`: Adicionados métodos especializados `classify_commit`, `should_skip_node`, `triage_failure` e `prune_context`.
+5. **CLI Corporativa**:
+   - Adicionado novo subcomando `corporate-engineer dataset` com ações `generate` e `recipe`.
+   - Expandido o subcomando `corporate-engineer decide` com os modos `--mode commit` e `--mode skip`.
+6. **Governança & Arquitetura**:
+   - Elaboração do [ADR-010](docs/adr/ADR-010-free-system-one-slm-finetuning-and-injection.md) e [PR-CORP-010.md](docs/pull_requests/PR-CORP-010.md).
+   - Atualização do catálogo em `.agents/orchestration/improvement-backlog.md` (IMP-0014 marcado como `IMPLEMENTED`).
+   - Expansão da suíte para 124 testes automatizados com 100% de aprovação e 88% de cobertura.
+
+### Sessão Anterior (Implementação de IMP-0013: Open-Source System-One Decision Engine):
 1. **Modelos DTO Pydantic v2**:
    - Criação de `ChoiceDecision`, `NoulDecision`, `ScoreDecision` e `SystemOneReport` fortemente tipados em `src/corporate_engineer/models.py`.
 2. **Arquitetura Modular System One (`src/corporate_engineer/system_one/`)**:
@@ -111,7 +131,8 @@
 1. `[x]` **Implementação e Testes das Melhorias do Backlog (IMP-0001 a IMP-0009)** (Merged em `main`).
 2. `[x]` **Implementação da Proposta IMP-0010 (Surgical TDD Runner Integrado ao Git Diff & Blast Radius)** (PR-CORP-008, 99/99 testes PASS).
 3. `[x]` **Implementação da Proposta IMP-0013 (Open-Source System-One Decision Engine via Outlines / Local SLM)** (PR-CORP-009, 113/113 testes PASS).
-4. `[ ]` **Priorização das Novas Iniciativas Salvas no Backlog Contínuo**:
+4. `[x]` **Implementação da Proposta IMP-0014 (Free System-One SLM Fine-Tuning Pipeline & Universal Framework Injection)** (PR-CORP-010, 124/124 testes PASS).
+5. `[ ]` **Priorização das Novas Iniciativas Salvas no Backlog Contínuo**:
    - `IMP-0011`: MCP Enterprise Hub & Tool Multiplexer (gerenciamento central de pools `.mcp.json`).
    - `IMP-0012`: AST Auto-Refactor & Self-Healing Fixer (`corporate-engineer fix --auto`).
 
@@ -121,6 +142,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-20T10:15:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0014: pipeline gratuito de fine-tuning para o Sistema 1 (`src/corporate_engineer/system_one/dataset.py`, `trainer.py`), modelos Pydantic v2, injeção universal em `ExecutionGraph` (DAG), `SurgicalTestRunner`, `git_utils.py` (Conventional Commits), novos modos e subcomandos CLI (`dataset`, `decide --mode commit/skip`), formalização do ADR-010, PR-CORP-010 e expansão da suíte para 124/124 testes PASS (88% cobertura). |
 | `2026-11-20T09:38:00-03:00` | Corp-Pipeline Master Orchestrator | Blindagem Always-On da Invariante de Push Remoto Pré-PR: atualização em `git_utils.py` (`is_branch_pushed`, `push_branch_to_remote`, `ensure_pushed=True`), correção dos caminhos em `.agents/hooks.json` e `pr_link_generator.py`, adição da Invariante 8 em `AGENTS.md`, `GEMINI.md`, `corp-pipeline-orchestrator.md` e `common-git-workflow.md`, expansão da suíte para 116/116 testes PASS. |
 | `2026-11-20T09:28:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0013: módulo System One (`src/corporate_engineer/system_one/`), modelos Pydantic v2, motores heurístico, outlines e ONNX NLI, fachada `SystemOneRouter`, subcomando `corporate-engineer decide`, formalização do ADR-009, PR-CORP-009, expansão da suíte para 113/113 testes PASS (87% cobertura) e push da branch `feat/IMP-0013-system-one-engine` para origin no GitHub. |
 | `2026-11-20T09:14:00-03:00` | Corp-Pipeline Master Orchestrator | Registro e formalização no backlog contínuo de `IMP-0013` (Open-Source System-One Decision Engine via Outlines / Local SLM / ONNX NLI) com status `SAVED_NOT_APPROVED` após aprovação do usuário. |

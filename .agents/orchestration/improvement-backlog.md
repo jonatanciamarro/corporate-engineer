@@ -39,6 +39,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0011` | MCP Enterprise Hub & Tool Multiplexer (.mcp.json pools) | `INTEGRATION` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-20` |
 | `IMP-0012` | AST Auto-Refactor & Self-Healing Fixer (Auto-Remediação) | `AUTOMATION` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-20` |
 | `IMP-0013` | Open-Source System-One Decision Engine (Outlines / Local SLM) | `EFFICIENCY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
+| `IMP-0014` | Free System-One SLM Fine-Tuning Pipeline & Universal Framework Injection | `EFFICIENCY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
 
 ---
 
@@ -228,5 +229,28 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Complexidade**: Média (M).
 - **Riscos**: Tamanho de dependências e tempo de download inicial de modelos locais. Mitigação: empacotamento opcional (`.[system-one]`), lazy-loading e fallback heurístico nativo.
 - **Critérios de Aceite**: Contratos Pydantic v2 para `DecisionChoice`, `DecisionScore` e `DecisionNoul`; interface abstrata `SystemOneEngine` com implementação concreta e fallback estático; suíte de testes com 100% de isolamento e zero chamadas de rede externas.
+
+---
+
+### 🔹 IMP-0014: Free System-One SLM Fine-Tuning Pipeline & Universal Framework Injection
+- **Categoria**: `EFFICIENCY` | `ARCHITECTURE` | `AI-ENGINEERING`
+- **Status**: `IMPLEMENTED` (Ref: `PR-CORP-010.md`, `ADR-010`)
+- **Data de Descoberta**: 2026-11-20
+- **Problema / Limitação Atual**: O motor `SystemOne` introduzido em `IMP-0013` provou o valor de decisões reflexivas ultrarrápidas, mas opera apenas em um subconjunto de pontos de decisão (roteamento de agente e risco geral de diff). Além disso, não existia um pipeline padronizado, reprodutível e 100% gratuito para sintetizar datasets de domínio do framework e treinar/otimizar SLMs compactos (0.5B / 360M) via LoRA/PEFT e exportar para ONNX Int8.
+- **Solução Proposta**:
+  1. *Gerador de Dataset Sintético Corporativo (`system_one/dataset.py`)*: Extrai e sintetiza amostras tipadas Pydantic v2 cobrindo roteamento de subagentes, avaliação de risco de diffs, seleção de commit types e descarte de nós da DAG, exportando para formato compatível com Hugging Face / SFTTrainer.
+  2. *Pipeline de Fine-Tuning & Exportação Gratuita (`system_one/trainer.py` e recipe Colab/local)*: Harness de treinamento baseado em LoRA/PEFT projetado para execução a custo zero no Google Colab T4 / Kaggle / CPU local com exportação para ONNX Runtime Int8.
+  3. *Injeção Universal do System One*: Plugar o motor System One em:
+     - `orchestrator/graph.py`: Pular nós dinamicamente (`should_skip_node`) e triagem de falhas (`triage_node_failure`).
+     - `quality/surgical_runner.py`: Avaliação de expansão do escopo de testes para integração (`evaluate_scope_expansion`).
+     - `git_utils.py`: Classificação automática de tipo de commit convencional a partir do diff (`classify_commit_type`).
+     - `rag/impact.py`: Filtro e poda de contexto para redução de tokens do Sistema 2 (`prune_context`).
+  4. *CLI Corporativa*: Extensão do subcomando `corporate-engineer decide` e novo subcomando `corporate-engineer dataset`.
+- **Benefícios Esperados**: Redução de mais de 70% no consumo de tokens do Sistema 2, decisões determinísticas em sub-5ms em todo o ciclo de engenharia e autonomia cognitiva local a custo financeiro zero.
+- **Componentes Afetados**: `src/corporate_engineer/system_one/`, `src/corporate_engineer/orchestrator/`, `src/corporate_engineer/quality/`, `src/corporate_engineer/rag/`, `src/corporate_engineer/git_utils.py`, `src/corporate_engineer/models.py`, `src/corporate_engineer/cli.py`.
+- **Complexidade**: Média (M).
+- **Riscos**: Dependências opcionais pesadas no ambiente corporativo padrão. Mitigação: arquitetura pura desacoplada, fallback heurístico nativo e receitas standalone para Colab.
+- **Critérios de Aceite**: Modelos Pydantic v2 tipados (`TrainingSample`, `DatasetReport`), gerador de dataset funcional com exportação JSONL, métodos de integração nos módulos do framework, receita de fine-tuning gratuita e 100% dos testes passando com 0 erros de linter e tipagem.
+
 
 

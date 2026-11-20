@@ -237,7 +237,7 @@ def build_parser() -> argparse.ArgumentParser:
         "pytest_extra_args", nargs="*", help="Optional extra arguments passed directly to pytest"
     )
 
-    # Command: decide (IMP-0013)
+    # Command: decide (IMP-0013 / IMP-0014)
     decide_parser = subparsers.add_parser(
         "decide",
         help="Fast System-One probabilistic decisions, agent routing, and triage",
@@ -250,9 +250,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     decide_parser.add_argument(
         "--mode",
-        choices=["route", "risk", "triage"],
+        choices=["route", "risk", "triage", "commit", "skip"],
         default="route",
-        help="Decision mode: route agent, assess risk, or full triage (default: route)",
+        help="Decision mode: route agent, assess risk, full triage, commit type, or skip node (default: route)",
     )
     decide_parser.add_argument(
         "--diff",
@@ -272,6 +272,42 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output format (default: text)",
     )
     decide_parser.add_argument("--output", default=None, help="Optional file path to write output")
+
+    # Command: dataset (IMP-0014)
+    dataset_parser = subparsers.add_parser(
+        "dataset",
+        help="Synthetic dataset generation and Colab recipe for System-One SLM fine-tuning (IMP-0014)",
+    )
+    dataset_parser.add_argument(
+        "action",
+        choices=["generate", "recipe"],
+        default="generate",
+        nargs="?",
+        help="Action: generate synthetic dataset or generate Colab training recipe (default: generate)",
+    )
+    dataset_parser.add_argument(
+        "--output",
+        "-o",
+        default=None,
+        help="Target output file path (default: data/system_one_dataset.jsonl or scripts/train_colab_recipe.py)",
+    )
+    dataset_parser.add_argument(
+        "--samples",
+        type=int,
+        default=10,
+        help="Samples per category for synthetic generation (default: 10)",
+    )
+    dataset_parser.add_argument(
+        "--model",
+        default="Qwen/Qwen2.5-0.5B-Instruct",
+        help="Target SLM base model for Colab training recipe (default: Qwen/Qwen2.5-0.5B-Instruct)",
+    )
+    dataset_parser.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format (default: text)",
+    )
 
     return parser
 
@@ -885,6 +921,39 @@ def handle_decide(args: argparse.Namespace) -> int:
                 f"{'=' * 60}\n"
             )
 
+    elif args.mode == "commit":
+        decision = router.classify_commit(diff_content or prompt)
+        if args.format == "json":
+            output_str = decision.model_dump_json(indent=2)
+        else:
+            output_str = (
+                f"\n{'=' * 60}\n"
+                f"🏷️  SYSTEM-ONE COMMIT CLASSIFICATION (IMP-0014)\n"
+                f"{'=' * 60}\n"
+                f"🎯 Commit Type   : {decision.choice}\n"
+                f"📊 Confidence    : {decision.confidence:.2%}\n"
+                f"💡 Rationale     : {decision.rationale}\n"
+                f"{'=' * 60}\n"
+            )
+
+    elif args.mode == "skip":
+        node_name = prompt or "security_scan"
+        noul = router.should_skip_node(node_name=node_name, context=diff_content or prompt)
+        if args.format == "json":
+            output_str = noul.model_dump_json(indent=2)
+        else:
+            status_label = "⏭️  SKIP (DISPENSÁVEL)" if noul.decision else "▶️  EXECUTE (MANDATÓRIO)"
+            output_str = (
+                f"\n{'=' * 60}\n"
+                f"⚡ SYSTEM-ONE DAG NODE SKIP EVALUATION (IMP-0014)\n"
+                f"{'=' * 60}\n"
+                f"📌 Target Node   : {node_name}\n"
+                f"⚖️  Should Skip   : {noul.decision} ({status_label})\n"
+                f"📊 Probability   : {noul.probability:.2%}\n"
+                f"💡 Rationale     : {noul.rationale}\n"
+                f"{'=' * 60}\n"
+            )
+
     else:  # triage
         report = router.triage_quality_gate(prompt=prompt, diff=diff_content)
         if args.format == "json":
@@ -892,7 +961,7 @@ def handle_decide(args: argparse.Namespace) -> int:
         else:
             output_str = (
                 f"\n{'=' * 60}\n"
-                f"🔬 SYSTEM-ONE QUALITY GATE TRIAGE (IMP-0013)\n"
+                f"🔬 SYSTEM-ONE QUALITY GATE TRIAGE (IMP-0013 / IMP-0014)\n"
                 f"{'=' * 60}\n"
                 f"🎯 Suggested Agent       : {report.suggested_agent or 'N/A'}\n"
                 f"🚨 Risk Level             : {report.risk_level}\n"
@@ -909,6 +978,54 @@ def handle_decide(args: argparse.Namespace) -> int:
         print(f"✅ Relatório salvo em: {out_p}")
     else:
         print(output_str)
+
+    return 0
+
+
+def handle_dataset(args: argparse.Namespace) -> int:
+    from corporate_engineer.system_one.dataset import SystemOneDatasetGenerator
+    from corporate_engineer.system_one.trainer import SystemOneTrainer
+
+    if args.action == "recipe":
+        trainer = SystemOneTrainer(model_id=args.model)
+        out_path = Path(args.output or "scripts/train_system_one_colab.py").resolve()
+        trainer.save_recipe(out_path)
+        print(
+            f"\n{'=' * 60}\n"
+            f"🚀 SYSTEM-ONE COLAB 1-CLICK RECIPE GERADA (IMP-0014)\n"
+            f"{'=' * 60}\n"
+            f"📄 Arquivo Salvo : {out_path}\n"
+            f"🤖 Modelo Alvo   : {args.model}\n"
+            f"💡 Instruções    : Abra no Google Colab (GPU T4 grátis), faça upload do dataset JSONL e execute!\n"
+            f"{'=' * 60}\n"
+        )
+        return 0
+
+    generator = SystemOneDatasetGenerator()
+    out_file = Path(args.output or "data/system_one_dataset.jsonl").resolve()
+    report = generator.export_dataset(
+        output_path=out_file,
+        agent_samples=args.samples,
+        risk_samples=args.samples,
+        commit_samples=args.samples,
+        skip_samples=args.samples,
+    )
+
+    if args.format == "json":
+        print(report.model_dump_json(indent=2))
+    else:
+        print(
+            f"\n{'=' * 60}\n"
+            f"📦 SYSTEM-ONE SYNTHETIC DATASET GERADO (IMP-0014)\n"
+            f"{'=' * 60}\n"
+            f"📊 Total de Amostras : {report.total_samples}\n"
+            f"📁 Arquivo de Saída  : {report.export_path}\n"
+            f"🔒 Checksum SHA-256  : {report.hash_sha256[:16]}...\n"
+            f"📈 Distribuição      :\n"
+        )
+        for cat, count in report.task_distribution.items():
+            print(f"   • {cat:<22}: {count} amostras")
+        print(f"{'=' * 60}\n")
 
     return 0
 
@@ -939,6 +1056,8 @@ def main(argv: list[str] | None = None) -> int:
         return handle_test_surgical(args)
     elif args.command == "decide":
         return handle_decide(args)
+    elif args.command == "dataset":
+        return handle_dataset(args)
     else:
         parser.print_help()
         return 0

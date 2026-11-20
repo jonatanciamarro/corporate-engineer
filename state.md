@@ -11,10 +11,10 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/corp-pipeline-enhancements-imp001-002-004` | 🟢 Branch de feature com melhorias IMP-0001, IMP-0002 e IMP-0004 |
+| **Branch Ativa** | `feat/IMP-0005-dag-mermaid-export` | 🟢 Branch de feature com implementação do IMP-0005 (Exportação Mermaid CLI dag) |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual configurado e dependências instaladas (`-e .[dev]`, `ruff`, `mypy`, `pytest-cov`) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **62/62 PASS** | Cobertura global de 92% (`pytest-cov`) em 9.96s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (34 arquivos formatados e verificados) |
+| **Testes (Pytest + Hypothesis)** | 🟢 **69/69 PASS** | Cobertura global de 92% (`pytest-cov`) em 2.78s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (35 arquivos formatados e verificados) |
 | **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 22 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
@@ -84,8 +84,10 @@
 
 1. `[x]` **Implementação e Testes das Melhorias do Backlog (IMP-0001, IMP-0002, IMP-0004)**:
    - Concluído com sucesso na branch `feat/corp-pipeline-enhancements-imp001-002-004` com 62 testes passing e 92% de cobertura.
-2. `[ ]` **Apreciação de Propostas Futuras do Backlog**:
-   - Analisar proposta `IMP-0005` (exportação de diagramas Mermaid dinâmicos a partir da CLI `dag`).
+2. `[x]` **Implementação da Proposta IMP-0005 (Exportação Mermaid Dinâmica na CLI `dag`)**:
+   - Concluído com sucesso na branch `feat/IMP-0005-dag-mermaid-export` com 69 testes passing, 92% de cobertura, ADR-003 formalizado e auditoria pre-flight 100% limpa.
+3. `[ ]` **Abertura de Pull Request e Integração Contínua**:
+   - Submissão da branch `feat/IMP-0005-dag-mermaid-export` para origin/main e acompanhamento da pipeline de CI.
 
 ---
 
@@ -93,6 +95,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-19T23:18:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0005: adição de `--mermaid` e `--output` no subcomando `dag`, serialização de FSM (`fsm_to_mermaid`) e timeline de checkpoints (`checkpoints_to_mermaid`), formalização do ADR-003 e total de 69/69 testes PASS com 92% de cobertura. |
 | `2026-11-19T21:42:00-03:00` | Antigravity AI | Correção de CI: adição explícita de `hypothesis` e `pytest-cov` nos dependency-groups e optional-dependencies de teste/dev do `pyproject.toml`, e atualização do workflow `.github/workflows/ci.yml` para instalar `.[dev,test]`. Suíte de 62 testes validada localmente. |
 | `2026-11-19T20:30:00-03:00` | Antigravity AI | Conclusão das melhorias IMP-0001 (detecção automática de venv no stack_detector), IMP-0002 (padrão Circuit Breaker CLOSED/OPEN/HALF_OPEN para clientes MCP) e IMP-0004 (cache SHA-256 de indexação AST). Criação da suíte de testes com total de 62/62 testes PASS, 92% de cobertura e auditoria pre-flight 100% limpa. |
 | `2026-11-19T19:21:00-03:00` | Antigravity AI | Clonagem do repositório, criação do ambiente virtual Python 3.11 (`.venv`), instalação de todas as dependências (`pydantic`, `pyyaml`, `pytest`, `hypothesis`, `pytest-cov`, `ruff`, `mypy`), registro da CLI `corporate-engineer` e validação completa (48/48 testes passando, 0 erros Ruff/Mypy, 0 segredos expostos). |

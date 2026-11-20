@@ -214,3 +214,43 @@ def test_cli_dag_checkpoints(capsys, tmp_path: Path):
     data = json.loads(out)
     assert "checkpoints" in data
     assert any(c["ticket_id"] == "CORP-CLI-CP" for c in data["checkpoints"])
+
+
+def test_cli_dag_mermaid(capsys):
+    ret = main(["dag", "--mermaid"])
+    captured = capsys.readouterr()
+    assert ret == 0
+    assert "flowchart TD" in captured.out
+    assert "PLANNING" in captured.out
+    assert "DELIVER" in captured.out
+
+
+def test_cli_dag_mermaid_output_file(capsys, tmp_path):
+    out_file = tmp_path / "diagram.mmd"
+    ret = main(["dag", "--mermaid", "--output", str(out_file)])
+    captured = capsys.readouterr()
+    assert ret == 0
+    assert out_file.exists()
+    content = out_file.read_text(encoding="utf-8")
+    assert "flowchart TD" in content
+    assert "Salvo com sucesso" in captured.out or "salvo com sucesso" in captured.out.lower()
+
+
+def test_cli_dag_checkpoints_mermaid(capsys, tmp_path):
+    from corporate_engineer.models import TaskInput
+    from corporate_engineer.orchestrator.graph import AutonomousEngineeringGraph
+
+    task = TaskInput(
+        ticket_id="CORP-CLI-MMD",
+        description="CLI Checkpoints Mermaid test",
+        workspace_path=str(tmp_path),
+    )
+    graph = AutonomousEngineeringGraph(task=task)
+    graph.step_plan("Plan mermaid")
+    graph.save_checkpoint()
+
+    ret = main(["dag", "--checkpoints", "--mermaid", "--workspace", str(tmp_path)])
+    captured = capsys.readouterr()
+    assert ret == 0
+    assert "flowchart LR" in captured.out
+    assert "CORP-CLI-MMD" in captured.out

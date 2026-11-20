@@ -66,11 +66,13 @@ class TaskInput(BaseModel):
     max_iterations: int = 20
     model_name: str = "gpt-4o"
 
+
 class CodeDiff(BaseModel):
     file_path: str
     original_content: str | None = None
     new_content: str
     explanation: str
+
 
 class TestResult(BaseModel):
     command: str
@@ -79,6 +81,7 @@ class TestResult(BaseModel):
     stderr: str
     passed: bool
     failures_detected: list[str] = Field(default_factory=list)
+
 
 class AgentState(BaseModel):
     task: TaskInput
@@ -92,15 +95,18 @@ class AgentState(BaseModel):
     needs_human_approval: bool = False
     error: str | None = None
 
+
 class MCPToolCall(BaseModel):
     server_name: str
     tool_name: str
     arguments: dict[str, Any] = Field(default_factory=dict)
 
+
 class MCPToolResult(BaseModel):
     tool_name: str
     is_error: bool
     content: str
+
 
 class NodeExecutionResult(BaseModel):
     node_name: str

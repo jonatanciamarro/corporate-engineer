@@ -11,11 +11,11 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0010-surgical-tdd-runner` | 🟢 Suíte com 99/99 testes PASS, 88% cobertura, IMP-0001 a IMP-0010 implementados |
-| **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual configurado e dependências instaladas (`-e .[dev]`, `ruff`, `mypy`, `pytest-cov`) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **99/99 PASS** | Cobertura global de 88% (`pytest-cov`) em 24.51s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (59 arquivos formatados e verificados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 36 arquivos validados estritamente no root |
+| **Branch Ativa** | `feat/IMP-0013-system-one-engine` | 🟢 Suíte com 113/113 testes PASS, 87% cobertura, IMP-0001 a IMP-0013 implementados |
+| **Ambiente Local** | `.venv` (Python 3.10.6) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev]`) |
+| **Testes (Pytest + Hypothesis)** | 🟢 **113/113 PASS** | Cobertura global de 87% (`pytest-cov`) em 11.81s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (68 arquivos formatados e verificados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 43 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -25,7 +25,23 @@
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação de IMP-0010: Surgical TDD Runner):
+### Sessão Atual (Implementação de IMP-0013: Open-Source System-One Decision Engine):
+1. **Modelos DTO Pydantic v2**:
+   - Criação de `ChoiceDecision`, `NoulDecision`, `ScoreDecision` e `SystemOneReport` fortemente tipados em `src/corporate_engineer/models.py`.
+2. **Arquitetura Modular System One (`src/corporate_engineer/system_one/`)**:
+   - `SystemOneEngine` (contrato abstrato).
+   - `HeuristicDecisionEngine`: motor ultrarrápido (<1ms) com calibração probabilística via softmax e sigmoide.
+   - `OutlinesDecisionEngine`: decodificação restrita por autômatos finitos (FSM) via biblioteca `outlines` com SLMs locais, eliminando alucinações estruturais.
+   - `ONNXNLIDecisionEngine`: inferência de linguagem natural (NLI) via ONNX Runtime para cálculo contínuo de acarretamento (*entailment*).
+   - `SystemOneRouter`: fachada unificada para roteamento dos 8 subagentes canônicos, análise de risco de diffs e triagem de quality gate.
+3. **CLI Corporativa**:
+   - Adicionado subcomando de primeira classe `corporate-engineer decide` com suporte a `--mode [route|risk|triage]`, `--engine [auto|heuristic|outlines|nli]`, `--format [text|json]` e `--output`.
+4. **Governança & Arquitetura**:
+   - Elaboração do [ADR-009](docs/adr/ADR-009-open-source-system-one-decisions.md) e [PR-CORP-009.md](docs/pull_requests/PR-CORP-009.md).
+   - Atualização do catálogo em `.agents/orchestration/improvement-backlog.md` (IMP-0013 marcado como `IMPLEMENTED`).
+   - Expansão da suíte para 113 testes automatizados com 100% de aprovação e 87% de cobertura.
+
+### Sessão Anterior (Implementação de IMP-0010: Surgical TDD Runner):
 1. **Modelos DTO Pydantic v2**:
    - Criação de `SurgicalTestReport` fortemente tipado em `src/corporate_engineer/models.py`.
 2. **Motor Surgical TDD Runner**:
@@ -94,7 +110,8 @@
 
 1. `[x]` **Implementação e Testes das Melhorias do Backlog (IMP-0001 a IMP-0009)** (Merged em `main`).
 2. `[x]` **Implementação da Proposta IMP-0010 (Surgical TDD Runner Integrado ao Git Diff & Blast Radius)** (PR-CORP-008, 99/99 testes PASS).
-3. `[ ]` **Priorização das Novas Iniciativas Salvas no Backlog Contínuo**:
+3. `[x]` **Implementação da Proposta IMP-0013 (Open-Source System-One Decision Engine via Outlines / Local SLM)** (PR-CORP-009, 113/113 testes PASS).
+4. `[ ]` **Priorização das Novas Iniciativas Salvas no Backlog Contínuo**:
    - `IMP-0011`: MCP Enterprise Hub & Tool Multiplexer (gerenciamento central de pools `.mcp.json`).
    - `IMP-0012`: AST Auto-Refactor & Self-Healing Fixer (`corporate-engineer fix --auto`).
 
@@ -104,6 +121,9 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-20T09:25:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0013: módulo System One (`src/corporate_engineer/system_one/`), modelos Pydantic v2 (`ChoiceDecision`, `NoulDecision`, `ScoreDecision`, `SystemOneReport`), motores heurístico, outlines e ONNX NLI, fachada `SystemOneRouter`, subcomando `corporate-engineer decide`, formalização do ADR-009, PR-CORP-009 e expansão da suíte para 113/113 testes PASS com 87% de cobertura. |
+| `2026-11-20T09:14:00-03:00` | Corp-Pipeline Master Orchestrator | Registro e formalização no backlog contínuo de `IMP-0013` (Open-Source System-One Decision Engine via Outlines / Local SLM / ONNX NLI) com status `SAVED_NOT_APPROVED` após aprovação do usuário. |
+| `2026-11-20T08:58:00-03:00` | Corp-Pipeline Master Orchestrator | Execução de `git pull` na branch `main` (commit `bb560cd`), correção de compatibilidade retroativa para Python 3.10 em `tracer.py` (`datetime.UTC`), validação da suíte (99/99 PASS, 0 erros Ruff e Mypy) e validação da CLI de engenharia contra o projeto `darkfactory`. |
 | `2026-11-20T03:15:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0010: motor de teste cirúrgico (`src/corporate_engineer/quality/surgical_runner.py`), modelo `SurgicalTestReport`, integração com Git diff e Blast Radius AST, subcomando `corporate-engineer test-surgical`, formalização do ADR-008, PR-CORP-008 e expansão da suíte para 99/99 testes PASS com 88% de cobertura. |
 | `2026-11-20T03:00:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0009: motor de telemetria OpenTelemetry (`src/corporate_engineer/telemetry/tracer.py`), modelos `AgentSpan` e `TraceReport`, instrumentação do DAG, flag `dag --trace`, subcomando `telemetry`, formalização do ADR-007, PR-CORP-007 e expansão da suíte para 94/94 testes PASS com 90% de cobertura. |
 | `2026-11-20T02:40:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão e merge oficial do IMP-0008 na branch `main`. Registro e estruturação das propostas de evolução IMP-0009 (OTel Tracing), IMP-0010 (Surgical TDD Runner), IMP-0011 (MCP Enterprise Hub) e IMP-0012 (AST Self-Healing Fixer) no backlog contínuo (`SAVED_NOT_APPROVED`). Pausa planejada de sessão com branch `main` 100% íntegra (88/88 testes PASS). |

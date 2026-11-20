@@ -177,3 +177,35 @@ class SurgicalTestReport(BaseModel):
     stderr: str = ""
     duration_ms: float = 0.0
     passed: bool = True
+
+
+class ChoiceDecision(BaseModel):
+    choice: str
+    confidence: float = Field(ge=0.0, le=1.0)
+    probabilities: dict[str, float] = Field(default_factory=dict)
+    rationale: str | None = None
+
+
+class NoulDecision(BaseModel):
+    decision: bool
+    probability: float = Field(ge=0.0, le=1.0)
+    rationale: str | None = None
+
+
+class ScoreDecision(BaseModel):
+    score: int | float
+    level: str | None = None
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    rationale: str | None = None
+
+
+class SystemOneReport(BaseModel):
+    task: str
+    engine_name: str = "heuristic"
+    duration_ms: float = 0.0
+    choices: dict[str, ChoiceDecision] = Field(default_factory=dict)
+    nouls: dict[str, NoulDecision] = Field(default_factory=dict)
+    scores: dict[str, ScoreDecision] = Field(default_factory=dict)
+    suggested_agent: str | None = None
+    risk_level: str = "LOW"  # LOW | MEDIUM | HIGH | CRITICAL
+    requires_human_approval: bool = False

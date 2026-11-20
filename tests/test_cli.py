@@ -255,3 +255,60 @@ def test_cli_dag_checkpoints_mermaid(capsys, tmp_path):
     assert ret == 0
     assert "flowchart LR" in captured.out
     assert "CORP-CLI-MMD" in captured.out
+
+
+def test_cli_decide_route_text(capsys):
+    ret = main(["decide", "Escrever suíte de testes TDD com pytest", "--mode", "route"])
+    captured = capsys.readouterr()
+    assert ret == 0
+    assert "tdd-guide" in captured.out
+    assert "SYSTEM-ONE AGENT ROUTING" in captured.out
+
+
+def test_cli_decide_route_json(capsys):
+    ret = main(
+        [
+            "decide",
+            "Criar arquitetura e ADR para nova feature",
+            "--mode",
+            "route",
+            "--format",
+            "json",
+        ]
+    )
+    captured = capsys.readouterr()
+    assert ret == 0
+    data = json.loads(captured.out)
+    assert data["choice"] == "architect"
+    assert "confidence" in data
+
+
+def test_cli_decide_risk(capsys):
+    ret = main(["decide", "Refatoração crítica do módulo de segurança e secrets", "--mode", "risk"])
+    captured = capsys.readouterr()
+    assert ret == 0
+    assert "SYSTEM-ONE RISK ASSESSMENT" in captured.out
+    assert "HIGH RISK" in captured.out
+
+
+def test_cli_decide_triage_output_file(capsys, tmp_path):
+    out_file = tmp_path / "triage.json"
+    ret = main(
+        [
+            "decide",
+            "Planejamento de testes e revisão de qualidade",
+            "--mode",
+            "triage",
+            "--format",
+            "json",
+            "--output",
+            str(out_file),
+        ]
+    )
+    captured = capsys.readouterr()
+    assert ret == 0
+    assert out_file.exists()
+    data = json.loads(out_file.read_text(encoding="utf-8"))
+    assert "task" in data
+    assert "risk_level" in data
+    assert "Relatório salvo" in captured.out

@@ -38,6 +38,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0010` | Surgical TDD Runner Integrado ao Git Diff & Blast Radius | `EFFICIENCY` | Baixa-Média (S-M) | `IMPLEMENTED` | `2026-11-20` |
 | `IMP-0011` | MCP Enterprise Hub & Tool Multiplexer (.mcp.json pools) | `INTEGRATION` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-20` |
 | `IMP-0012` | AST Auto-Refactor & Self-Healing Fixer (Auto-Remediação) | `AUTOMATION` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-20` |
+| `IMP-0013` | Open-Source System-One Decision Engine (Outlines / Local SLM) | `EFFICIENCY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
 
 ---
 
@@ -210,4 +211,22 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Complexidade**: Média-Alta (M-L).
 - **Riscos**: Risco de alterar semântica do código se transformações não forem estritamente conservadoras.
 - **Critérios de Aceite**: Transformações aplicadas são validadas por re-execução da suíte de testes existente.
+
+---
+
+### 🔹 IMP-0013: Open-Source System-One Decision Engine (Outlines / Local SLM)
+- **Categoria**: `EFFICIENCY` | `ARCHITECTURE` | `PRIVACY`
+- **Status**: `IMPLEMENTED` (Ref: `PR-CORP-009.md`, `ADR-009`)
+- **Data de Descoberta**: 2026-11-20
+- **Problema / Limitação Atual**: Decisões categóricas de alta frequência (como roteamento de subagentes na DAG, triagem de risco de mudanças para o Surgical Runner e validação semântica de regras como imutabilidade) atualmente ou dependem de casamento heurístico simples ou exigiriam invocar LLMs generativos pesados (System Two). Isso gera latência indesejada, alto custo de tokens, risco de parsing de JSON e dependência de APIs proprietárias fechadas (como Jev/TypeSafe AI).
+- **Solução Proposta**: Implementar um motor corporativo desacoplado de decisões rápidas (System One) baseado em tecnologias open-source:
+  1. *Constrained Logits Decoding*: via biblioteca `outlines` com SLMs locais leves (ex.: `Qwen/Qwen2.5-0.5B-Instruct` ou `SmolLM2-360M`) para saídas Pydantic v2 estritas com 0% de erro de schema.
+  2. *Calibração Probabilística por NLI*: via modelos compactos de inferência de linguagem natural (ex.: `ModernBERT` ou `DeBERTa-v3` via ONNX Runtime) para probabilidades contínuas (equivalente a `noul`/Yes-No).
+  3. *Arquitetura Modular com Graceful Fallback*: fallback automático para `HeuristicDecisionEngine` se dependências pesadas ou pesos locais não estiverem instalados.
+- **Benefícios Esperados**: Despacho de subagentes e decisões em sub-50ms no localhost, conformidade total de privacidade e dados corporativos (zero envio externo), 100% de precisão de schema e ausência de custos de API.
+- **Componentes Afetados**: `src/corporate_engineer/system_one/`, `src/corporate_engineer/orchestrator/`, `src/corporate_engineer/quality/`, `src/corporate_engineer/models.py`, `src/corporate_engineer/cli.py`.
+- **Complexidade**: Média (M).
+- **Riscos**: Tamanho de dependências e tempo de download inicial de modelos locais. Mitigação: empacotamento opcional (`.[system-one]`), lazy-loading e fallback heurístico nativo.
+- **Critérios de Aceite**: Contratos Pydantic v2 para `DecisionChoice`, `DecisionScore` e `DecisionNoul`; interface abstrata `SystemOneEngine` com implementação concreta e fallback estático; suíte de testes com 100% de isolamento e zero chamadas de rede externas.
+
 

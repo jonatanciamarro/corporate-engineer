@@ -10,13 +10,21 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from corporate_engineer.models import AgentState, CodeDiff, NodeExecutionResult, TaskInput
+from corporate_engineer.models import (
+    AgentState,
+    CodeDiff,
+    NodeExecutionResult,
+    TaskInput,
+    TraceReport,
+)
+from corporate_engineer.telemetry.tracer import AgentTracer
 
 
 class AutonomousEngineeringGraph:
     def __init__(self, task: TaskInput):
         self.task = task
         self.state = AgentState(task=task)
+        self.tracer = AgentTracer(service_name="corporate-engineer")
 
     def record_iteration(self) -> int:
         self.state.iteration_count += 1
@@ -26,40 +34,65 @@ class AutonomousEngineeringGraph:
         return self.state.iteration_count >= self.task.max_iterations
 
     def step_plan(self, plan_text: str) -> AgentState:
-        self.record_iteration()
-        self.state.plan = plan_text
-        self.state.phase = "TDD"
-        return self.state
+        with self.tracer.span("dag.node.planning", attributes={"phase": "PLANNING"}):
+            self.record_iteration()
+            self.state.plan = plan_text
+            self.state.phase = "TDD"
+            return self.state
 
     def step_tdd(self, test_file: str) -> AgentState:
-        self.record_iteration()
-        if test_file not in self.state.test_files:
-            self.state.test_files.append(test_file)
-        self.state.phase = "IMPLEMENT"
-        return self.state
+        with self.tracer.span("dag.node.tdd", attributes={"phase": "TDD", "test_file": test_file}):
+            self.record_iteration()
+            if test_file not in self.state.test_files:
+                self.state.test_files.append(test_file)
+            self.state.phase = "IMPLEMENT"
+            return self.state
 
     def step_implement(
         self, code_file: str, code: str, explanation: str = "Implementation"
     ) -> AgentState:
-        self.record_iteration()
-        diff = CodeDiff(
-            file_path=code_file,
-            new_content=code,
-            explanation=explanation,
-        )
-        self.state.code_changes.append(diff)
-        self.state.phase = "AUDIT"
-        return self.state
+        with self.tracer.span(
+            "dag.node.implement", attributes={"phase": "IMPLEMENT", "code_file": code_file}
+        ):
+            self.record_iteration()
+            diff = CodeDiff(
+                file_path=code_file,
+                new_content=code,
+                explanation=explanation,
+            )
+            self.state.code_changes.append(diff)
+            self.state.phase = "AUDIT"
+            return self.state
 
     def step_audit(self, all_passed: bool) -> AgentState:
-        self.record_iteration()
-        if all_passed:
-            self.state.phase = "DELIVER"
-            self.state.needs_human_approval = True
-        else:
-            # Loop back to implement for surgical auto-recovery
-            self.state.phase = "IMPLEMENT"
+        with self.tracer.span(
+            "dag.node.audit", attributes={"phase": "AUDIT", "passed": all_passed}
+        ):
+            self.record_iteration()
+            if all_passed:
+                self.state.phase = "DELIVER"
+                self.state.needs_human_approval = True
+            else:
+                # Loop back to implement for surgical auto-recovery
+                self.state.phase = "IMPLEMENT"
+            return self.state
+
+    def execute_step(self) -> AgentState:
+        """Advance the graph by one step based on current phase with telemetry tracking."""
+        phase = self.state.phase
+        if phase == "PLANNING":
+            return self.step_plan("Auto-generated implementation plan")
+        elif phase == "TDD":
+            return self.step_tdd("tests/test_auto.py")
+        elif phase == "IMPLEMENT":
+            return self.step_implement("src/auto.py", "# auto implementation")
+        elif phase == "AUDIT":
+            return self.step_audit(True)
         return self.state
+
+    def get_trace_report(self) -> TraceReport:
+        """Export OpenTelemetry trace report from the internal tracer."""
+        return self.tracer.export_trace()
 
     def save_checkpoint(self, checkpoint_path: Path | str | None = None) -> Path:
         """Persist current graph state to a JSON checkpoint."""
@@ -134,7 +167,8 @@ class AutonomousEngineeringGraph:
         def _runner(name: str, fn: Callable[[], Any]) -> NodeExecutionResult:
             t0 = time.perf_counter()
             try:
-                out = fn()
+                with self.tracer.span(f"dag.parallel.{name}"):
+                    out = fn()
                 t1 = time.perf_counter()
                 return NodeExecutionResult(
                     node_name=name,

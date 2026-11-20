@@ -140,3 +140,27 @@ class BlastRadiusReport(BaseModel):
     impacted_nodes: list[ImpactNode] = Field(default_factory=list)
     affected_tests: list[str] = Field(default_factory=list)
     recommended_test_command: str = "pytest"
+
+
+class AgentSpan(BaseModel):
+    trace_id: str
+    span_id: str
+    parent_span_id: str | None = None
+    name: str
+    start_time_iso: str
+    end_time_iso: str | None = None
+    duration_ms: float = 0.0
+    status: str = "OK"  # OK | ERROR | UNSET
+    attributes: dict[str, Any] = Field(default_factory=dict)
+    events: list[dict[str, Any]] = Field(default_factory=list)
+    error_message: str | None = None
+
+
+class TraceReport(BaseModel):
+    trace_id: str
+    root_span_name: str = "workflow.root"
+    total_spans: int = 0
+    total_duration_ms: float = 0.0
+    total_tokens: int = 0
+    spans: list[AgentSpan] = Field(default_factory=list)
+    status: str = "OK"

@@ -11,11 +11,11 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0005-dag-mermaid-export` | 🟢 Branch de feature com implementação do IMP-0005 (Exportação Mermaid CLI dag) |
+| **Branch Ativa** | `feat/IMP-0006-mutation-testing-engine` | 🟢 Branch de feature com implementação do IMP-0006 (Motor de Mutation Testing AST) |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual configurado e dependências instaladas (`-e .[dev]`, `ruff`, `mypy`, `pytest-cov`) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **69/69 PASS** | Cobertura global de 92% (`pytest-cov`) em 2.78s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (35 arquivos formatados e verificados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 22 arquivos validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **74/74 PASS** | Cobertura global de 91% (`pytest-cov`) em 4.92s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (39 arquivos formatados e verificados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 24 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -85,9 +85,11 @@
 1. `[x]` **Implementação e Testes das Melhorias do Backlog (IMP-0001, IMP-0002, IMP-0004)**:
    - Concluído com sucesso na branch `feat/corp-pipeline-enhancements-imp001-002-004` com 62 testes passing e 92% de cobertura.
 2. `[x]` **Implementação da Proposta IMP-0005 (Exportação Mermaid Dinâmica na CLI `dag`)**:
-   - Concluído com sucesso na branch `feat/IMP-0005-dag-mermaid-export` com 69 testes passing, 92% de cobertura, ADR-003 formalizado e auditoria pre-flight 100% limpa.
-3. `[ ]` **Abertura de Pull Request e Integração Contínua**:
-   - Submissão da branch `feat/IMP-0005-dag-mermaid-export` para origin/main e acompanhamento da pipeline de CI.
+   - Concluído com sucesso na branch `feat/IMP-0005-dag-mermaid-export` com 69 testes passing, 92% de cobertura, ADR-003 formalizado e PR-CORP-003 aberto.
+3. `[x]` **Implementação da Proposta IMP-0006 (Motor Nativo de Mutation Testing via AST)**:
+   - Concluído com sucesso na branch `feat/IMP-0006-mutation-testing-engine` com 74 testes passing, 91% de cobertura, ADR-004 formalizado e integração completa com `audit --mutation`.
+4. `[ ]` **Apreciação das Propostas Futuras do Backlog**:
+   - Analisar `IMP-0007` (Evaluation-Driven Development Scorecard Semântico) e `IMP-0008` (Blast Radius / Code GraphRAG).
 
 ---
 
@@ -95,6 +97,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-20T00:59:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0006: motor de testes de mutação via AST (`src/corporate_engineer/quality/mutation.py`), flag `--mutation` e `--target-file` no subcomando `audit`, formalização do ADR-004, inclusão de IMP-0007 e IMP-0008 no backlog e total de 74/74 testes PASS com 91% de cobertura. |
 | `2026-11-19T23:18:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0005: adição de `--mermaid` e `--output` no subcomando `dag`, serialização de FSM (`fsm_to_mermaid`) e timeline de checkpoints (`checkpoints_to_mermaid`), formalização do ADR-003 e total de 69/69 testes PASS com 92% de cobertura. |
 | `2026-11-19T21:42:00-03:00` | Antigravity AI | Correção de CI: adição explícita de `hypothesis` e `pytest-cov` nos dependency-groups e optional-dependencies de teste/dev do `pyproject.toml`, e atualização do workflow `.github/workflows/ci.yml` para instalar `.[dev,test]`. Suíte de 62 testes validada localmente. |
 | `2026-11-19T20:30:00-03:00` | Antigravity AI | Conclusão das melhorias IMP-0001 (detecção automática de venv no stack_detector), IMP-0002 (padrão Circuit Breaker CLOSED/OPEN/HALF_OPEN para clientes MCP) e IMP-0004 (cache SHA-256 de indexação AST). Criação da suíte de testes com total de 62/62 testes PASS, 92% de cobertura e auditoria pre-flight 100% limpa. |

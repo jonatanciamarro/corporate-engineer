@@ -31,6 +31,9 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0003` | Script de Hook `SessionStart` com Injeção de Contexto Corp-Pipeline | `AUTOMATION` | Baixa (S) | `IMPLEMENTED` | `2026-11-19` |
 | `IMP-0004` | Cache de Indexação AST Baseado em Hash SHA-256 de Conteúdo | `EFFICIENCY` | Média (M) | `IMPLEMENTED` | `2026-11-19` |
 | `IMP-0005` | Exportação de Diagramas Mermaid Dinâmicos a partir da CLI `dag` | `CAPABILITY` | Baixa (S) | `IMPLEMENTED` | `2026-11-19` |
+| `IMP-0006` | Motor Nativo de Mutation Testing via AST para Validação de Testes AI | `QUALITY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
+| `IMP-0007` | Evaluation-Driven Development (EDD) & Scorecard Semântico | `GOVERNANCE` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-20` |
+| `IMP-0008` | Code GraphRAG & Análise de Blast Radius / Impacto de Mudanças | `EFFICIENCY` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-20` |
 
 ---
 
@@ -105,3 +108,45 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Complexidade**: Baixa.
 - **Riscos**: Mínimos.
 - **Critérios de Aceite**: Flag `--mermaid` gera código Mermaid válido testado via pytest.
+
+---
+
+### 🔹 IMP-0006: Motor Nativo de Mutation Testing via AST para Validação de Testes AI
+- **Categoria**: `QUALITY` | `RELIABILITY`
+- **Status**: `IMPLEMENTED`
+- **Data de Descoberta**: 2026-11-20
+- **Problema / Limitação Atual**: O pipeline avalia cobertura de código em linhas (`pytest-cov`), mas não valida a assertividade real dos testes contra bugs lógicos. Testes gerados por IA correm o risco de passarem com 100% de cobertura mesmo quando há regressões de lógica sutis.
+- **Solução Proposta**: Implementar motor nativo de Mutation Testing via manipulação de AST (`src/corporate_engineer/quality/mutation.py`), integrando mutadores de operadores relacionais, booleanos e retornos. Adicionar flag `--mutation` ao subcomando `corporate-engineer audit` para calcular e reportar o Mutation Score (% de mutantes mortos pela suíte de testes).
+- **Benefícios Esperados**: Certificação objetiva de que a suíte de testes do repositório é robusta e resistente contra falhas lógicas e testes superficiais.
+- **Componentes Afetados**: `src/corporate_engineer/quality/mutation.py`, `src/corporate_engineer/cli.py`, `tests/test_mutation.py`.
+- **Complexidade**: Média (M).
+- **Riscos**: Tempo excessivo de execução se mutantes não forem testados de forma seletiva e isolada.
+- **Critérios de Aceite**: Motor gera mutantes sintáticos válidos, calcula taxa de mutantes mortos e sobrevive a auditoria pre-flight com 100% dos testes verdes.
+
+---
+
+### 🔹 IMP-0007: Evaluation-Driven Development (EDD) & Scorecard Semântico
+- **Categoria**: `GOVERNANCE` | `QUALITY`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-20
+- **Problema / Limitação Atual**: Não há comando ou módulo CLI para emitir um scorecard holístico da saúde do código (imutabilidade, tipagem Pydantic, complexidade ciclomática, ausência de code smells corporativos).
+- **Solução Proposta**: Criar o comando `corporate-engineer eval` e módulo `src/corporate_engineer/eval/` que executa avaliações semânticas estáticas e emite uma pontuação de 0 a 100 com scorecard em 5 eixos.
+- **Benefícios Esperados**: Observabilidade imediata da saúde da base de código contra degradação por agentes autônomos.
+- **Componentes Afetados**: `src/corporate_engineer/eval/`, `src/corporate_engineer/cli.py`.
+- **Complexidade**: Média (M).
+- **Riscos**: Falsos positivos em regras heurísticas de estilo se os limites não forem calibrados.
+- **Critérios de Aceite**: Comando `eval` gera scorecard JSON/tabular detalhando conformidade com os 5 eixos.
+
+---
+
+### 🔹 IMP-0008: Code GraphRAG & Análise de Blast Radius / Impacto de Mudanças
+- **Categoria**: `EFFICIENCY` | `CAPABILITY`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-20
+- **Problema / Limitação Atual**: O indexador AST atual mapeia classes e métodos por arquivo, mas não calcula o grafo de impacto ("se a função X mudar, quais arquivos e testes são diretamente afetados?").
+- **Solução Proposta**: Adicionar motor de cálculo de **Blast Radius / Impact Analysis** ao indexador AST e flag `index --impact-of <arquivo/função>`.
+- **Benefícios Esperados**: Permite que o pipeline execute cirurgicamente apenas os testes afetados por uma mudança, acelerando o ciclo TDD.
+- **Componentes Afetados**: `src/corporate_engineer/rag/ast_indexer.py`, `src/corporate_engineer/cli.py`.
+- **Complexidade**: Média (M).
+- **Riscos**: Chamadas dinâmicas (ex.: `getattr`) podem não ser detectadas via AST estático.
+- **Critérios de Aceite**: Identificação precisa de símbolos dependentes com testes demonstrando acurácia no grafo.

@@ -22,6 +22,8 @@ When creating PRs:
 3. Draft comprehensive PR summary
 4. Include test plan with TODOs
 5. Push with `-u` flag if new branch
+6. **Pre-filled GitHub PR Link**: Always provide the GitHub PR creation URL with `quick_pull=1`, `title` (with type and IMP-xxxx ticket ID) and `body` (URL-encoded markdown from the generated `docs/pull_requests/PR-CORP-xxx.md`) so the user only has to open the URL and click "Create pull request" with all fields already filled.
+   Format: `https://github.com/<owner>/<repo>/compare/main...<head>?quick_pull=1&title=<encoded_title>&body=<encoded_body>`
 
 > For the full development process (planning, TDD, code review) before git operations,
 > see [development-workflow.md](./development-workflow.md).

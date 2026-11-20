@@ -230,6 +230,42 @@ def build_parser() -> argparse.ArgumentParser:
         "pytest_extra_args", nargs="*", help="Optional extra arguments passed directly to pytest"
     )
 
+    # Command: decide (IMP-0013)
+    decide_parser = subparsers.add_parser(
+        "decide",
+        help="Fast System-One probabilistic decisions, agent routing, and triage",
+    )
+    decide_parser.add_argument(
+        "prompt",
+        nargs="?",
+        default="",
+        help="Prompt, requirement, or state to evaluate",
+    )
+    decide_parser.add_argument(
+        "--mode",
+        choices=["route", "risk", "triage"],
+        default="route",
+        help="Decision mode: route agent, assess risk, or full triage (default: route)",
+    )
+    decide_parser.add_argument(
+        "--diff",
+        default="",
+        help="Optional git diff content or file path for risk analysis",
+    )
+    decide_parser.add_argument(
+        "--engine",
+        choices=["heuristic", "outlines", "nli", "auto"],
+        default="auto",
+        help="Decision engine backend (default: auto)",
+    )
+    decide_parser.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format (default: text)",
+    )
+    decide_parser.add_argument("--output", default=None, help="Optional file path to write output")
+
     return parser
 
 
@@ -776,6 +812,97 @@ def handle_test_surgical(args: argparse.Namespace) -> int:
     return report.exit_code if report.executed else 0
 
 
+def handle_decide(args: argparse.Namespace) -> int:
+    from corporate_engineer.system_one.base import SystemOneEngine
+    from corporate_engineer.system_one.heuristic_engine import HeuristicDecisionEngine
+    from corporate_engineer.system_one.nli_engine import ONNXNLIDecisionEngine
+    from corporate_engineer.system_one.outlines_engine import OutlinesDecisionEngine
+    from corporate_engineer.system_one.router import SystemOneRouter
+
+    engine: SystemOneEngine
+    if args.engine == "outlines":
+        engine = OutlinesDecisionEngine(fallback_to_heuristic=True)
+    elif args.engine == "nli":
+        engine = ONNXNLIDecisionEngine(fallback_to_heuristic=True)
+    else:
+        engine = HeuristicDecisionEngine()
+
+    router = SystemOneRouter(engine=engine)
+    prompt = args.prompt or ""
+
+    diff_content = args.diff or ""
+    if diff_content and os.path.exists(diff_content) and os.path.isfile(diff_content):
+        try:
+            diff_content = Path(diff_content).read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            pass
+
+    if args.mode == "route":
+        decision = router.route_agent(prompt)
+        if args.format == "json":
+            output_str = decision.model_dump_json(indent=2)
+        else:
+            output_str = (
+                f"\n{'=' * 60}\n"
+                f"⚡ SYSTEM-ONE AGENT ROUTING (IMP-0013)\n"
+                f"{'=' * 60}\n"
+                f"🎯 Target Agent  : {decision.choice}\n"
+                f"📊 Confidence    : {decision.confidence:.2%}\n"
+                f"💡 Rationale     : {decision.rationale}\n"
+                f"⚙️  Engine        : {args.engine}\n"
+            )
+            if decision.probabilities:
+                output_str += "📈 Distribution  :\n"
+                for opt, prob in sorted(
+                    decision.probabilities.items(), key=lambda x: x[1], reverse=True
+                )[:5]:
+                    output_str += f"   • {opt:<22}: {prob:.2%}\n"
+            output_str += f"{'=' * 60}\n"
+
+    elif args.mode == "risk":
+        noul = router.assess_risk(diff_content or prompt)
+        if args.format == "json":
+            output_str = noul.model_dump_json(indent=2)
+        else:
+            risk_label = "🚨 HIGH RISK / CRITICAL" if noul.decision else "✅ LOW / MODERATE"
+            output_str = (
+                f"\n{'=' * 60}\n"
+                f"🛡️  SYSTEM-ONE RISK ASSESSMENT (IMP-0013)\n"
+                f"{'=' * 60}\n"
+                f"⚖️  High Risk      : {noul.decision} ({risk_label})\n"
+                f"📊 Probability    : {noul.probability:.2%}\n"
+                f"💡 Rationale      : {noul.rationale}\n"
+                f"{'=' * 60}\n"
+            )
+
+    else:  # triage
+        report = router.triage_quality_gate(prompt=prompt, diff=diff_content)
+        if args.format == "json":
+            output_str = report.model_dump_json(indent=2)
+        else:
+            output_str = (
+                f"\n{'=' * 60}\n"
+                f"🔬 SYSTEM-ONE QUALITY GATE TRIAGE (IMP-0013)\n"
+                f"{'=' * 60}\n"
+                f"🎯 Suggested Agent       : {report.suggested_agent or 'N/A'}\n"
+                f"🚨 Risk Level             : {report.risk_level}\n"
+                f"🛑 Requires Human Approval: {report.requires_human_approval}\n"
+                f"⏱️  Duration               : {report.duration_ms:.2f} ms\n"
+                f"⚙️  Engine                 : {report.engine_name}\n"
+                f"{'=' * 60}\n"
+            )
+
+    if args.output:
+        out_p = Path(args.output).resolve()
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(output_str, encoding="utf-8")
+        print(f"✅ Relatório salvo em: {out_p}")
+    else:
+        print(output_str)
+
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -800,6 +927,8 @@ def main(argv: list[str] | None = None) -> int:
         return handle_telemetry(args)
     elif args.command == "test-surgical":
         return handle_test_surgical(args)
+    elif args.command == "decide":
+        return handle_decide(args)
     else:
         parser.print_help()
         return 0

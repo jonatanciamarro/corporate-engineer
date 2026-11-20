@@ -8,9 +8,15 @@ import time
 import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+try:
+    from datetime import UTC, datetime
+except ImportError:
+    from datetime import datetime, timezone  # type: ignore[assignment]
+
+    UTC = timezone.utc  # type: ignore[assignment] # noqa: UP017
 
 from corporate_engineer.models import AgentSpan, TraceReport
 

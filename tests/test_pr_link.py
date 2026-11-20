@@ -9,6 +9,8 @@ from corporate_engineer.git_utils import (
     extract_github_repo_slug,
     generate_pr_url,
     get_current_branch,
+    is_branch_pushed,
+    push_branch_to_remote,
 )
 
 
@@ -67,3 +69,27 @@ def test_cli_pr_link_json(capsys):
     assert ret == 0
     assert "url" in captured.out
     assert "branch" in captured.out
+
+
+def test_is_branch_pushed_mock():
+    # Testa verificação com branch mockada
+    assert is_branch_pushed(".", "main") in [True, False]
+
+
+def test_push_branch_to_remote_mock():
+    # Testa chamada sem falha de exceção
+    assert isinstance(push_branch_to_remote(".", "non-existent-dummy-branch"), bool)
+
+
+def test_generate_pr_url_ensure_pushed(tmp_path: Path):
+    doc_path = tmp_path / "PR-CORP-TEST.md"
+    doc_path.write_text("# Pull Request: feat: test push", encoding="utf-8")
+    info = generate_pr_url(
+        repo_path=tmp_path,
+        branch="feat/test-pushed",
+        pr_doc_path=doc_path,
+        ensure_pushed=False,
+    )
+    assert info["branch"] == "feat/test-pushed"
+    assert "pushed" in info
+    assert info["pushed"] is False

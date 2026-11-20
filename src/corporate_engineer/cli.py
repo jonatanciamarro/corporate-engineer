@@ -150,6 +150,13 @@ def build_parser() -> argparse.ArgumentParser:
     pr_parser.add_argument(
         "--format", choices=["text", "json"], default="text", help="Output format"
     )
+    pr_parser.add_argument(
+        "--no-push",
+        dest="push",
+        action="store_false",
+        default=True,
+        help="Skip pushing branch to origin remote before generating URL (default: push is always-on)",
+    )
 
     # Command: eval (IMP-0007)
     eval_parser = subparsers.add_parser(
@@ -556,6 +563,7 @@ def handle_pr_link(args: argparse.Namespace) -> int:
         branch=args.branch,
         base=args.base,
         pr_doc_path=args.doc,
+        ensure_pushed=args.push,
     )
     if args.format == "json":
         print(json.dumps(info, indent=2))
@@ -563,6 +571,8 @@ def handle_pr_link(args: argparse.Namespace) -> int:
         print(f"🔗 Pre-Filled GitHub PR Link [{info['branch']} -> {info['base']}]:")
         print(f"  - Ticket: {info['ticket_id']}")
         print(f"  - Título: {info['title']}")
+        push_label = "✅ Sincronizado no origin" if info.get("pushed") else "⚠️  Local apenas"
+        print(f"  - Push Status: {push_label}")
         print(f"  - URL: {info['url']}")
     return 0
 

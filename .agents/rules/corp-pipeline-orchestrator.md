@@ -116,3 +116,15 @@ Action:
 - **Never implement unsolicited improvements without user consent.**
 - When user chooses `SAVE FOR LATER`, persist the entry in `.agents/orchestration/improvement-backlog.md` with status `SAVED_NOT_APPROVED`.
 - When user chooses `IMPLEMENT`, verify prerequisites and execute via the 6 phases of Corp-Pipeline.
+
+---
+
+## 5. Git & PR Invariants (ALWAYS-ON)
+
+1. **Mandatory Remote Push Before PR URL Generation (CRITICAL)**:
+   - The orchestrator and all tools (`pr-link`, hooks, scripts) MUST verify and execute `git push -u origin <branch>` **BEFORE** generating or presenting the 1-click GitHub PR URL to the user.
+   - A PR URL pointing to a branch that has not yet been pushed to GitHub is broken and results in a 404 error. The remote push is an unconditional, always-on prerequisite.
+2. **Pre-Filled PR Links**:
+   - Always synthesize `docs/pull_requests/PR-CORP-xxx.md` with full demand identification, executive summary, TDD evidence, and pre-flight results.
+   - The generated PR link must carry the URL-encoded title and markdown body (`quick_pull=1`) so the user can submit the PR with a single click.
+

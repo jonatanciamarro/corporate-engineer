@@ -45,15 +45,17 @@ def run_pr_link_hook() -> None:
         branch = get_current_branch(root)
         # Only inject if on a feature or fix branch
         if branch.startswith(("feat/", "fix/", "chore/", "refactor/")):
-            info = generate_pr_url(repo_path=root, branch=branch)
+            info = generate_pr_url(repo_path=root, branch=branch, ensure_pushed=True)
+            push_status = "✅ Sincronizado no origin" if info.get("pushed") else "⚠️  Local apenas"
             msg = (
                 "🔗 [HOOK / PRE-FILLED GITHUB PR LINK ACTIVE]\n"
                 f"• Branch: {info['branch']} ➔ {info['base']}\n"
                 f"• Ticket: {info['ticket_id']}\n"
                 f"• Título da PR: {info['title']}\n"
+                f"• Push Status: {push_status}\n"
                 f"• 1-Click URL: {info['url']}\n"
-                "• Diretriz Corporativa Obrigatória: Sempre forneça este link pré-preenchido ao usuário "
-                "para que ele apenas abra a URL e clique em 'Create pull request' sem digitação manual."
+                "• Invariante Mandatória Always-On: O push da branch para o remote origin (git push -u origin <branch>) "
+                "deve SEMPRE ocorrer antes de gerar ou fornecer a URL ao usuário, garantindo que o link do GitHub nunca abra em 404."
             )
             output = {
                 "injectSteps": [

@@ -190,3 +190,59 @@ def test_graph_parallel_stage_error_isolation(tmp_path: Path):
     assert "Critical lint syntax error" in (results["failing_node"].error or "")
     assert results["passing_node"].success is True
     assert results["passing_node"].result == "audit_ok"
+
+
+def test_graph_fsm_to_mermaid():
+    diagram = AutonomousEngineeringGraph.fsm_to_mermaid()
+    assert "flowchart TD" in diagram
+    assert "PLANNING" in diagram
+    assert "TDD" in diagram
+    assert "IMPLEMENT" in diagram
+    assert "AUDIT" in diagram
+    assert "DELIVER" in diagram
+    assert "step_plan" in diagram
+    assert "step_audit" in diagram
+
+
+def test_graph_instance_to_mermaid_with_highlight(tmp_path: Path):
+    task = TaskInput(
+        ticket_id="CORP-306",
+        description="Mermaid highlight test",
+        workspace_path=str(tmp_path),
+    )
+    graph = AutonomousEngineeringGraph(task=task)
+    graph.step_plan("Plan done")
+    assert graph.state.phase == "TDD"
+
+    diagram = graph.to_mermaid(highlight_current=True)
+    assert "flowchart TD" in diagram
+    assert "TDD" in diagram
+    assert "style TDD" in diagram
+
+
+def test_graph_checkpoints_to_mermaid():
+    checkpoints = [
+        {
+            "filename": "cp_CORP-1_PLANNING_1.json",
+            "ticket_id": "CORP-1",
+            "phase": "PLANNING",
+            "iteration_count": 1,
+        },
+        {
+            "filename": "cp_CORP-1_TDD_2.json",
+            "ticket_id": "CORP-1",
+            "phase": "TDD",
+            "iteration_count": 2,
+        },
+    ]
+    diagram = AutonomousEngineeringGraph.checkpoints_to_mermaid(checkpoints)
+    assert "flowchart LR" in diagram
+    assert "cp_CORP-1_PLANNING_1" in diagram
+    assert "cp_CORP-1_TDD_2" in diagram
+    assert "-->" in diagram
+
+
+def test_graph_checkpoints_to_mermaid_empty():
+    diagram = AutonomousEngineeringGraph.checkpoints_to_mermaid([])
+    assert "flowchart LR" in diagram
+    assert "Nenhum checkpoint" in diagram

@@ -4,11 +4,18 @@ Version: 0.1.0
 Summary: Autonomous Corporate Software Engineer - Open Source Enterprise Agent Framework
 Requires-Python: >=3.10
 Description-Content-Type: text/markdown
+License-File: LICENSE
 Requires-Dist: pydantic>=2.0.0
 Requires-Dist: pyyaml>=6.0.0
 Provides-Extra: dev
 Requires-Dist: pytest>=8.0.0; extra == "dev"
 Requires-Dist: hypothesis>=6.90.0; extra == "dev"
+Requires-Dist: pytest-cov>=5.0.0; extra == "dev"
+Provides-Extra: test
+Requires-Dist: pytest>=8.0.0; extra == "test"
+Requires-Dist: hypothesis>=6.90.0; extra == "test"
+Requires-Dist: pytest-cov>=5.0.0; extra == "test"
+Dynamic: license-file
 
 # Enterprise AI Software Engineering Framework
 
@@ -59,7 +66,6 @@ Protocolo de entrevista investigativa baseado em:
   python .agents/skills/corp-pipeline/scripts/secret_scanner.py [caminho]
   ```
   Audita arquivos contra vazamento de credenciais, chaves de API e tokens sensíveis antes de qualquer commit.
-
 ---
 
 ## 📚 Documentação Adicional

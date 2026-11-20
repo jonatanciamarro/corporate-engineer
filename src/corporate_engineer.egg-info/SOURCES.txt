@@ -1,3 +1,4 @@
+LICENSE
 README.md
 pyproject.toml
 src/corporate_engineer/__init__.py
@@ -10,6 +11,7 @@ src/corporate_engineer.egg-info/entry_points.txt
 src/corporate_engineer.egg-info/requires.txt
 src/corporate_engineer.egg-info/top_level.txt
 src/corporate_engineer/mcp/__init__.py
+src/corporate_engineer/mcp/circuit_breaker.py
 src/corporate_engineer/mcp/client.py
 src/corporate_engineer/orchestrator/__init__.py
 src/corporate_engineer/orchestrator/graph.py
@@ -17,8 +19,13 @@ src/corporate_engineer/quality/__init__.py
 src/corporate_engineer/quality/gate.py
 src/corporate_engineer/rag/__init__.py
 src/corporate_engineer/rag/ast_indexer.py
+src/corporate_engineer/rag/cached_ast_indexer.py
 tests/test_ast_indexer.py
+tests/test_cached_ast_indexer.py
+tests/test_circuit_breaker.py
+tests/test_cli.py
 tests/test_mcp_client.py
 tests/test_models.py
 tests/test_orchestrator.py
 tests/test_quality_gate.py
+tests/test_stack_detector.py

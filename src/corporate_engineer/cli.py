@@ -69,8 +69,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--workspace", default=".", help="Workspace path to inspect checkpoints"
     )
     dag_parser.add_argument(
+        "--mermaid",
+        action="store_true",
+        help="Export FSM lifecycle or checkpoints as Mermaid flowchart",
+    )
+    dag_parser.add_argument(
         "--format", choices=["text", "json"], default="text", help="Output format"
     )
+    dag_parser.add_argument("--output", default=None, help="Optional file path to write output")
 
     # Command: mcp
     mcp_parser = subparsers.add_parser("mcp", help="Inspect and execute tools via MCP protocol")
@@ -202,20 +208,48 @@ def handle_audit(args: argparse.Namespace) -> int:
 
 
 def handle_dag(args: argparse.Namespace) -> int:
+    if getattr(args, "mermaid", False):
+        if getattr(args, "checkpoints", False):
+            ws = Path(getattr(args, "workspace", ".")).resolve()
+            checkpoints = AutonomousEngineeringGraph.list_checkpoints(ws)
+            output_str = AutonomousEngineeringGraph.checkpoints_to_mermaid(checkpoints)
+        else:
+            output_str = AutonomousEngineeringGraph.fsm_to_mermaid()
+
+        if getattr(args, "output", None):
+            out_p = Path(args.output).resolve()
+            out_p.parent.mkdir(parents=True, exist_ok=True)
+            out_p.write_text(output_str, encoding="utf-8")
+            print(f"✅ Diagrama Mermaid salvo com sucesso em: {out_p}")
+        else:
+            print(output_str)
+        return 0
+
     if getattr(args, "checkpoints", False):
         ws = Path(getattr(args, "workspace", ".")).resolve()
         checkpoints = AutonomousEngineeringGraph.list_checkpoints(ws)
         if args.format == "json":
-            print(json.dumps({"workspace": str(ws), "checkpoints": checkpoints}, indent=2))
+            output_str = json.dumps({"workspace": str(ws), "checkpoints": checkpoints}, indent=2)
         else:
-            print(f"📦 Checkpoints salvos em: {ws}")
+            lines = [f"📦 Checkpoints salvos em: {ws}"]
             if not checkpoints:
-                print("  (Nenhum checkpoint encontrado)")
+                lines.append("  (Nenhum checkpoint encontrado)")
             for cp in checkpoints:
                 ticket = cp.get("ticket_id") or "N/A"
                 phase = cp.get("phase") or "N/A"
                 iter_cnt = cp.get("iteration_count", 0)
-                print(f"  - [{ticket}] {cp['filename']} (Fase: {phase}, Iteração: {iter_cnt})")
+                lines.append(
+                    f"  - [{ticket}] {cp['filename']} (Fase: {phase}, Iteração: {iter_cnt})"
+                )
+            output_str = "\n".join(lines)
+
+        if getattr(args, "output", None):
+            out_p = Path(args.output).resolve()
+            out_p.parent.mkdir(parents=True, exist_ok=True)
+            out_p.write_text(output_str, encoding="utf-8")
+            print(f"✅ Saída salva com sucesso em: {out_p}")
+        else:
+            print(output_str)
         return 0
 
     if args.format == "json":
@@ -223,14 +257,23 @@ def handle_dag(args: argparse.Namespace) -> int:
             "phases": DAG_PHASES,
             "transitions": DAG_TRANSITIONS,
         }
-        print(json.dumps(payload, indent=2))
+        output_str = json.dumps(payload, indent=2)
     else:
-        print("📊 Ciclo de Vida e Fases da Orquestração DAG:")
+        lines = ["📊 Ciclo de Vida e Fases da Orquestração DAG:"]
         for idx, phase in enumerate(DAG_PHASES, start=1):
-            print(f"  {idx}. {phase}")
-        print("\n🔀 Transições Válidas:")
+            lines.append(f"  {idx}. {phase}")
+        lines.append("\n🔀 Transições Válidas:")
         for t in DAG_TRANSITIONS:
-            print(f"  [{t['from']}] --({t['trigger']})--> [{t['to']}]")
+            lines.append(f"  [{t['from']}] --({t['trigger']})--> [{t['to']}]")
+        output_str = "\n".join(lines)
+
+    if getattr(args, "output", None):
+        out_p = Path(args.output).resolve()
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(output_str, encoding="utf-8")
+        print(f"✅ Saída salva com sucesso em: {out_p}")
+    else:
+        print(output_str)
     return 0
 
 

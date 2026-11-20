@@ -160,3 +160,49 @@ class AutonomousEngineeringGraph:
                 results[node_res.node_name] = node_res
 
         return results
+
+    @classmethod
+    def fsm_to_mermaid(cls, highlight_phase: str | None = None) -> str:
+        """Export the FSM lifecycle and transitions as a Mermaid flowchart TD diagram."""
+        lines = [
+            "flowchart TD",
+            '    PLANNING["1. PLANNING"] -->|step_plan| TDD["2. TDD"]',
+            '    TDD -->|step_tdd| IMPLEMENT["3. IMPLEMENT"]',
+            '    IMPLEMENT -->|step_implement| AUDIT["4. AUDIT"]',
+            '    AUDIT -->|step_audit(passed=True)| DELIVER["5. DELIVER"]',
+            "    AUDIT -->|step_audit(passed=False)| IMPLEMENT",
+        ]
+        if highlight_phase:
+            phase_clean = highlight_phase.upper()
+            lines.append(
+                f"    style {phase_clean} fill:#10b981,stroke:#059669,stroke-width:2px,color:#ffffff"
+            )
+        return "\n".join(lines)
+
+    def to_mermaid(self, highlight_current: bool = False) -> str:
+        """Export the current graph lifecycle as Mermaid diagram with optional active state highlighting."""
+        highlight = self.state.phase if highlight_current else None
+        return self.fsm_to_mermaid(highlight_phase=highlight)
+
+    @classmethod
+    def checkpoints_to_mermaid(cls, checkpoints: list[dict[str, Any]]) -> str:
+        """Export a list of saved checkpoints as a chronological Mermaid flowchart LR timeline."""
+        if not checkpoints:
+            return 'flowchart LR\n    EMPTY["(Nenhum checkpoint salvo)"]'
+
+        lines = ["flowchart LR"]
+        node_ids: list[str] = []
+        for idx, cp in enumerate(checkpoints):
+            node_id = f"cp_{idx}"
+            node_ids.append(node_id)
+            ticket = cp.get("ticket_id") or "N/A"
+            filename = cp.get("filename") or f"checkpoint_{idx}"
+            phase = cp.get("phase") or "UNKNOWN"
+            iter_cnt = cp.get("iteration_count", 0)
+            label = f"[{ticket}] {filename}<br/>Phase: {phase} | Iter: {iter_cnt}"
+            lines.append(f'    {node_id}["{label}"]')
+
+        for i in range(len(node_ids) - 1):
+            lines.append(f"    {node_ids[i]} --> {node_ids[i + 1]}")
+
+        return "\n".join(lines)

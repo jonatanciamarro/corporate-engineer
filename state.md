@@ -11,11 +11,11 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0009-opentelemetry-agent-tracing` | 🟢 Suíte com 94/94 testes PASS, 90% cobertura, IMP-0001 a IMP-0009 implementados |
+| **Branch Ativa** | `feat/IMP-0010-surgical-tdd-runner` | 🟢 Suíte com 99/99 testes PASS, 88% cobertura, IMP-0001 a IMP-0010 implementados |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual configurado e dependências instaladas (`-e .[dev]`, `ruff`, `mypy`, `pytest-cov`) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **94/94 PASS** | Cobertura global de 90% (`pytest-cov`) em 11.49s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (56 arquivos formatados e verificados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 34 arquivos validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **99/99 PASS** | Cobertura global de 88% (`pytest-cov`) em 24.51s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (59 arquivos formatados e verificados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 36 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -25,21 +25,23 @@
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação de IMP-0009: OpenTelemetry Agent Tracing):
+### Sessão Atual (Implementação de IMP-0010: Surgical TDD Runner):
 1. **Modelos DTO Pydantic v2**:
-   - Criação de `AgentSpan` e `TraceReport` fortemente tipados em `src/corporate_engineer/models.py`.
-2. **Motor OpenTelemetry Tracer**:
-   - Criação de `src/corporate_engineer/telemetry/tracer.py` com `AgentTracer`, gerenciamento de pilha de spans ativos, geração padronizada de `trace_id` (32-hex) e `span_id` (16-hex), contagem de tokens GenAI e exportador JSON.
-3. **Integração no Grafo de Engenharia**:
-   - Instrumentação nativa das etapas `step_plan`, `step_tdd`, `step_review` e tarefas paralelas (`execute_parallel_tasks`) em `AutonomousEngineeringGraph`.
-   - Adição do método `get_trace_report()` no grafo.
+   - Criação de `SurgicalTestReport` fortemente tipado em `src/corporate_engineer/models.py`.
+2. **Motor Surgical TDD Runner**:
+   - Criação de `src/corporate_engineer/quality/surgical_runner.py` com `SurgicalTestRunner`.
+   - Detecção automatizada de alterações via `git status --porcelain` e `git diff --name-only <base_branch>...HEAD`.
+   - Resolução inteligente de testes afetados (diretos e dependências transitivas via AST Blast Radius).
+   - Resolução cross-platform do binário pytest (`.venv` Scripts/bin ou fallback para `sys.executable -m pytest`).
+   - Suporte a modo `--dry-run` e fallback seguro `--fallback-all`.
+3. **Melhorias no Módulo de Impacto**:
+   - Aprimoramento de `BlastRadiusAnalyzer` com suporte a `root_path` e métodos de conveniência `analyze_file()` e `analyze_symbol()`.
 4. **CLI Corporativa**:
-   - Adicionada flag `--trace` ao subcomando `corporate-engineer dag`.
-   - Criado subcomando `corporate-engineer telemetry --file <path> [--format text|json]`.
+   - Adicionado subcomando de primeira classe `corporate-engineer test-surgical` com visualização rica e formato JSON.
 5. **Governança & Arquitetura**:
-   - Elaboração do [ADR-007](docs/adr/ADR-007-opentelemetry-agent-tracing.md) e [PR-CORP-007.md](docs/pull_requests/PR-CORP-007.md).
+   - Elaboração do [ADR-008](docs/adr/ADR-008-surgical-tdd-runner-git-diff.md) e [PR-CORP-008.md](docs/pull_requests/PR-CORP-008.md).
    - Atualização do catálogo contínuo em `.agents/orchestration/improvement-backlog.md`.
-   - Expansão da suíte para 94 testes automatizados com 100% de aprovação e 90% de cobertura.
+   - Expansão da suíte para 99 testes automatizados com 100% de aprovação e 88% de cobertura.
 
 ---
 
@@ -53,6 +55,7 @@
 - `[x]` Adicionar subcomando `eval`: scorecard semântico de código via AST.
 - `[x]` Adicionar subcomando `blast-radius`: análise de impacto de mudanças e testes afetados.
 - `[x]` Adicionar subcomando `telemetry`: inspeção e renderização de relatórios de spans OTel.
+- `[x]` Adicionar subcomando `test-surgical`: execução cirúrgica de testes via git diff e blast radius (`IMP-0010`).
 
 ### 🔌 Trilha 2: Conectores e Transporte Remoto MCP (`src/corporate_engineer/mcp/`)
 - `[x]` Suporte a transporte Server-Sent Events (SSE) / JSON-RPC 2.0 para servidores MCP remotos.
@@ -89,10 +92,9 @@
 
 ## 4. Próximos Passos Imediatos para a Próxima Sessão
 
-1. `[x]` **Implementação e Testes das Melhorias do Backlog (IMP-0001 a IMP-0008)** (Merged em `main`).
-2. `[x]` **Implementação da Proposta IMP-0009 (OpenTelemetry Agent Tracing & Span Telemetry)** (PR-CORP-007, 94/94 testes PASS).
+1. `[x]` **Implementação e Testes das Melhorias do Backlog (IMP-0001 a IMP-0009)** (Merged em `main`).
+2. `[x]` **Implementação da Proposta IMP-0010 (Surgical TDD Runner Integrado ao Git Diff & Blast Radius)** (PR-CORP-008, 99/99 testes PASS).
 3. `[ ]` **Priorização das Novas Iniciativas Salvas no Backlog Contínuo**:
-   - `IMP-0010`: Surgical TDD Runner Integrado ao Git Diff & Blast Radius (`corporate-engineer test-surgical`).
    - `IMP-0011`: MCP Enterprise Hub & Tool Multiplexer (gerenciamento central de pools `.mcp.json`).
    - `IMP-0012`: AST Auto-Refactor & Self-Healing Fixer (`corporate-engineer fix --auto`).
 
@@ -102,6 +104,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-20T03:15:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0010: motor de teste cirúrgico (`src/corporate_engineer/quality/surgical_runner.py`), modelo `SurgicalTestReport`, integração com Git diff e Blast Radius AST, subcomando `corporate-engineer test-surgical`, formalização do ADR-008, PR-CORP-008 e expansão da suíte para 99/99 testes PASS com 88% de cobertura. |
 | `2026-11-20T03:00:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0009: motor de telemetria OpenTelemetry (`src/corporate_engineer/telemetry/tracer.py`), modelos `AgentSpan` e `TraceReport`, instrumentação do DAG, flag `dag --trace`, subcomando `telemetry`, formalização do ADR-007, PR-CORP-007 e expansão da suíte para 94/94 testes PASS com 90% de cobertura. |
 | `2026-11-20T02:40:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão e merge oficial do IMP-0008 na branch `main`. Registro e estruturação das propostas de evolução IMP-0009 (OTel Tracing), IMP-0010 (Surgical TDD Runner), IMP-0011 (MCP Enterprise Hub) e IMP-0012 (AST Self-Healing Fixer) no backlog contínuo (`SAVED_NOT_APPROVED`). Pausa planejada de sessão com branch `main` 100% íntegra (88/88 testes PASS). |
 | `2026-11-20T02:15:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0008: motor de análise de Blast Radius (`src/corporate_engineer/rag/impact.py`), comando `corporate-engineer blast-radius` e flag `index --impact-of`, formalização do ADR-006, PR-CORP-006 e expansão da suíte para 88/88 testes PASS com 90% de cobertura. |

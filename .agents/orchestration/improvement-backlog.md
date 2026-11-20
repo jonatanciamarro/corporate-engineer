@@ -43,7 +43,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0001: Detecção Automática do `.venv` no `stack_detector.py`
 - **Categoria**: `AUTOMATION` | `RELIABILITY`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED`
 - **Data de Descoberta**: 2026-11-19
 - **Problema / Limitação Atual**: No Windows, se o desenvolvedor executa `pytest` ou `python` pelo terminal padrão sem o `.venv` ativado no path, o Python global pode não conter as dependências instaladas (`hypothesis`, `pytest-cov`, `pydantic`), causando falhas falsas. O `stack_detector.py` atualmente emite comandos genéricos como `pytest` ao invés de apontar para `.venv\Scripts\pytest` quando o `.venv` existe localmente.
 - **Solução Proposta**: Atualizar `stack_detector.py` para inspecionar se a pasta `.venv` existe no root. Em caso afirmativo no Windows, sugerir `.venv\Scripts\<tool>` ou `.venv/bin/<tool>` em sistemas Unix/macOS.
@@ -57,7 +57,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0002: Circuit Breaker e Reconexão com Backoff no `RemoteMCPSSEClient`
 - **Categoria**: `RELIABILITY` | `CAPABILITY`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED`
 - **Data de Descoberta**: 2026-11-19
 - **Problema / Limitação Atual**: O cliente SSE para MCP (`RemoteMCPSSEClient`) trata desconexões imediatas, mas não possui um padrão de circuit breaker integrado com retentativas automáticas e backoff exponencial quando o endpoint remoto fica intermitente.
 - **Solução Proposta**: Implementar padrão Circuit Breaker com três estados (`CLOSED`, `OPEN`, `HALF_OPEN`) e política configurável de reconexão no cliente SSE.
@@ -71,7 +71,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0003: Script de Hook `SessionStart` com Injeção de Contexto Corp-Pipeline
 - **Categoria**: `AUTOMATION` | `ARCHITECTURE`
-- **Status**: `IN_PROGRESS`
+- **Status**: `IMPLEMENTED`
 - **Data de Descoberta**: 2026-11-19
 - **Problema / Limitação Atual**: Antigravity suporta `SessionStart` em `hooks.json`, mas atualmente não havia nenhum hook configurado para alertar a sessão sobre o estado do projeto e o orquestrador Corp-Pipeline ativo.
 - **Solução Proposta**: Implementar `.agents/hooks.json` apontando para um script Python em `.agents/orchestration/hooks/session_start.py` que lê o `state.md`, valida a saúde inicial e injeta a mensagem inicial no formato oficial protojson de Antigravity.
@@ -85,7 +85,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0004: Cache de Indexação AST Baseado em Hash SHA-256 de Conteúdo
 - **Categoria**: `EFFICIENCY` | `PERFORMANCE`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED`
 - **Data de Descoberta**: 2026-11-19
 - **Problema / Limitação Atual**: O indexador AST (`ASTCodebaseIndexer`) re-analisa todos os arquivos `.py` a cada execução de `corporate-engineer index`, mesmo quando os arquivos não foram modificados.
 - **Solução Proposta**: Integrar o padrão `content-hash-cache-pattern`, armazenando os nós AST indexados indexados por SHA-256 do arquivo fonte em arquivo `.cache/ast_index.json`.

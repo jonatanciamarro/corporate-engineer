@@ -82,28 +82,17 @@
 
 ## 4. Próximos Passos Imediatos para a Próxima Sessão
 
-1. `[x]` **Implementação e Testes das Melhorias do Backlog (IMP-0001, IMP-0002, IMP-0004)**:
-   - Concluído com sucesso na branch `feat/corp-pipeline-enhancements-imp001-002-004` com 62 testes passing e 92% de cobertura.
-2. `[x]` **Implementação da Proposta IMP-0005 (Exportação Mermaid Dinâmica na CLI `dag`)**:
-   - Concluído com sucesso na branch `feat/IMP-0005-dag-mermaid-export` com 69 testes passing, 92% de cobertura, ADR-003 formalizado e PR-CORP-003 aberto.
-3. `[x]` **Implementação da Proposta IMP-0006 (Motor Nativo de Mutation Testing via AST)**:
-   - Concluído com sucesso na branch `feat/IMP-0006-mutation-testing-engine` com 74 testes passing, 91% de cobertura, ADR-004 formalizado e integração completa com `audit --mutation`.
-4. `[x]` **Automação Padrão do Link Pré-Preenchido de PR (Hook Nativo e CLI `pr-link`)**:
-   - Implementado `src/corporate_engineer/git_utils.py` com resolução dinâmica de branch, ticket ID (`IMP-xxxx`), título e corpo completo codificados na URL (`quick_pull=1&title=...&body=...`).
-   - Integrado novo subcomando `corporate-engineer pr-link` na CLI e hook automático em `.agents/hooks.json` (`pr_link_generator.py` e `session_start.py`).
-   - Suíte de testes em `tests/test_pr_link.py` (5 testes novos) e regra `.agents/rules/common-git-workflow.md` atualizada.
-5. `[x]` **Implementação da Proposta IMP-0007 (Evaluation-Driven Development - EDD & Scorecard Semântico)**:
-   - Implementado motor de avaliação em `src/corporate_engineer/eval/scorecard.py` cobrindo 5 eixos corporativos de qualidade.
-   - Adicionado novo subcomando `corporate-engineer eval [path]` com barras de progresso visuais no formato texto e saída estruturada JSON.
-   - Definidos modelos Pydantic v2 `EvaluationAxisScore` e `SemanticEvaluationReport` em `src/corporate_engineer/models.py`.
-   - Formalizado [ADR-005](file:///c:/Users/WDAGUtilityAccount/Downloads/Nova%20pasta/corporate-engineer/docs/adr/ADR-005-evaluation-driven-development-scorecard.md), documentado [PR-CORP-005.md](file:///c:/Users/WDAGUtilityAccount/Downloads/Nova%20pasta/corporate-engineer/docs/pull_requests/PR-CORP-005.md) e suíte de testes expandida para 84/84 PASS.
-6. `[x]` **Implementação da Proposta IMP-0008 (Code GraphRAG & Análise de Blast Radius / Impacto de Mudanças)**:
-   - Implementado motor de análise de impacto em `src/corporate_engineer/rag/impact.py` com grafo reverso de chamadas e importações.
-   - Adicionado novo subcomando `corporate-engineer blast-radius <target>` e flag `--impact-of <target>` no subcomando `index`.
-   - Definidos modelos Pydantic v2 `ImpactNode` e `BlastRadiusReport` em `src/corporate_engineer/models.py`.
-   - Formalizado [ADR-006](file:///c:/Users/WDAGUtilityAccount/Downloads/Nova%20pasta/corporate-engineer/docs/adr/ADR-006-code-graphrag-blast-radius-impact.md), documentado [PR-CORP-006.md](file:///c:/Users/WDAGUtilityAccount/Downloads/Nova%20pasta/corporate-engineer/docs/pull_requests/PR-CORP-006.md) e suíte de testes expandida para 88/88 PASS com 90% de cobertura.
-7. `[ ]` **Próximas Iniciativas do Roadmap**:
-   - Identificar e mapear novas demandas e expansões avançadas para o ecossistema Corp-Pipeline.
+1. `[x]` **Implementação e Testes das Melhorias do Backlog (IMP-0001, IMP-0002, IMP-0004)** (Merged em `main`).
+2. `[x]` **Implementação da Proposta IMP-0005 (Exportação Mermaid Dinâmica na CLI `dag`)** (Merged em `main`).
+3. `[x]` **Implementação da Proposta IMP-0006 (Motor Nativo de Mutation Testing via AST)** (Merged em `main`).
+4. `[x]` **Automação Padrão do Link Pré-Preenchido de PR (Hook Nativo e CLI `pr-link`)** (Merged em `main`).
+5. `[x]` **Implementação da Proposta IMP-0007 (Evaluation-Driven Development - EDD & Scorecard Semântico)** (Merged em `main`).
+6. `[x]` **Implementação da Proposta IMP-0008 (Code GraphRAG & Análise de Blast Radius / Impacto de Mudanças)** (Merged em `main`).
+7. `[ ]` **Priorização das Novas Iniciativas Salvas no Backlog Contínuo**:
+   - `IMP-0009`: OpenTelemetry Agent Tracing & Span Telemetry (OTel LLMOps).
+   - `IMP-0010`: Surgical TDD Runner Integrado ao Git Diff & Blast Radius (`corporate-engineer test-surgical`).
+   - `IMP-0011`: MCP Enterprise Hub & Tool Multiplexer (gerenciamento central de pools `.mcp.json`).
+   - `IMP-0012`: AST Auto-Refactor & Self-Healing Fixer (`corporate-engineer fix --auto`).
 
 ---
 
@@ -111,6 +100,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-20T02:40:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão e merge oficial do IMP-0008 na branch `main`. Registro e estruturação das propostas de evolução IMP-0009 (OTel Tracing), IMP-0010 (Surgical TDD Runner), IMP-0011 (MCP Enterprise Hub) e IMP-0012 (AST Self-Healing Fixer) no backlog contínuo (`SAVED_NOT_APPROVED`). Pausa planejada de sessão com branch `main` 100% íntegra (88/88 testes PASS). |
 | `2026-11-20T02:15:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0008: motor de análise de Blast Radius (`src/corporate_engineer/rag/impact.py`), comando `corporate-engineer blast-radius` e flag `index --impact-of`, formalização do ADR-006, PR-CORP-006 e expansão da suíte para 88/88 testes PASS com 90% de cobertura. |
 | `2026-11-20T01:52:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0007: motor de avaliação semântica EDD (`src/corporate_engineer/eval/scorecard.py`), comando `corporate-engineer eval`, formalização do ADR-005, PR-CORP-005 e expansão da suíte para 84/84 testes PASS com 89% de cobertura. |
 | `2026-11-20T01:32:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão da automação padrão de Link de PR Pré-Preenchido: adição de `src/corporate_engineer/git_utils.py`, subcomando `corporate-engineer pr-link`, hook `pr_link_generator.py` registrado em `.agents/hooks.json`, 5 novos testes unitários (79/79 PASS) e atualização de `common-git-workflow.md`. |

@@ -34,6 +34,10 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0006` | Motor Nativo de Mutation Testing via AST para Validação de Testes AI | `QUALITY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
 | `IMP-0007` | Evaluation-Driven Development (EDD) & Scorecard Semântico | `GOVERNANCE` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
 | `IMP-0008` | Code GraphRAG & Análise de Blast Radius / Impacto de Mudanças | `EFFICIENCY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
+| `IMP-0009` | OpenTelemetry Agent Tracing & Span Telemetry (OTel LLMOps) | `OBSERVABILITY` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-20` |
+| `IMP-0010` | Surgical TDD Runner Integrado ao Git Diff & Blast Radius | `EFFICIENCY` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-20` |
+| `IMP-0011` | MCP Enterprise Hub & Tool Multiplexer (.mcp.json pools) | `INTEGRATION` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-20` |
+| `IMP-0012` | AST Auto-Refactor & Self-Healing Fixer (Auto-Remediação) | `AUTOMATION` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-20` |
 
 ---
 
@@ -150,3 +154,60 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Complexidade**: Média (M).
 - **Riscos**: Chamadas dinâmicas (ex.: `getattr`) podem não ser detectadas via AST estático.
 - **Critérios de Aceite**: Identificação precisa de símbolos dependentes com testes demonstrando acurácia no grafo.
+
+---
+
+### 🔹 IMP-0009: OpenTelemetry Agent Tracing & Span Telemetry (OTel LLMOps)
+- **Categoria**: `OBSERVABILITY` | `RELIABILITY`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-20
+- **Problema / Limitação Atual**: A execução de DAGs, nós de agentes e ferramentas MCP não gera traces de telemetria estruturados compatíveis com OpenTelemetry, dificultando a análise de gargalos de latência, contagem de tokens consumidos e diagnóstico de bugs distribuídos.
+- **Solução Proposta**: Implementar módulo `src/corporate_engineer/telemetry/` com `AgentTracer` gerando spans padronizados (`trace_id`, `span_id`, latência, contagem de tokens, prompt/completion payload, status de erro) e exportadores locais para JSON e coletores OTel.
+- **Benefícios Esperados**: Observabilidade de nível sênior em produção para mitigar o "observability gap" em sistemas multi-agentes.
+- **Componentes Afetados**: `src/corporate_engineer/telemetry/`, `src/corporate_engineer/orchestrator/graph.py`, `src/corporate_engineer/mcp/client.py`.
+- **Complexidade**: Média (M).
+- **Riscos**: Overhead de serialização se não for mantido assíncrono.
+- **Critérios de Aceite**: Spans gerados para cada nó do grafo com validação de formato e testes unitários.
+
+---
+
+### 🔹 IMP-0010: Surgical TDD Runner Integrado ao Git Diff & Blast Radius
+- **Categoria**: `EFFICIENCY` | `QUALITY`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-20
+- **Problema / Limitação Atual**: O desenvolvedor ou agente precisa rodar `corporate-engineer blast-radius` manualmente e em seguida copiar o comando de teste para validar mudanças no código.
+- **Solução Proposta**: Criar o subcomando `corporate-engineer test-surgical` que inspeciona o `git diff` contra a branch base (ex.: `main`), calcula automaticamente o blast radius dos símbolos/arquivos alterados e executa cirurgicamente apenas os testes afetados.
+- **Benefícios Esperados**: Redução de até 80% no tempo de ciclo do loop TDD em repositórios grandes.
+- **Componentes Afetados**: `src/corporate_engineer/cli.py`, `src/corporate_engineer/rag/impact.py`.
+- **Complexidade**: Baixa-Média (S-M).
+- **Riscos**: Mudanças puramente dinâmicas podem exigir fallback para execução completa da suíte.
+- **Critérios de Aceite**: `test-surgical` detecta alterações locais não commitadas ou no diff da branch e executa os testes afetados retornando código 0 ou 1.
+
+---
+
+### 🔹 IMP-0011: MCP Enterprise Hub & Tool Multiplexer (.mcp.json pools)
+- **Categoria**: `INTEGRATION` | `CAPABILITY`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-20
+- **Problema / Limitação Atual**: O cliente MCP atual (`LocalMCPToolAdapter` e `RemoteMCPSSEClient`) gerencia um servidor isolado por vez via CLI ou parâmetros pontuais. Não há suporte para carregar arquivos de configuração como `.mcp.json` e orquestrar múltiplos servidores corporativos simultaneamente (ex.: GitHub, Jira, Postgres, Sentry).
+- **Solução Proposta**: Criar `MCPEnterpriseHub` que lê arquivos `.mcp.json`, instancia pools de conexões stdio/SSE com circuit breakers individuais e oferece um namespace unificado de ferramentas (`github.create_pr`, `postgres.query`, `jira.get_issue`).
+- **Benefícios Esperados**: Transforma o framework em uma plataforma unificada de consumo MCP enterprise.
+- **Componentes Afetados**: `src/corporate_engineer/mcp/hub.py`, `src/corporate_engineer/cli.py`.
+- **Complexidade**: Média (M).
+- **Riscos**: Gerenciamento de ciclo de vida de múltiplos subprocessos em sistemas Windows.
+- **Critérios de Aceite**: Carregamento de configuração multi-servidor com resolução de ferramentas e isolamento de falhas.
+
+---
+
+### 🔹 IMP-0012: AST Auto-Refactor & Self-Healing Fixer (Auto-Remediação)
+- **Categoria**: `AUTOMATION` | `QUALITY`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-20
+- **Problema / Limitação Atual**: Quando os subcomandos `eval` (scorecard semântico) ou `audit` detectam violações estruturais (ex.: métodos `__init__` sem `-> None`, ausência de tipos em retornos evidentes, variáveis globais indevidas), a correção necessita de intervenção manual.
+- **Solução Proposta**: Adicionar o comando `corporate-engineer fix --auto` que utiliza `ast.NodeTransformer` para aplicar correções seguras e cirúrgicas sem introduzir regressões.
+- **Benefícios Esperados**: Aumento autônomo na pontuação do scorecard semântico sem atrito manual.
+- **Componentes Afetados**: `src/corporate_engineer/eval/fixer.py`, `src/corporate_engineer/cli.py`.
+- **Complexidade**: Média-Alta (M-L).
+- **Riscos**: Risco de alterar semântica do código se transformações não forem estritamente conservadoras.
+- **Critérios de Aceite**: Transformações aplicadas são validadas por re-execução da suíte de testes existente.
+

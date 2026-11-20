@@ -11,11 +11,11 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0007-edd-semantic-scorecard` | 🟢 Branch de feature com implementação do IMP-0007 (Evaluation-Driven Development & Scorecard Semântico) |
+| **Branch Ativa** | `feat/IMP-0008-blast-radius-impact` | 🟢 Branch de feature com implementação do IMP-0008 (Code GraphRAG & Blast Radius Impact Analysis) |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual configurado e dependências instaladas (`-e .[dev]`, `ruff`, `mypy`, `pytest-cov`) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **84/84 PASS** | Cobertura global de 89% (`pytest-cov`) em 5.02s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (47 arquivos formatados e verificados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 29 arquivos validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **88/88 PASS** | Cobertura global de 90% (`pytest-cov`) em 6.13s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (51 arquivos formatados e verificados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 31 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -97,8 +97,13 @@
    - Adicionado novo subcomando `corporate-engineer eval [path]` com barras de progresso visuais no formato texto e saída estruturada JSON.
    - Definidos modelos Pydantic v2 `EvaluationAxisScore` e `SemanticEvaluationReport` em `src/corporate_engineer/models.py`.
    - Formalizado [ADR-005](file:///c:/Users/WDAGUtilityAccount/Downloads/Nova%20pasta/corporate-engineer/docs/adr/ADR-005-evaluation-driven-development-scorecard.md), documentado [PR-CORP-005.md](file:///c:/Users/WDAGUtilityAccount/Downloads/Nova%20pasta/corporate-engineer/docs/pull_requests/PR-CORP-005.md) e suíte de testes expandida para 84/84 PASS.
-6. `[ ]` **Apreciação das Propostas Futuras do Backlog**:
-   - Analisar `IMP-0008` (Code GraphRAG & Análise de Blast Radius / Impacto de Mudanças).
+6. `[x]` **Implementação da Proposta IMP-0008 (Code GraphRAG & Análise de Blast Radius / Impacto de Mudanças)**:
+   - Implementado motor de análise de impacto em `src/corporate_engineer/rag/impact.py` com grafo reverso de chamadas e importações.
+   - Adicionado novo subcomando `corporate-engineer blast-radius <target>` e flag `--impact-of <target>` no subcomando `index`.
+   - Definidos modelos Pydantic v2 `ImpactNode` e `BlastRadiusReport` em `src/corporate_engineer/models.py`.
+   - Formalizado [ADR-006](file:///c:/Users/WDAGUtilityAccount/Downloads/Nova%20pasta/corporate-engineer/docs/adr/ADR-006-code-graphrag-blast-radius-impact.md), documentado [PR-CORP-006.md](file:///c:/Users/WDAGUtilityAccount/Downloads/Nova%20pasta/corporate-engineer/docs/pull_requests/PR-CORP-006.md) e suíte de testes expandida para 88/88 PASS com 90% de cobertura.
+7. `[ ]` **Próximas Iniciativas do Roadmap**:
+   - Identificar e mapear novas demandas e expansões avançadas para o ecossistema Corp-Pipeline.
 
 ---
 
@@ -106,6 +111,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-20T02:15:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0008: motor de análise de Blast Radius (`src/corporate_engineer/rag/impact.py`), comando `corporate-engineer blast-radius` e flag `index --impact-of`, formalização do ADR-006, PR-CORP-006 e expansão da suíte para 88/88 testes PASS com 90% de cobertura. |
 | `2026-11-20T01:52:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0007: motor de avaliação semântica EDD (`src/corporate_engineer/eval/scorecard.py`), comando `corporate-engineer eval`, formalização do ADR-005, PR-CORP-005 e expansão da suíte para 84/84 testes PASS com 89% de cobertura. |
 | `2026-11-20T01:32:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão da automação padrão de Link de PR Pré-Preenchido: adição de `src/corporate_engineer/git_utils.py`, subcomando `corporate-engineer pr-link`, hook `pr_link_generator.py` registrado em `.agents/hooks.json`, 5 novos testes unitários (79/79 PASS) e atualização de `common-git-workflow.md`. |
 | `2026-11-20T00:59:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0006: motor de testes de mutação via AST (`src/corporate_engineer/quality/mutation.py`), flag `--mutation` e `--target-file` no subcomando `audit`, formalização do ADR-004, inclusão de IMP-0007 e IMP-0008 no backlog e total de 74/74 testes PASS com 91% de cobertura. |

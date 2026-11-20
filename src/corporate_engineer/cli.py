@@ -48,6 +48,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--format", choices=["text", "json"], default="text", help="Output format"
     )
     index_parser.add_argument("--output", default=None, help="Optional file path to write output")
+    index_parser.add_argument(
+        "--impact-of", default=None, help="Calculate blast radius for target symbol or file"
+    )
+    index_parser.add_argument(
+        "--depth", type=int, default=3, help="Max propagation depth for impact analysis"
+    )
 
     # Command: audit
     audit_parser = subparsers.add_parser("audit", help="Run pre-flight security and quality audit")
@@ -160,6 +166,20 @@ def build_parser() -> argparse.ArgumentParser:
         "--format", choices=["text", "json"], default="text", help="Output format (default: text)"
     )
 
+    # Command: blast-radius (IMP-0008)
+    blast_parser = subparsers.add_parser(
+        "blast-radius", help="Calculate blast radius and affected tests for a code change"
+    )
+    blast_parser.add_argument("target", help="Target function, class name or file path")
+    blast_parser.add_argument(
+        "--depth", type=int, default=3, help="Max transitive propagation depth (default: 3)"
+    )
+    blast_parser.add_argument("--workspace", default=".", help="Workspace path (default: .)")
+    blast_parser.add_argument(
+        "--format", choices=["text", "json"], default="text", help="Output format (default: text)"
+    )
+    blast_parser.add_argument("--output", default=None, help="Optional file path to write output")
+
     return parser
 
 
@@ -180,6 +200,16 @@ def handle_run(args: argparse.Namespace) -> int:
 
 def handle_index(args: argparse.Namespace) -> int:
     target = Path(args.path).resolve()
+
+    if getattr(args, "impact_of", None):
+        return _run_blast_radius_analysis(
+            target_val=args.impact_of,
+            workspace=str(target),
+            depth=getattr(args, "depth", 3),
+            format_type=args.format,
+            output_path=args.output,
+        )
+
     indexer = ASTCodebaseIndexer(root_path=target)
 
     if args.format == "json":
@@ -482,6 +512,79 @@ def handle_eval(args: argparse.Namespace) -> int:
     return 0 if report.passed_gate else 1
 
 
+def _run_blast_radius_analysis(
+    target_val: str,
+    workspace: str = ".",
+    depth: int = 3,
+    format_type: str = "text",
+    output_path: str | None = None,
+) -> int:
+    from corporate_engineer.models import BlastRadiusReport
+    from corporate_engineer.rag.impact import BlastRadiusAnalyzer
+
+    is_file = target_val.endswith(".py") or "/" in target_val or "\\" in target_val
+    analyzer = BlastRadiusAnalyzer(workspace_root=workspace)
+    report: BlastRadiusReport = analyzer.analyze_impact(
+        target_file=target_val if is_file else None,
+        target_symbol=target_val if not is_file else None,
+        max_depth=depth,
+    )
+
+    if format_type == "json":
+        output_str = report.model_dump_json(indent=2)
+    else:
+        lines = [
+            "\n" + "=" * 60,
+            f"💥 Blast Radius Analysis: {report.target} [{report.target_type}]",
+            "=" * 60,
+            f"• Total Impacted Files: {report.total_impacted_files}",
+            f"• Total Impacted Symbols: {report.total_impacted_symbols}",
+            f"• Impacted Test Suites: {len(report.affected_tests)}",
+            f"• Recommended Surgical Test Command:\n  👉 {report.recommended_test_command}",
+            "\n--- Impact Propagation Tree ---",
+        ]
+        if not report.impacted_nodes:
+            lines.append("  (No external callers or importers detected - localized component)")
+        else:
+            nodes_by_depth: dict[int, list[Any]] = {}
+            for n in report.impacted_nodes:
+                nodes_by_depth.setdefault(n.depth, []).append(n)
+
+            for d in sorted(nodes_by_depth.keys()):
+                tag = "DIRECT IMPACT" if d == 1 else f"TRANSITIVE IMPACT (Depth {d})"
+                lines.append(f"\n📂 [{tag}]")
+                for n in nodes_by_depth[d]:
+                    lines.append(f"  • {n.file_path} :: {n.symbol} ({n.relationship})")
+
+        if report.affected_tests:
+            lines.append("\n🧪 [AFFECTED TESTS]")
+            for t in report.affected_tests:
+                lines.append(f"  ✓ {t}")
+
+        lines.append("=" * 60 + "\n")
+        output_str = "\n".join(lines)
+
+    if output_path:
+        out_p = Path(output_path).resolve()
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(output_str, encoding="utf-8")
+        print(f"✅ Análise de Blast Radius salva em: {out_p}")
+    else:
+        print(output_str)
+
+    return 0
+
+
+def handle_blast_radius(args: argparse.Namespace) -> int:
+    return _run_blast_radius_analysis(
+        target_val=args.target,
+        workspace=args.workspace,
+        depth=args.depth,
+        format_type=args.format,
+        output_path=getattr(args, "output", None),
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -500,6 +603,8 @@ def main(argv: list[str] | None = None) -> int:
         return handle_pr_link(args)
     elif args.command == "eval":
         return handle_eval(args)
+    elif args.command == "blast-radius":
+        return handle_blast_radius(args)
     else:
         parser.print_help()
         return 0

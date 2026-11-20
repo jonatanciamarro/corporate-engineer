@@ -140,6 +140,26 @@ def build_parser() -> argparse.ArgumentParser:
         "--format", choices=["text", "json"], default="text", help="Output format"
     )
 
+    # Command: eval (IMP-0007)
+    eval_parser = subparsers.add_parser(
+        "eval", help="Evaluate code quality using semantic corporate scorecard (EDD)"
+    )
+    eval_parser.add_argument(
+        "path", nargs="?", default="src", help="Path to file or directory to evaluate"
+    )
+    eval_parser.add_argument(
+        "--min-score",
+        type=float,
+        default=80.0,
+        help="Minimum composite score to pass gate (default: 80.0)",
+    )
+    eval_parser.add_argument(
+        "--strict", action="store_true", help="Fail if any axis fails or any violation occurs"
+    )
+    eval_parser.add_argument(
+        "--format", choices=["text", "json"], default="text", help="Output format (default: text)"
+    )
+
     return parser
 
 
@@ -415,6 +435,53 @@ def handle_pr_link(args: argparse.Namespace) -> int:
     return 0
 
 
+def handle_eval(args: argparse.Namespace) -> int:
+    from corporate_engineer.eval.scorecard import SemanticCodeEvaluator
+
+    evaluator = SemanticCodeEvaluator()
+    target = Path(args.path)
+    if target.is_file():
+        content = target.read_text(encoding="utf-8", errors="ignore")
+        report = evaluator.evaluate_source(
+            content, file_path=str(target), min_passing_score=args.min_score
+        )
+    else:
+        report = evaluator.evaluate_directory(target, min_passing_score=args.min_score)
+
+    if args.format == "json":
+        print(report.model_dump_json(indent=2))
+    else:
+        print("\n" + "=" * 60)
+        print(f"📊 Corporate Scorecard (EDD) - Target: {report.target_path}")
+        print("=" * 60)
+        print(
+            f"• Composite Score: {report.composite_score:.1f} / 100.0  [Grade: {report.letter_grade}]"
+        )
+        print(
+            f"• Gate Status: {'✅ PASS' if report.passed_gate else '❌ FAIL'} "
+            f"(Min required: {report.min_passing_score:.1f})"
+        )
+        print(f"• Total Files Evaluated: {report.total_files_evaluated}")
+        print(f"• Total Functions Evaluated: {report.total_functions_evaluated}")
+        print(f"• Total Violations: {report.total_violations}")
+        print("\n--- Corporate Axes Breakdown ---")
+        for ax in report.axes:
+            status = "✅ PASS" if ax.passed else "❌ FAIL"
+            bar_len = int(ax.score // 5)
+            bar = "█" * bar_len + "░" * (20 - bar_len)
+            print(f"[{bar}] {ax.score:5.1f}% (Weight: {ax.weight:.2f}) {status} - {ax.axis_name}")
+            if ax.violations:
+                for v in ax.violations[:3]:
+                    print(f"    ⚠️  {v}")
+                if len(ax.violations) > 3:
+                    print(f"    ... e mais {len(ax.violations) - 3} violação(ões)")
+        print("=" * 60 + "\n")
+
+    if args.strict and (not report.passed_gate or report.total_violations > 0):
+        return 1
+    return 0 if report.passed_gate else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -431,6 +498,8 @@ def main(argv: list[str] | None = None) -> int:
         return handle_mcp(args)
     elif args.command == "pr-link":
         return handle_pr_link(args)
+    elif args.command == "eval":
+        return handle_eval(args)
     else:
         parser.print_help()
         return 0

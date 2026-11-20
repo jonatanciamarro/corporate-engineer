@@ -82,3 +82,43 @@ class MutationReport(BaseModel):
     errors: int
     mutation_score: float
     mutants: list[Mutant] = Field(default_factory=list)
+
+
+class EvaluationAxisScore(BaseModel):
+    axis_name: str
+    score: float
+    weight: float
+    violations: list[str] = Field(default_factory=list)
+    passed: bool = True
+
+
+class SemanticEvaluationReport(BaseModel):
+    target_path: str
+    axes: list[EvaluationAxisScore] = Field(default_factory=list)
+    total_files_evaluated: int = 0
+    total_functions_evaluated: int = 0
+    min_passing_score: float = 80.0
+    composite_score: float = 0.0
+    letter_grade: str = "A"
+    passed_gate: bool = True
+    total_violations: int = 0
+
+    def model_post_init(self, context: Any, /) -> None:
+        if self.axes:
+            total_weight = sum(a.weight for a in self.axes)
+            if total_weight > 0:
+                self.composite_score = round(
+                    sum(a.score * a.weight for a in self.axes) / total_weight, 2
+                )
+            self.total_violations = sum(len(a.violations) for a in self.axes)
+
+        if self.composite_score >= 90.0:
+            self.letter_grade = "A"
+        elif self.composite_score >= 80.0:
+            self.letter_grade = "B"
+        elif self.composite_score >= 70.0:
+            self.letter_grade = "C"
+        else:
+            self.letter_grade = "F"
+
+        self.passed_gate = self.composite_score >= self.min_passing_score

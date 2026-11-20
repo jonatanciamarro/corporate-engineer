@@ -1,0 +1,198 @@
+"""
+Surgical TDD Runner integrated with Git Diff & Blast Radius (IMP-0010).
+Computes blast radius of modified code and runs only affected test suites.
+"""
+
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+from corporate_engineer.models import SurgicalTestReport
+from corporate_engineer.rag.impact import BlastRadiusAnalyzer
+
+
+class SurgicalTestRunner:
+    """Intelligent TDD runner executing only tests affected by Git changes."""
+
+    def __init__(self, root_path: Path | str = ".") -> None:
+        self.root = Path(root_path).resolve()
+        self.analyzer = BlastRadiusAnalyzer(root_path=self.root)
+
+    def get_changed_files(
+        self,
+        base_branch: str = "main",
+        include_uncommitted: bool = True,
+    ) -> list[str]:
+        """Detect files changed on the current branch or uncommitted in the working tree."""
+        changed: set[str] = set()
+
+        # 1. Uncommitted changes (staged, unstaged, untracked)
+        if include_uncommitted:
+            try:
+                proc = subprocess.run(
+                    ["git", "status", "--porcelain"],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    cwd=str(self.root),
+                )
+                if proc.returncode == 0:
+                    for line in proc.stdout.splitlines():
+                        if len(line) > 3:
+                            rel_file = line[3:].strip()
+                            if " -> " in rel_file:
+                                rel_file = rel_file.split(" -> ")[1].strip()
+                            rel_norm = rel_file.replace("\\", "/").strip('"')
+                            changed.add(rel_norm)
+            except (subprocess.SubprocessError, OSError):
+                pass
+
+        # 2. Committed changes compared to base branch
+        if base_branch:
+            for diff_args in (
+                ["git", "diff", "--name-only", f"{base_branch}...HEAD"],
+                ["git", "diff", "--name-only", base_branch],
+            ):
+                try:
+                    proc = subprocess.run(
+                        diff_args,
+                        check=False,
+                        capture_output=True,
+                        text=True,
+                        cwd=str(self.root),
+                    )
+                    if proc.returncode == 0:
+                        for line in proc.stdout.splitlines():
+                            clean_line = line.strip().replace("\\", "/").strip('"')
+                            if clean_line:
+                                changed.add(clean_line)
+                        break
+                except (subprocess.SubprocessError, OSError):
+                    pass
+
+        return sorted(changed)
+
+    def resolve_affected_tests(
+        self,
+        changed_files: list[str],
+        max_depth: int = 3,
+    ) -> list[str]:
+        """Compute all pytest test files directly modified or affected via blast radius."""
+        affected_tests: set[str] = set()
+
+        for file_str in changed_files:
+            norm_str = file_str.replace("\\", "/")
+
+            # Direct test file modification
+            if (
+                norm_str.startswith("tests/")
+                or "/tests/" in norm_str
+                or Path(norm_str).name.startswith("test_")
+                or Path(norm_str).name.endswith("_test.py")
+            ) and norm_str.endswith(".py"):
+                affected_tests.add(norm_str)
+                continue
+
+            # Python source file modification: analyze blast radius
+            if norm_str.endswith(".py"):
+                full_path = self.root / norm_str
+                if full_path.exists():
+                    report = self.analyzer.analyze_file(norm_str, max_depth=max_depth)
+                    for test_path in report.affected_tests:
+                        affected_tests.add(test_path.replace("\\", "/"))
+
+        return sorted(affected_tests)
+
+    def build_command(
+        self,
+        affected_tests: list[str],
+        extra_args: list[str] | None = None,
+    ) -> list[str]:
+        """Determine appropriate pytest executable and assemble CLI arguments."""
+        venv_scripts_pytest = self.root / ".venv" / "Scripts" / "pytest.exe"
+        venv_bin_pytest = self.root / ".venv" / "bin" / "pytest"
+
+        if venv_scripts_pytest.exists():
+            cmd = [str(venv_scripts_pytest), *affected_tests]
+        elif venv_bin_pytest.exists():
+            cmd = [str(venv_bin_pytest), *affected_tests]
+        else:
+            cmd = [sys.executable, "-m", "pytest", *affected_tests]
+
+        if extra_args:
+            cmd.extend(extra_args)
+        return cmd
+
+    def run(
+        self,
+        base_branch: str = "main",
+        max_depth: int = 3,
+        dry_run: bool = False,
+        changed_files: list[str] | None = None,
+        extra_args: list[str] | None = None,
+        fallback_all: bool = False,
+    ) -> SurgicalTestReport:
+        """Run surgical testing on affected test files and produce a structured report."""
+        files = (
+            self.get_changed_files(base_branch=base_branch)
+            if changed_files is None
+            else list(changed_files)
+        )
+        tests = self.resolve_affected_tests(files, max_depth=max_depth)
+
+        if not tests and files and fallback_all:
+            tests_dir = self.root / "tests"
+            if tests_dir.exists():
+                tests = [
+                    str(p.relative_to(self.root)).replace("\\", "/")
+                    for p in sorted(tests_dir.glob("test_*.py"))
+                ]
+
+        if not tests:
+            return SurgicalTestReport(
+                base_branch=base_branch,
+                changed_files=files,
+                affected_tests=[],
+                command="",
+                executed=False,
+                exit_code=0,
+                passed=True,
+            )
+
+        cmd_list = self.build_command(tests, extra_args=extra_args)
+        cmd_str = " ".join(cmd_list)
+
+        if dry_run:
+            return SurgicalTestReport(
+                base_branch=base_branch,
+                changed_files=files,
+                affected_tests=tests,
+                command=cmd_str,
+                executed=False,
+                exit_code=0,
+                passed=True,
+            )
+
+        start_time = time.monotonic()
+        proc = subprocess.run(
+            cmd_list,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=str(self.root),
+        )
+        duration_ms = round((time.monotonic() - start_time) * 1000.0, 2)
+
+        return SurgicalTestReport(
+            base_branch=base_branch,
+            changed_files=files,
+            affected_tests=tests,
+            command=cmd_str,
+            executed=True,
+            exit_code=proc.returncode,
+            stdout=proc.stdout,
+            stderr=proc.stderr,
+            duration_ms=duration_ms,
+            passed=(proc.returncode == 0),
+        )

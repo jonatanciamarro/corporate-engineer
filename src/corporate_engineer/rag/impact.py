@@ -14,8 +14,12 @@ from corporate_engineer.rag.ast_indexer import ASTCodebaseIndexer
 class BlastRadiusAnalyzer:
     """Analyzes the blast radius and transitive impacts of modifying code elements."""
 
-    def __init__(self, workspace_root: str | Path = ".") -> None:
-        self.root = Path(workspace_root).resolve()
+    def __init__(
+        self,
+        workspace_root: str | Path = ".",
+        root_path: str | Path | None = None,
+    ) -> None:
+        self.root = Path(root_path if root_path is not None else workspace_root).resolve()
         self.indexer = ASTCodebaseIndexer(root_path=self.root)
 
     def _discover_python_files(self) -> list[Path]:
@@ -38,6 +42,14 @@ class BlastRadiusAnalyzer:
             return ast.parse(content, filename=str(file_path))
         except (SyntaxError, OSError):
             return None
+
+    def analyze_symbol(self, symbol: str, max_depth: int = 3) -> BlastRadiusReport:
+        """Calculate blast radius and affected tests for a specific symbol."""
+        return self.analyze_impact(target_symbol=symbol, max_depth=max_depth)
+
+    def analyze_file(self, file_path: str | Path, max_depth: int = 3) -> BlastRadiusReport:
+        """Calculate blast radius and affected tests for a given file."""
+        return self.analyze_impact(target_file=str(file_path), max_depth=max_depth)
 
     def analyze_impact(
         self,

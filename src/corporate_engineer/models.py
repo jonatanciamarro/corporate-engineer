@@ -164,3 +164,16 @@ class TraceReport(BaseModel):
     total_tokens: int = 0
     spans: list[AgentSpan] = Field(default_factory=list)
     status: str = "OK"
+
+
+class SurgicalTestReport(BaseModel):
+    base_branch: str = "main"
+    changed_files: list[str] = Field(default_factory=list)
+    affected_tests: list[str] = Field(default_factory=list)
+    command: str = ""
+    executed: bool = False
+    exit_code: int = 0
+    stdout: str = ""
+    stderr: str = ""
+    duration_ms: float = 0.0
+    passed: bool = True

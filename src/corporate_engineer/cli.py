@@ -195,6 +195,41 @@ def build_parser() -> argparse.ArgumentParser:
     )
     tel_parser.add_argument("--output", default=None, help="Optional file path to export report")
 
+    # Command: test-surgical (IMP-0010)
+    surgical_parser = subparsers.add_parser(
+        "test-surgical",
+        help="Run surgical testing by detecting Git diff and computing affected tests via blast radius",
+    )
+    surgical_parser.add_argument(
+        "--base-branch", default="main", help="Base Git branch for comparison (default: main)"
+    )
+    surgical_parser.add_argument(
+        "--depth",
+        type=int,
+        default=3,
+        help="Max transitive blast radius propagation depth (default: 3)",
+    )
+    surgical_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print affected tests and test command without executing",
+    )
+    surgical_parser.add_argument(
+        "--fallback-all",
+        action="store_true",
+        help="Fallback to running all tests if changes exist but no tests match",
+    )
+    surgical_parser.add_argument("--workspace", default=".", help="Workspace path (default: .)")
+    surgical_parser.add_argument(
+        "--format", choices=["text", "json"], default="text", help="Output format (default: text)"
+    )
+    surgical_parser.add_argument(
+        "--output", default=None, help="Optional file path to write output"
+    )
+    surgical_parser.add_argument(
+        "pytest_extra_args", nargs="*", help="Optional extra arguments passed directly to pytest"
+    )
+
     return parser
 
 
@@ -675,6 +710,72 @@ def handle_telemetry(args: argparse.Namespace) -> int:
     return 0
 
 
+def handle_test_surgical(args: argparse.Namespace) -> int:
+    from corporate_engineer.quality.surgical_runner import SurgicalTestRunner
+
+    runner = SurgicalTestRunner(root_path=Path(args.workspace).resolve())
+    extra_args = args.pytest_extra_args if getattr(args, "pytest_extra_args", None) else None
+    report = runner.run(
+        base_branch=args.base_branch,
+        max_depth=args.depth,
+        dry_run=args.dry_run,
+        fallback_all=args.fallback_all,
+        extra_args=extra_args,
+    )
+
+    if args.format == "json":
+        output_str = report.model_dump_json(indent=2)
+    else:
+        lines = [
+            "\n" + "=" * 60,
+            "🔬 CORPORATE SURGICAL TDD RUNNER (IMP-0010)",
+            "=" * 60,
+            f"📌 Base Branch: {report.base_branch}",
+            f"📂 Changed Files ({len(report.changed_files)}):",
+        ]
+        if report.changed_files:
+            for f in report.changed_files:
+                lines.append(f"   • {f}")
+        else:
+            lines.append("   (nenhum arquivo alterado detectado no Git diff / working tree)")
+
+        lines.append(f"\n🎯 Affected Tests via Blast Radius ({len(report.affected_tests)}):")
+        if report.affected_tests:
+            for t in report.affected_tests:
+                lines.append(f"   ⚡ {t}")
+        else:
+            lines.append("   (nenhum teste afetado detectado)")
+
+        if report.command:
+            lines.append(f"\n⚙️  Command: {report.command}")
+
+        if report.executed:
+            status_symbol = "✅ PASS" if report.passed else "❌ FAIL"
+            lines.append(f"⏱️  Duration: {report.duration_ms:.2f} ms")
+            lines.append(f"📊 Result: {status_symbol} (exit code: {report.exit_code})")
+            if report.stdout:
+                lines.append("\n--- Pytest Output ---")
+                lines.append(report.stdout.strip())
+            if report.stderr:
+                lines.append("\n--- Pytest Stderr ---")
+                lines.append(report.stderr.strip())
+        elif report.affected_tests:
+            lines.append("ℹ️  Dry-run mode: testes não executados.")
+
+        lines.append("=" * 60 + "\n")
+        output_str = "\n".join(lines)
+
+    if args.output:
+        out_p = Path(args.output).resolve()
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(output_str, encoding="utf-8")
+        print(f"✅ Relatório de teste cirúrgico salvo em: {out_p}")
+    else:
+        print(output_str)
+
+    return report.exit_code if report.executed else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -697,6 +798,8 @@ def main(argv: list[str] | None = None) -> int:
         return handle_blast_radius(args)
     elif args.command == "telemetry":
         return handle_telemetry(args)
+    elif args.command == "test-surgical":
+        return handle_test_surgical(args)
     else:
         parser.print_help()
         return 0

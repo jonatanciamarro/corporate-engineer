@@ -6,6 +6,7 @@ import re
 import subprocess
 import urllib.parse
 from pathlib import Path
+from typing import Any
 
 
 def extract_github_repo_slug(remote_url: str) -> str:
@@ -62,6 +63,88 @@ def get_remote_url(repo_path: Path | str = ".", remote_name: str = "origin") -> 
     return "https://github.com/jonatanciamarro/corporate-engineer.git"
 
 
+def is_branch_pushed(
+    repo_path: Path | str = ".",
+    branch: str | None = None,
+    remote_name: str = "origin",
+) -> bool:
+    """Check if the active or specified branch is pushed to remote and up-to-date."""
+    resolved_path = Path(repo_path).resolve()
+    target_branch = branch or get_current_branch(resolved_path)
+
+    # Check if remote exists
+    try:
+        proc_remote = subprocess.run(
+            ["git", "remote"],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=str(resolved_path),
+        )
+        if remote_name not in proc_remote.stdout.split():
+            return False
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+    # Check ls-remote for target branch
+    try:
+        proc = subprocess.run(
+            ["git", "ls-remote", "--heads", remote_name, target_branch],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=str(resolved_path),
+        )
+        if proc.returncode != 0 or not proc.stdout.strip():
+            return False
+
+        remote_hash = proc.stdout.split()[0].strip()
+
+        # Compare with local HEAD hash
+        proc_head = subprocess.run(
+            ["git", "rev-parse", target_branch],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=str(resolved_path),
+        )
+        if proc_head.returncode == 0:
+            local_hash = proc_head.stdout.strip()
+            return local_hash == remote_hash
+
+        return True
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def push_branch_to_remote(
+    repo_path: Path | str = ".",
+    branch: str | None = None,
+    remote_name: str = "origin",
+    set_upstream: bool = True,
+) -> bool:
+    """Push the branch to the specified remote repository."""
+    resolved_path = Path(repo_path).resolve()
+    target_branch = branch or get_current_branch(resolved_path)
+
+    cmd = ["git", "push"]
+    if set_upstream:
+        cmd.append("-u")
+    cmd.extend([remote_name, target_branch])
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=str(resolved_path),
+        )
+        return proc.returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
 def find_pr_document(repo_path: Path | str = ".", branch: str = "") -> Path | None:
     """Locate the most relevant or latest PR markdown document in docs/pull_requests/."""
     pr_dir = Path(repo_path) / "docs" / "pull_requests"
@@ -94,10 +177,21 @@ def generate_pr_url(
     base: str = "main",
     pr_doc_path: Path | str | None = None,
     repo_slug: str | None = None,
-) -> dict[str, str]:
-    """Generate a 1-click pre-filled GitHub Pull Request creation URL with title and body."""
+    ensure_pushed: bool = True,
+) -> dict[str, Any]:
+    """Generate a 1-click pre-filled GitHub Pull Request creation URL with title and body.
+
+    Ensures the branch is pushed to origin remote by default (Always-On).
+    """
     resolved_path = Path(repo_path).resolve()
     active_branch = branch or get_current_branch(resolved_path)
+
+    pushed = False
+    if ensure_pushed and active_branch not in [base, "HEAD"]:
+        if not is_branch_pushed(resolved_path, active_branch):
+            pushed = push_branch_to_remote(resolved_path, active_branch)
+        else:
+            pushed = True
 
     if not repo_slug:
         remote_url = get_remote_url(resolved_path)
@@ -165,4 +259,5 @@ def generate_pr_url(
         "ticket_id": ticket_id,
         "pr_doc": str(doc) if doc else "",
         "url": pr_url,
+        "pushed": pushed,
     }

@@ -32,3 +32,5 @@ Repository-wide operating standards and instructions for AI agents working in `c
 5. **Pre-Flight Mandatory**: Execute `/preflight` and verify 0 errors across all 4 checks before submitting work.
 6. **Improvement Governance**: Never apply unsolicited architectural modifications. Present proposals via `[CORP-PIPELINE / IMPROVEMENT DETECTED]` and offer saving to `.agents/orchestration/improvement-backlog.md`.
 7. **ADR & Git Conventions**: Create an ADR in `docs/adr/` for significant architectural modifications. Commit using Conventional Commits (`feat:`, `fix:`, `refactor:`, etc.).
+8. **Mandatory Remote Push Before PR URL (Always-On)**: The agent must ALWAYS push the branch to `origin` (`git push -u origin <branch>`) BEFORE generating, presenting, or formatting the 1-click GitHub PR URL. A PR creation link must NEVER lead to a GitHub 404.
+

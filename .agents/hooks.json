@@ -4,14 +4,14 @@
     "SessionStart": [
       {
         "type": "command",
-        "command": "python orchestration/hooks/session_start.py",
+        "command": "python .agents/orchestration/hooks/session_start.py",
         "timeout": 15
       }
     ],
     "PreInvocation": [
       {
         "type": "command",
-        "command": "python orchestration/hooks/pr_link_generator.py",
+        "command": "python .agents/orchestration/hooks/pr_link_generator.py",
         "timeout": 15
       }
     ]

@@ -13,13 +13,13 @@
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
 | **Branch Ativa** | `feat/IMP-0013-system-one-engine` | 🟢 Suíte com 113/113 testes PASS, 87% cobertura, IMP-0001 a IMP-0013 implementados |
 | **Ambiente Local** | `.venv` (Python 3.10.6) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev]`) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **113/113 PASS** | Cobertura global de 87% (`pytest-cov`) em 11.81s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (68 arquivos formatados e verificados) |
+| **Testes (Pytest + Hypothesis)** | 🟢 **116/116 PASS** | Cobertura global de 87% (`pytest-cov`) em 21.35s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (70 arquivos formatados e verificados) |
 | **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 43 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
-| **Lifecycle Hooks** | 🟢 **SessionStart & PreInvocation Ativos** | `.agents/hooks.json` integrado a `session_start.py` e `pr_link_generator.py` (PR link 1-clique pre-filled com `IMP-xxxx`) |
+| **Lifecycle Hooks** | 🟢 **SessionStart & PreInvocation Ativos** | `.agents/hooks.json` integrado com push remoto Always-On antes da geração de PR |
 
 ---
 
@@ -121,6 +121,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-20T09:38:00-03:00` | Corp-Pipeline Master Orchestrator | Blindagem Always-On da Invariante de Push Remoto Pré-PR: atualização em `git_utils.py` (`is_branch_pushed`, `push_branch_to_remote`, `ensure_pushed=True`), correção dos caminhos em `.agents/hooks.json` e `pr_link_generator.py`, adição da Invariante 8 em `AGENTS.md`, `GEMINI.md`, `corp-pipeline-orchestrator.md` e `common-git-workflow.md`, expansão da suíte para 116/116 testes PASS. |
 | `2026-11-20T09:28:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0013: módulo System One (`src/corporate_engineer/system_one/`), modelos Pydantic v2, motores heurístico, outlines e ONNX NLI, fachada `SystemOneRouter`, subcomando `corporate-engineer decide`, formalização do ADR-009, PR-CORP-009, expansão da suíte para 113/113 testes PASS (87% cobertura) e push da branch `feat/IMP-0013-system-one-engine` para origin no GitHub. |
 | `2026-11-20T09:14:00-03:00` | Corp-Pipeline Master Orchestrator | Registro e formalização no backlog contínuo de `IMP-0013` (Open-Source System-One Decision Engine via Outlines / Local SLM / ONNX NLI) com status `SAVED_NOT_APPROVED` após aprovação do usuário. |
 | `2026-11-20T08:58:00-03:00` | Corp-Pipeline Master Orchestrator | Execução de `git pull` na branch `main` (commit `bb560cd`), correção de compatibilidade retroativa para Python 3.10 em `tracer.py` (`datetime.UTC`), validação da suíte (99/99 PASS, 0 erros Ruff e Mypy) e validação da CLI de engenharia contra o projeto `darkfactory`. |

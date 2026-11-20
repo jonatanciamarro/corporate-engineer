@@ -77,3 +77,5 @@ O ecossistema está organizado e mapeado em registros canônicos:
 5. **Pre-Flight Obrigatório**: Antes de qualquer commit ou entrega, é mandatório rodar `/preflight` (todos os 4 cheques devem passar com 0 erros).
 6. **Governança de Melhorias**: NUNCA aplicar melhorias não solicitadas sem aprovação. Apresentar formato padrão `[CORP-PIPELINE / IMPROVEMENT DETECTED]` e oferecer salvamento no backlog.
 7. **Padrão Git & Conventional Commits**: Branches no padrão `feat/<ID>-<slug>` ou `fix/<ID>-<slug>`. Commits seguindo a especificação convencional (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`).
+8. **Push Remoto Pré-PR Mandatório (Always-On)**: O envio da branch para o remote no GitHub (`git push -u origin <branch>`) DEVE OBRIGATORIAMENTE anteceder a geração, formatação ou apresentação de qualquer link de PR. O framework e o orquestrador NUNCA devem emitir links de PR para branches locais não sincronizadas (garantindo zero erros 404 no GitHub).
+

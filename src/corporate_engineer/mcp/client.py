@@ -11,6 +11,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+from corporate_engineer.mcp.circuit_breaker import CircuitBreaker, CircuitBreakerOpenError
 from corporate_engineer.models import MCPToolCall, MCPToolResult
 
 # Deterministic allowlist of safe base commands
@@ -206,13 +207,20 @@ class LocalMCPToolAdapter:
 class RemoteMCPSSEClient:
     """
     Client for remote MCP servers using Server-Sent Events (SSE) / JSON-RPC over HTTP.
-    Supports corporate Bearer authentication and enterprise endpoint connectivity.
+    Supports corporate Bearer authentication, enterprise endpoint connectivity, and circuit breaker.
     """
 
-    def __init__(self, endpoint: str, auth_token: str | None = None, timeout: float = 10.0):
+    def __init__(
+        self,
+        endpoint: str,
+        auth_token: str | None = None,
+        timeout: float = 10.0,
+        circuit_breaker: CircuitBreaker | None = None,
+    ):
         self.endpoint = endpoint.rstrip("/")
         self.auth_token = auth_token
         self.timeout = timeout
+        self.circuit_breaker = circuit_breaker
         self.headers: dict[str, str] = {
             "Content-Type": "application/json",
             "Accept": "application/json, text/event-stream",
@@ -222,6 +230,11 @@ class RemoteMCPSSEClient:
             self.headers["Authorization"] = f"Bearer {auth_token}"
 
     def _send_request(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        if self.circuit_breaker and not self.circuit_breaker.can_execute():
+            raise CircuitBreakerOpenError(
+                f"Circuit breaker is OPEN: endpoint '{self.endpoint}' is temporarily unavailable."
+            )
+
         payload = {
             "jsonrpc": "2.0",
             "id": 1,
@@ -234,8 +247,13 @@ class RemoteMCPSSEClient:
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                 raw_bytes = resp.read()
-                return json.loads(raw_bytes.decode("utf-8"))
+                res = json.loads(raw_bytes.decode("utf-8"))
+                if self.circuit_breaker:
+                    self.circuit_breaker.record_success()
+                return res
         except Exception as e:
+            if self.circuit_breaker:
+                self.circuit_breaker.record_failure()
             raise ConnectionError(
                 f"Connection error reaching MCP endpoint '{self.endpoint}': {e}"
             ) from e
@@ -249,7 +267,7 @@ class RemoteMCPSSEClient:
                 "endpoint": self.endpoint,
                 "response": res.get("result", {}),
             }
-        except ConnectionError as e:
+        except (ConnectionError, CircuitBreakerOpenError) as e:
             return {
                 "status": "error",
                 "mode": "remote-sse",
@@ -262,7 +280,7 @@ class RemoteMCPSSEClient:
             res = self._send_request("tools/list")
             tools = res.get("result", {}).get("tools", [])
             return list(tools)
-        except ConnectionError:
+        except (ConnectionError, CircuitBreakerOpenError):
             return []
 
     def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> MCPToolResult:
@@ -279,7 +297,7 @@ class RemoteMCPSSEClient:
             ]
             content = "\n".join(text_parts) if text_parts else str(result_data)
             return MCPToolResult(tool_name=tool_name, is_error=is_error, content=content)
-        except ConnectionError as e:
+        except (ConnectionError, CircuitBreakerOpenError) as e:
             return MCPToolResult(
                 tool_name=tool_name,
                 is_error=True,

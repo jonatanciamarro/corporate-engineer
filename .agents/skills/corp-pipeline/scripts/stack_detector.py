@@ -3,13 +3,14 @@
 stack_detector.py - Universal Polyglot Stack Detector for Corporate Pipelines.
 Inspects project roots to identify language, package manager, and deterministically
 proposes commands for testing (test_cmd), linting (lint_cmd), and type checking (typecheck_cmd).
+Includes IMP-0001: Automatic virtualenv (.venv/venv) detection and tool path resolution.
 """
 
 import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 
 def find_files(root: Path, patterns: List[str]) -> List[str]:
@@ -23,7 +24,27 @@ def find_files(root: Path, patterns: List[str]) -> List[str]:
 
 def detect_stack(project_dir: Path) -> Dict[str, Any]:
     project_dir = project_dir.resolve()
-    
+
+    # Check for virtual environment (.venv or venv) - IMP-0001
+    venv_dir: Path | None = None
+    venv_detected = False
+    for candidate in [".venv", "venv"]:
+        cand_path = project_dir / candidate
+        if cand_path.is_dir():
+            venv_dir = cand_path
+            venv_detected = True
+            break
+
+    # Determine bin directory for venv
+    venv_bin_prefix: str | None = None
+    if venv_dir is not None:
+        if (venv_dir / "Scripts").is_dir() or (os.name == "nt" and (venv_dir / "Scripts").exists()):
+            rel_path = venv_dir.relative_to(project_dir) if venv_dir.is_relative_to(project_dir) else venv_dir
+            venv_bin_prefix = f"{rel_path}\\Scripts"
+        elif (venv_dir / "bin").is_dir() or (venv_dir / "bin").exists():
+            rel_path = venv_dir.relative_to(project_dir) if venv_dir.is_relative_to(project_dir) else venv_dir
+            venv_bin_prefix = f"{rel_path}/bin"
+
     # Check Python
     py_markers = ["pyproject.toml", "requirements.txt", "Pipfile", "setup.py", "setup.cfg"]
     detected_py = [m for m in py_markers if (project_dir / m).exists()]
@@ -43,9 +64,14 @@ def detect_stack(project_dir: Path) -> Dict[str, Any]:
                 typecheck_cmd = "poetry run mypy ."
             else:
                 pkg_mgr = "pip/pyproject"
-                test_cmd = "pytest"
-                lint_cmd = "ruff check ."
-                typecheck_cmd = "mypy ."
+                if venv_bin_prefix:
+                    test_cmd = f"{venv_bin_prefix}\\pytest" if "\\" in venv_bin_prefix else f"{venv_bin_prefix}/pytest"
+                    lint_cmd = f"{venv_bin_prefix}\\ruff check ." if "\\" in venv_bin_prefix else f"{venv_bin_prefix}/ruff check ."
+                    typecheck_cmd = f"{venv_bin_prefix}\\mypy ." if "\\" in venv_bin_prefix else f"{venv_bin_prefix}/mypy ."
+                else:
+                    test_cmd = "pytest"
+                    lint_cmd = "ruff check ."
+                    typecheck_cmd = "mypy ."
         elif (project_dir / "Pipfile").exists():
             pkg_mgr = "pipenv"
             test_cmd = "pipenv run pytest"
@@ -53,14 +79,21 @@ def detect_stack(project_dir: Path) -> Dict[str, Any]:
             typecheck_cmd = "pipenv run mypy ."
         else:
             pkg_mgr = "pip"
-            test_cmd = "pytest"
-            lint_cmd = "ruff check ." if (project_dir / ".ruff.toml").exists() else "flake8"
-            typecheck_cmd = "mypy ."
+            if venv_bin_prefix:
+                test_cmd = f"{venv_bin_prefix}\\pytest" if "\\" in venv_bin_prefix else f"{venv_bin_prefix}/pytest"
+                lint_cmd = f"{venv_bin_prefix}\\ruff check ." if "\\" in venv_bin_prefix else f"{venv_bin_prefix}/ruff check ."
+                typecheck_cmd = f"{venv_bin_prefix}\\mypy ." if "\\" in venv_bin_prefix else f"{venv_bin_prefix}/mypy ."
+            else:
+                test_cmd = "pytest"
+                lint_cmd = "ruff check ." if (project_dir / ".ruff.toml").exists() else "flake8"
+                typecheck_cmd = "mypy ."
 
         return {
             "stack": "python",
             "detected_files": detected_py,
             "package_manager": pkg_mgr,
+            "venv_detected": venv_detected,
+            "venv_path": str(venv_dir) if venv_dir else None,
             "test_cmd": test_cmd,
             "lint_cmd": lint_cmd,
             "typecheck_cmd": typecheck_cmd,
@@ -76,7 +109,7 @@ def detect_stack(project_dir: Path) -> Dict[str, Any]:
                 pkg_data = json.load(f)
         except Exception:
             pass
-        
+
         scripts = pkg_data.get("scripts", {})
         has_ts = (project_dir / "tsconfig.json").exists() or "typescript" in pkg_data.get("devDependencies", {})
 

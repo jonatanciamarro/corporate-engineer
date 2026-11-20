@@ -122,3 +122,21 @@ class SemanticEvaluationReport(BaseModel):
             self.letter_grade = "F"
 
         self.passed_gate = self.composite_score >= self.min_passing_score
+
+
+class ImpactNode(BaseModel):
+    symbol: str
+    file_path: str
+    depth: int = 1
+    impact_type: str = "DIRECT"  # DIRECT | TRANSITIVE
+    relationship: str = "CALLS"  # CALLS | IMPORTS | INHERITS
+
+
+class BlastRadiusReport(BaseModel):
+    target: str
+    target_type: str = "SYMBOL"  # SYMBOL | FILE
+    total_impacted_files: int = 0
+    total_impacted_symbols: int = 0
+    impacted_nodes: list[ImpactNode] = Field(default_factory=list)
+    affected_tests: list[str] = Field(default_factory=list)
+    recommended_test_command: str = "pytest"

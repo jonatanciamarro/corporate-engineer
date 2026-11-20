@@ -33,7 +33,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0005` | Exportação de Diagramas Mermaid Dinâmicos a partir da CLI `dag` | `CAPABILITY` | Baixa (S) | `IMPLEMENTED` | `2026-11-19` |
 | `IMP-0006` | Motor Nativo de Mutation Testing via AST para Validação de Testes AI | `QUALITY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
 | `IMP-0007` | Evaluation-Driven Development (EDD) & Scorecard Semântico | `GOVERNANCE` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
-| `IMP-0008` | Code GraphRAG & Análise de Blast Radius / Impacto de Mudanças | `EFFICIENCY` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-20` |
+| `IMP-0008` | Code GraphRAG & Análise de Blast Radius / Impacto de Mudanças | `EFFICIENCY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
 
 ---
 
@@ -141,7 +141,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0008: Code GraphRAG & Análise de Blast Radius / Impacto de Mudanças
 - **Categoria**: `EFFICIENCY` | `CAPABILITY`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED`
 - **Data de Descoberta**: 2026-11-20
 - **Problema / Limitação Atual**: O indexador AST atual mapeia classes e métodos por arquivo, mas não calcula o grafo de impacto ("se a função X mudar, quais arquivos e testes são diretamente afetados?").
 - **Solução Proposta**: Adicionar motor de cálculo de **Blast Radius / Impact Analysis** ao indexador AST e flag `index --impact-of <arquivo/função>`.

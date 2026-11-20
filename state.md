@@ -13,13 +13,13 @@
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
 | **Branch Ativa** | `feat/IMP-0006-mutation-testing-engine` | 🟢 Branch de feature com implementação do IMP-0006 (Motor de Mutation Testing AST) |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual configurado e dependências instaladas (`-e .[dev]`, `ruff`, `mypy`, `pytest-cov`) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **74/74 PASS** | Cobertura global de 91% (`pytest-cov`) em 4.92s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (39 arquivos formatados e verificados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 24 arquivos validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **79/79 PASS** | Cobertura global de 91% (`pytest-cov`) em 4.68s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (43 arquivos formatados e verificados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 26 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
-| **Lifecycle Hooks** | 🟢 **SessionStart Ativo** | `.agents/hooks.json` integrado ao script `session_start.py` via protojson nativo |
+| **Lifecycle Hooks** | 🟢 **SessionStart & PreInvocation Ativos** | `.agents/hooks.json` integrado a `session_start.py` e `pr_link_generator.py` (PR link 1-clique pre-filled com `IMP-xxxx`) |
 
 ---
 
@@ -88,7 +88,11 @@
    - Concluído com sucesso na branch `feat/IMP-0005-dag-mermaid-export` com 69 testes passing, 92% de cobertura, ADR-003 formalizado e PR-CORP-003 aberto.
 3. `[x]` **Implementação da Proposta IMP-0006 (Motor Nativo de Mutation Testing via AST)**:
    - Concluído com sucesso na branch `feat/IMP-0006-mutation-testing-engine` com 74 testes passing, 91% de cobertura, ADR-004 formalizado e integração completa com `audit --mutation`.
-4. `[ ]` **Apreciação das Propostas Futuras do Backlog**:
+4. `[x]` **Automação Padrão do Link Pré-Preenchido de PR (Hook Nativo e CLI `pr-link`)**:
+   - Implementado `src/corporate_engineer/git_utils.py` com resolução dinâmica de branch, ticket ID (`IMP-xxxx`), título e corpo completo codificados na URL (`quick_pull=1&title=...&body=...`).
+   - Integrado novo subcomando `corporate-engineer pr-link` na CLI e hook automático em `.agents/hooks.json` (`pr_link_generator.py` e `session_start.py`).
+   - Suíte de testes em `tests/test_pr_link.py` (5 testes novos) e regra `.agents/rules/common-git-workflow.md` atualizada.
+5. `[ ]` **Apreciação das Propostas Futuras do Backlog**:
    - Analisar `IMP-0007` (Evaluation-Driven Development Scorecard Semântico) e `IMP-0008` (Blast Radius / Code GraphRAG).
 
 ---
@@ -97,6 +101,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-20T01:32:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão da automação padrão de Link de PR Pré-Preenchido: adição de `src/corporate_engineer/git_utils.py`, subcomando `corporate-engineer pr-link`, hook `pr_link_generator.py` registrado em `.agents/hooks.json`, 5 novos testes unitários (79/79 PASS) e atualização de `common-git-workflow.md`. |
 | `2026-11-20T00:59:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0006: motor de testes de mutação via AST (`src/corporate_engineer/quality/mutation.py`), flag `--mutation` e `--target-file` no subcomando `audit`, formalização do ADR-004, inclusão de IMP-0007 e IMP-0008 no backlog e total de 74/74 testes PASS com 91% de cobertura. |
 | `2026-11-19T23:18:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0005: adição de `--mermaid` e `--output` no subcomando `dag`, serialização de FSM (`fsm_to_mermaid`) e timeline de checkpoints (`checkpoints_to_mermaid`), formalização do ADR-003 e total de 69/69 testes PASS com 92% de cobertura. |
 | `2026-11-19T21:42:00-03:00` | Antigravity AI | Correção de CI: adição explícita de `hypothesis` e `pytest-cov` nos dependency-groups e optional-dependencies de teste/dev do `pyproject.toml`, e atualização do workflow `.github/workflows/ci.yml` para instalar `.[dev,test]`. Suíte de 62 testes validada localmente. |

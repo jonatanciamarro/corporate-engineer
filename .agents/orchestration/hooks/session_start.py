@@ -24,11 +24,12 @@ def get_workspace_root() -> Path:
 
 
 def run_session_start_hook() -> None:
-    # Read stdin safely
+    # Read stdin safely if piped
     try:
-        raw_input = sys.stdin.read()
-        if raw_input.strip():
-            _ = json.loads(raw_input)
+        if not sys.stdin.isatty():
+            raw_input = sys.stdin.read()
+            if raw_input.strip():
+                _ = json.loads(raw_input)
     except (json.JSONDecodeError, OSError):
         pass
 
@@ -47,14 +48,30 @@ def run_session_start_hook() -> None:
         except OSError:
             pass
 
-    welcome_msg = (
-        "🟢 Corp-Pipeline Master Orchestrator: ACTIVE\n"
-        f"• Framework: corporate-engineer (Python 3.10+ target py311)\n"
-        f"• Living State: {state_info} (read state.md before acting)\n"
-        "• Capability Intelligence: Registries loaded from .agents/orchestration/\n"
-        "• Execution Standard: 6-Phase Corp-Pipeline with Shift-Left TDD & Pre-Flight Gates\n"
-        "• Continuous Improvement: Ideas presented via [CORP-PIPELINE / IMPROVEMENT DETECTED]"
-    )
+    welcome_lines = [
+        "🟢 Corp-Pipeline Master Orchestrator: ACTIVE",
+        f"• Framework: corporate-engineer (Python 3.10+ target py311)",
+        f"• Living State: {state_info} (read state.md before acting)",
+        "• Capability Intelligence: Registries loaded from .agents/orchestration/",
+        "• Execution Standard: 6-Phase Corp-Pipeline with Shift-Left TDD & Pre-Flight Gates",
+        "• Continuous Improvement: Ideas presented via [CORP-PIPELINE / IMPROVEMENT DETECTED]",
+    ]
+
+    src_dir = str(root / "src")
+    if src_dir not in sys.path:
+        sys.path.insert(0, src_dir)
+
+    try:
+        from corporate_engineer.git_utils import generate_pr_url, get_current_branch
+
+        branch = get_current_branch(root)
+        if branch.startswith(("feat/", "fix/", "chore/", "refactor/")):
+            pr_info = generate_pr_url(repo_path=root, branch=branch)
+            welcome_lines.append(f"• Pre-filled 1-Click PR URL: {pr_info['url']}")
+    except Exception:  # noqa: BLE001
+        pass
+
+    welcome_msg = "\n".join(welcome_lines)
 
     output = {
         "injectSteps": [

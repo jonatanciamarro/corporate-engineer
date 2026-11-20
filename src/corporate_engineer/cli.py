@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from corporate_engineer.git_utils import generate_pr_url
 from corporate_engineer.mcp.client import LocalMCPToolAdapter, RemoteMCPSSEClient
 from corporate_engineer.models import MCPToolCall, TaskInput
 from corporate_engineer.orchestrator.graph import AutonomousEngineeringGraph
@@ -125,6 +126,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     call_parser.add_argument("--token", default=None, help="Bearer auth token for remote MCP")
     call_parser.add_argument("--format", choices=["text", "json"], default="text")
+
+    # Command: pr-link
+    pr_parser = subparsers.add_parser(
+        "pr-link", help="Generate 1-click pre-filled GitHub Pull Request URL"
+    )
+    pr_parser.add_argument(
+        "--branch", default=None, help="Target branch name (default: active branch)"
+    )
+    pr_parser.add_argument("--base", default="main", help="Base branch (default: main)")
+    pr_parser.add_argument("--doc", default=None, help="Path to specific PR markdown file")
+    pr_parser.add_argument(
+        "--format", choices=["text", "json"], default="text", help="Output format"
+    )
 
     return parser
 
@@ -384,6 +398,23 @@ def handle_mcp(args: argparse.Namespace) -> int:
     return 0
 
 
+def handle_pr_link(args: argparse.Namespace) -> int:
+    info = generate_pr_url(
+        repo_path=".",
+        branch=args.branch,
+        base=args.base,
+        pr_doc_path=args.doc,
+    )
+    if args.format == "json":
+        print(json.dumps(info, indent=2))
+    else:
+        print(f"🔗 Pre-Filled GitHub PR Link [{info['branch']} -> {info['base']}]:")
+        print(f"  - Ticket: {info['ticket_id']}")
+        print(f"  - Título: {info['title']}")
+        print(f"  - URL: {info['url']}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -398,6 +429,8 @@ def main(argv: list[str] | None = None) -> int:
         return handle_dag(args)
     elif args.command == "mcp":
         return handle_mcp(args)
+    elif args.command == "pr-link":
+        return handle_pr_link(args)
     else:
         parser.print_help()
         return 0

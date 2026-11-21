@@ -37,7 +37,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0009` | OpenTelemetry Agent Tracing & Span Telemetry (OTel LLMOps) | `OBSERVABILITY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
 | `IMP-0010` | Surgical TDD Runner Integrado ao Git Diff & Blast Radius | `EFFICIENCY` | Baixa-Média (S-M) | `IMPLEMENTED` | `2026-11-20` |
 | `IMP-0011` | MCP Enterprise Hub & Tool Multiplexer (.mcp.json pools) | `INTEGRATION` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
-| `IMP-0012` | AST Auto-Refactor & Self-Healing Fixer (Auto-Remediação) | `AUTOMATION` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-20` |
+| `IMP-0012` | AST Auto-Refactor & Self-Healing Fixer (Auto-Remediação) | `AUTOMATION` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-20` |
 | `IMP-0013` | Open-Source System-One Decision Engine (Outlines / Local SLM) | `EFFICIENCY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
 | `IMP-0014` | Free System-One SLM Fine-Tuning Pipeline & Universal Framework Injection | `EFFICIENCY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
 
@@ -203,7 +203,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0012: AST Auto-Refactor & Self-Healing Fixer (Auto-Remediação)
 - **Categoria**: `AUTOMATION` | `QUALITY`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED` (Ref: `PR-CORP-012.md`, `ADR-012`)
 - **Data de Descoberta**: 2026-11-20
 - **Problema / Limitação Atual**: Quando os subcomandos `eval` (scorecard semântico) ou `audit` detectam violações estruturais (ex.: métodos `__init__` sem `-> None`, ausência de tipos em retornos evidentes, variáveis globais indevidas), a correção necessita de intervenção manual.
 - **Solução Proposta**: Adicionar o comando `corporate-engineer fix --auto` que utiliza `ast.NodeTransformer` para aplicar correções seguras e cirúrgicas sem introduzir regressões.

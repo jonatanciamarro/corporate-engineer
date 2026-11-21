@@ -279,3 +279,21 @@ class MCPHubStatus(BaseModel):
     circuit_states: dict[str, str] = Field(default_factory=dict)
     total_tools: int = 0
     tools_by_server: dict[str, int] = Field(default_factory=dict)
+
+
+class FixDetail(BaseModel):
+    file_path: str
+    rule_name: str
+    line_number: int = 1
+    description: str
+    original_snippet: str = ""
+    fixed_snippet: str = ""
+
+
+class FixReport(BaseModel):
+    total_files_analyzed: int = 0
+    files_modified: int = 0
+    fixes_applied: list[FixDetail] = Field(default_factory=list)
+    dry_run: bool = False
+    system_one_risk: str = "LOW"
+    success: bool = True

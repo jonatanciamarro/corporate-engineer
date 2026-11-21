@@ -11,7 +11,7 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0012-ast-auto-refactor` | 🟢 Suíte com 138/138 testes PASS, 88% cobertura, IMP-0001 a IMP-0014 implementados |
+| **Branch Ativa** | `main` | 🟢 Suíte com 138/138 testes PASS, 88% cobertura, IMP-0001 a IMP-0014 implementados e consolidados |
 | **Ambiente Local** | `.venv` (Python 3.10.6) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev]`) |
 | **Testes (Pytest + Hypothesis)** | 🟢 **138/138 PASS** | Cobertura global de 88% (`pytest-cov`) em 18.56s |
 | **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (83 arquivos formatados e verificados) |
@@ -158,14 +158,14 @@
 ## 4. Próximos Passos Imediatos para a Próxima Sessão
 
 1. `[x]` **Implementação e Testes das Melhorias do Backlog (IMP-0001 a IMP-0009)** (Merged em `main`).
-2. `[x]` **Implementação da Proposta IMP-0010 (Surgical TDD Runner Integrado ao Git Diff & Blast Radius)** (PR-CORP-008, 99/99 testes PASS).
-3. `[x]` **Implementação da Proposta IMP-0013 (Open-Source System-One Decision Engine via Outlines / Local SLM)** (PR-CORP-009, 113/113 testes PASS).
-4. `[x]` **Implementação da Proposta IMP-0014 (Free System-One SLM Fine-Tuning Pipeline & Universal Framework Injection)** (PR-CORP-010, 124/124 testes PASS).
+2. `[x]` **Implementação da Proposta IMP-0010 (Surgical TDD Runner Integrado ao Git Diff & Blast Radius)** (PR-CORP-008, 99/99 testes PASS, Merged em `main`).
+3. `[x]` **Implementação da Proposta IMP-0013 (Open-Source System-One Decision Engine via Outlines / Local SLM)** (PR-CORP-009, 113/113 testes PASS, Merged em `main`).
+4. `[x]` **Implementação da Proposta IMP-0014 (Free System-One SLM Fine-Tuning Pipeline & Universal Framework Injection)** (PR-CORP-010, 124/124 testes PASS, Merged em `main`).
 5. `[x]` **Implementação da Proposta IMP-0011 (MCP Enterprise Hub & Tool Multiplexer)** (PR-CORP-011, 130/130 testes PASS, Merged em `main`).
-6. `[x]` **Implementação de `IMP-0012` (AST Auto-Refactor & Self-Healing Fixer com `corporate-engineer fix --auto`)** (PR-CORP-012, 138/138 testes PASS).
-7. `[ ]` **Execução dos Próximos Passos da Sequência Aprovada pelo Usuário**:
-   - **Passo 3**: Execução prática do Fine-Tuning do Sistema 1 no Colab com modelo exportado localmente.
-   - **Passo 4**: Merge e consolidação de todas as branches na `main`.
+6. `[x]` **Implementação de `IMP-0012` (AST Auto-Refactor & Self-Healing Fixer com `corporate-engineer fix --auto`)** (PR-CORP-012, 138/138 testes PASS, Merged em `main`).
+7. `[x]` **Execução Prática do Fine-Tuning do Sistema 1 (Dataset Sintético 100 amostras & Receita Colab 1-Click)** (100 amostras geradas, validação CLI em todos os modos).
+8. `[x]` **Sincronização Git e Consolidação de Todas as Branches na `main`** (Todos os PRs #1-#15 mergeados, suíte com 138/138 testes verdes).
+9. `[ ]` **Novas Oportunidades & Expansão Futura do Framework** (Conforme novas demandas corporativas).
 
 ---
 
@@ -173,6 +173,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-21T10:14:00-03:00` | Corp-Pipeline Master Orchestrator | Consolidação completa das 4 etapas aprovadas pelo usuário na branch `main`: PR #11 (IMP-0011) e PR #15 (IMP-0012) mergeados com sucesso, dataset sintético do Sistema 1 de 100 amostras validado com receita Colab, testes de inferência reflexiva em todos os modos e suíte global 100% verde (138/138 PASS, 88% cobertura, 0 erros Ruff/Mypy). |
 | `2026-11-21T10:05:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0012: motor `ASTSelfHealingFixer` (`src/corporate_engineer/eval/fixer.py`), modelos Pydantic v2 `FixDetail` e `FixReport`, transformadores AST para `__init__ -> None`, argumentos padrão mutáveis e limpeza de `pass` redundante, guardrail do Sistema 1, subcomando CLI `fix`, formalização do ADR-012, PR-CORP-012 e expansão da suíte para 138/138 testes PASS (88% cobertura). |
 | `2026-11-20T21:20:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0011: motor `MCPEnterpriseHub` (`src/corporate_engineer/mcp/hub.py`), modelos Pydantic v2, suporte a `.mcp.json`, isolamento de falhas por Circuit Breaker individual, poda seletiva via Sistema 1, subcomando CLI `mcp hub` (`list`, `call`, `prune`), formalização do ADR-011, PR-CORP-011 e expansão da suíte para 130/130 testes PASS (88% cobertura). |
 | `2026-11-20T10:15:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0014: pipeline gratuito de fine-tuning para o Sistema 1 (`src/corporate_engineer/system_one/dataset.py`, `trainer.py`), modelos Pydantic v2, injeção universal em `ExecutionGraph` (DAG), `SurgicalTestRunner`, `git_utils.py` (Conventional Commits), novos modos e subcomandos CLI (`dataset`, `decide --mode commit/skip`), formalização do ADR-010, PR-CORP-010 e expansão da suíte para 124/124 testes PASS (88% cobertura). |

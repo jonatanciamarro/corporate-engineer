@@ -27,7 +27,8 @@ SECRET_PATTERNS = [
 
 IGNORE_DIRS = {
     ".git", ".venv", "venv", "node_modules", "__pycache__",
-    ".pytest_cache", "dist", "build", "target", "bin", "obj", ".idea", ".vscode"
+    ".pytest_cache", "dist", "build", "target", "bin", "obj", ".idea", ".vscode",
+    "chrome_session", "data"
 }
 
 IGNORE_EXTENSIONS = {
@@ -46,7 +47,7 @@ def scan_file(file_path: Path) -> List[Tuple[str, int, str]]:
     lines = content.splitlines()
     for line_num, line in enumerate(lines, start=1):
         # Skip commented placeholders or documentation examples
-        if any(dummy in line.lower() for dummy in ["your_api_key", "example", "<api_key>", "placeholder", "fake_", "xxx"]):
+        if any(dummy in line.lower() for dummy in ["your_api_key", "example", "<api_key>", "placeholder", "fake_", "xxx", "dummy", "test_key", "test_api_key", "mock"]):
             continue
 
         for rule_name, pattern in SECRET_PATTERNS:

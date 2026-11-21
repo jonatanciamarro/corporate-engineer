@@ -328,6 +328,38 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output format (default: text)",
     )
 
+    # Command: fix (IMP-0012)
+    fix_parser = subparsers.add_parser(
+        "fix",
+        help="AST auto-refactor and self-healing code remediation engine (IMP-0012)",
+    )
+    fix_parser.add_argument(
+        "--path",
+        default=".",
+        help="Target file or directory to auto-refactor (default: .)",
+    )
+    fix_parser.add_argument(
+        "--auto",
+        action="store_true",
+        help="Automatically apply and write fixes to source files",
+    )
+    fix_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simulate fixes and display diff without writing to disk",
+    )
+    fix_parser.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format (default: text)",
+    )
+    fix_parser.add_argument(
+        "--output",
+        default=None,
+        help="Optional file path to write fix report",
+    )
+
     return parser
 
 
@@ -1106,6 +1138,57 @@ def handle_dataset(args: argparse.Namespace) -> int:
     return 0
 
 
+def handle_fix(args: argparse.Namespace) -> int:
+    from corporate_engineer.eval.fixer import ASTSelfHealingFixer
+
+    fixer = ASTSelfHealingFixer()
+    target_path = Path(args.path).resolve()
+
+    dry_run = not args.auto or args.dry_run
+
+    if target_path.is_file():
+        report = fixer.fix_file(target_path, dry_run=dry_run)
+    else:
+        report = fixer.fix_workspace(target_path, dry_run=dry_run)
+
+    if args.format == "json":
+        output_str = json.dumps(report.model_dump(), indent=2, ensure_ascii=False)
+    else:
+        status_mode = (
+            "[DRY RUN - SEM ESCRITA]" if report.dry_run else "[AUTO FIX - MODIFICAÇÕES GRAVADAS]"
+        )
+        lines = [
+            f"\n{'=' * 60}",
+            "🛠️  AST Auto-Refactor & Self-Healing Fixer (IMP-0012)",
+            f"{'=' * 60}",
+            f"📁 Alvo               : {target_path}",
+            f"⚙️  Modo               : {status_mode}",
+            f"📊 Arquivos Analisados: {report.total_files_analyzed}",
+            f"✏️  Arquivos Modificados: {report.files_modified}",
+            f"🔧 Correções Aplicadas: {len(report.fixes_applied)}",
+            f"🛡️  Risco Sistema 1    : {report.system_one_risk}",
+            f"{'-' * 60}",
+        ]
+        if report.fixes_applied:
+            lines.append("📋 Detalhes das Correções:")
+            for fix in report.fixes_applied:
+                lines.append(
+                    f"   • [{fix.rule_name}] {fix.file_path}:{fix.line_number} - {fix.description}"
+                )
+        else:
+            lines.append("✨ Nenhuma inconformidade estrutural detectada.")
+        lines.append(f"{'=' * 60}\n")
+        output_str = "\n".join(lines)
+
+    if args.output:
+        Path(args.output).write_text(output_str, encoding="utf-8")
+        print(f"Relatório de correções salvo em: {args.output}")
+    else:
+        print(output_str)
+
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -1134,6 +1217,8 @@ def main(argv: list[str] | None = None) -> int:
         return handle_decide(args)
     elif args.command == "dataset":
         return handle_dataset(args)
+    elif args.command == "fix":
+        return handle_fix(args)
     else:
         parser.print_help()
         return 0

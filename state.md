@@ -11,11 +11,11 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0011-mcp-enterprise-hub` | 🟢 Suíte com 130/130 testes PASS, 88% cobertura, IMP-0001 a IMP-0014 implementados |
+| **Branch Ativa** | `feat/IMP-0012-ast-auto-refactor` | 🟢 Suíte com 138/138 testes PASS, 88% cobertura, IMP-0001 a IMP-0014 implementados |
 | **Ambiente Local** | `.venv` (Python 3.10.6) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev]`) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **130/130 PASS** | Cobertura global de 88% (`pytest-cov`) em 62.07s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (79 arquivos formatados e verificados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 49 arquivos validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **138/138 PASS** | Cobertura global de 88% (`pytest-cov`) em 18.56s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (83 arquivos formatados e verificados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 51 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -25,7 +25,22 @@
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação de IMP-0011: MCP Enterprise Hub & Tool Multiplexer):
+### Sessão Atual (Implementação de IMP-0012: AST Auto-Refactor & Self-Healing Fixer):
+1. **Modelos DTO Pydantic v2**:
+   - Criação de `FixDetail` e `FixReport` em `src/corporate_engineer/models.py`.
+2. **Motor AST NodeTransformer (`src/corporate_engineer/eval/fixer.py`)**:
+   - `InitReturnAnnotationFixer`: Insere automaticamente anotação `-> None` em construtores `__init__`.
+   - `MutableDefaultArgumentFixer`: Converte argumentos padrão mutáveis (`[]`, `{}`) para `None` e injeta inicialização defensiva no corpo da função preservando docstrings.
+   - `RedundantPassCleaner`: Remove declarações `pass` redundantes em classes e funções.
+   - `ASTSelfHealingFixer`: Orquestrador com suporte a simulação em memória (`dry_run`), validação sintática via `ast.parse()` e guardrail de risco do Sistema 1 (`SystemOneRouter.assess_risk`).
+3. **CLI Corporativa**:
+   - Adicionado novo subcomando `corporate-engineer fix` com suporte a `--auto`, `--dry-run`, `--path` e `--format json`.
+4. **Governança & Arquitetura**:
+   - Elaboração do [ADR-012](docs/adr/ADR-012-ast-auto-refactor-fixer.md) e [PR-CORP-012.md](docs/pull_requests/PR-CORP-012.md).
+   - Atualização do catálogo em `.agents/orchestration/improvement-backlog.md` (IMP-0012 marcado como `IMPLEMENTED`).
+   - Expansão da suíte para 138 testes automatizados com 100% de aprovação e 88% de cobertura.
+
+### Sessão Anterior (Implementação de IMP-0011: MCP Enterprise Hub & Tool Multiplexer):
 1. **Modelos DTO Pydantic v2**:
    - Criação de `MCPServerDefinition`, `MCPConfigFile`, `MCPNamespacedTool` e `MCPHubStatus` em `src/corporate_engineer/models.py`.
 2. **Motor MCP Enterprise Hub (`src/corporate_engineer/mcp/hub.py`)**:
@@ -146,9 +161,9 @@
 2. `[x]` **Implementação da Proposta IMP-0010 (Surgical TDD Runner Integrado ao Git Diff & Blast Radius)** (PR-CORP-008, 99/99 testes PASS).
 3. `[x]` **Implementação da Proposta IMP-0013 (Open-Source System-One Decision Engine via Outlines / Local SLM)** (PR-CORP-009, 113/113 testes PASS).
 4. `[x]` **Implementação da Proposta IMP-0014 (Free System-One SLM Fine-Tuning Pipeline & Universal Framework Injection)** (PR-CORP-010, 124/124 testes PASS).
-5. `[x]` **Implementação da Proposta IMP-0011 (MCP Enterprise Hub & Tool Multiplexer)** (PR-CORP-011, 130/130 testes PASS).
-6. `[ ]` **Execução da Sequência Aprovada pelo Usuário**:
-   - **Passo 2**: Implementação de `IMP-0012` (AST Auto-Refactor & Self-Healing Fixer com `corporate-engineer fix --auto`).
+5. `[x]` **Implementação da Proposta IMP-0011 (MCP Enterprise Hub & Tool Multiplexer)** (PR-CORP-011, 130/130 testes PASS, Merged em `main`).
+6. `[x]` **Implementação de `IMP-0012` (AST Auto-Refactor & Self-Healing Fixer com `corporate-engineer fix --auto`)** (PR-CORP-012, 138/138 testes PASS).
+7. `[ ]` **Execução dos Próximos Passos da Sequência Aprovada pelo Usuário**:
    - **Passo 3**: Execução prática do Fine-Tuning do Sistema 1 no Colab com modelo exportado localmente.
    - **Passo 4**: Merge e consolidação de todas as branches na `main`.
 
@@ -158,6 +173,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-21T10:05:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0012: motor `ASTSelfHealingFixer` (`src/corporate_engineer/eval/fixer.py`), modelos Pydantic v2 `FixDetail` e `FixReport`, transformadores AST para `__init__ -> None`, argumentos padrão mutáveis e limpeza de `pass` redundante, guardrail do Sistema 1, subcomando CLI `fix`, formalização do ADR-012, PR-CORP-012 e expansão da suíte para 138/138 testes PASS (88% cobertura). |
 | `2026-11-20T21:20:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0011: motor `MCPEnterpriseHub` (`src/corporate_engineer/mcp/hub.py`), modelos Pydantic v2, suporte a `.mcp.json`, isolamento de falhas por Circuit Breaker individual, poda seletiva via Sistema 1, subcomando CLI `mcp hub` (`list`, `call`, `prune`), formalização do ADR-011, PR-CORP-011 e expansão da suíte para 130/130 testes PASS (88% cobertura). |
 | `2026-11-20T10:15:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0014: pipeline gratuito de fine-tuning para o Sistema 1 (`src/corporate_engineer/system_one/dataset.py`, `trainer.py`), modelos Pydantic v2, injeção universal em `ExecutionGraph` (DAG), `SurgicalTestRunner`, `git_utils.py` (Conventional Commits), novos modos e subcomandos CLI (`dataset`, `decide --mode commit/skip`), formalização do ADR-010, PR-CORP-010 e expansão da suíte para 124/124 testes PASS (88% cobertura). |
 | `2026-11-20T09:38:00-03:00` | Corp-Pipeline Master Orchestrator | Blindagem Always-On da Invariante de Push Remoto Pré-PR: atualização em `git_utils.py` (`is_branch_pushed`, `push_branch_to_remote`, `ensure_pushed=True`), correção dos caminhos em `.agents/hooks.json` e `pr_link_generator.py`, adição da Invariante 8 em `AGENTS.md`, `GEMINI.md`, `corp-pipeline-orchestrator.md` e `common-git-workflow.md`, expansão da suíte para 116/116 testes PASS. |

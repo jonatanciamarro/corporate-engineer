@@ -138,6 +138,25 @@ def build_parser() -> argparse.ArgumentParser:
     call_parser.add_argument("--token", default=None, help="Bearer auth token for remote MCP")
     call_parser.add_argument("--format", choices=["text", "json"], default="text")
 
+    # mcp hub (IMP-0011)
+    hub_parser = mcp_subparsers.add_parser(
+        "hub", help="Enterprise MCP Multi-Server Hub (.mcp.json pools)"
+    )
+    hub_parser.add_argument("--config", default=".mcp.json", help="Path to .mcp.json config file")
+    hub_parser.add_argument(
+        "hub_action",
+        choices=["list", "call", "prune"],
+        default="list",
+        nargs="?",
+        help="Action: list tools/status, call namespaced tool, or prune for prompt",
+    )
+    hub_parser.add_argument(
+        "--tool", default=None, help="Namespaced tool to call (e.g. postgres.query)"
+    )
+    hub_parser.add_argument("--args", default="{}", help="Tool arguments in JSON format")
+    hub_parser.add_argument("--prompt", default="", help="Prompt for System-One tool pruning")
+    hub_parser.add_argument("--format", choices=["text", "json"], default="text")
+
     # Command: pr-link
     pr_parser = subparsers.add_parser(
         "pr-link", help="Generate 1-click pre-filled GitHub Pull Request URL"
@@ -527,7 +546,64 @@ def handle_dag(args: argparse.Namespace) -> int:
 
 
 def handle_mcp(args: argparse.Namespace) -> int:
-    is_remote = args.server == "remote"
+    if args.mcp_action == "hub":
+        from corporate_engineer.mcp.hub import MCPEnterpriseHub
+
+        cfg_p = Path(args.config)
+        hub = MCPEnterpriseHub(config_path=cfg_p if cfg_p.exists() else None)
+
+        if args.hub_action == "call":
+            if not args.tool:
+                print("❌ Parâmetro --tool é obrigatório para hub call", file=sys.stderr)
+                return 1
+            try:
+                parsed_args = json.loads(args.args)
+            except json.JSONDecodeError as e:
+                print(f"❌ Argumentos JSON inválidos: {e}", file=sys.stderr)
+                return 1
+            res = hub.call_tool(args.tool, parsed_args)
+            print(json.dumps(res, indent=2) if args.format == "json" else f"✅ Resultado: {res}")
+            return 0
+
+        elif args.hub_action == "prune":
+            pruned = hub.prune_tools_for_prompt(args.prompt or "")
+            if args.format == "json":
+                print(json.dumps([tool_item.model_dump() for tool_item in pruned], indent=2))
+            else:
+                print(f"\n🔍 FERRAMENTAS SELECIONADAS PELO SISTEMA 1 (Prompt: '{args.prompt}'):")
+                for tool_item in pruned:
+                    print(f"  • {tool_item.namespaced_name}: {tool_item.description}")
+            return 0
+
+        else:  # list
+            hub_status = hub.get_status()
+            hub_tools = hub.list_tools()
+            if args.format == "json":
+                print(
+                    json.dumps(
+                        {
+                            "status": hub_status.model_dump(),
+                            "tools": [ht.model_dump() for ht in hub_tools],
+                        },
+                        indent=2,
+                    )
+                )
+            else:
+                print(f"\n{'=' * 60}\n🌐 MCP ENTERPRISE HUB (IMP-0011)\n{'=' * 60}")
+                print(f"📦 Total de Servidores : {hub_status.total_servers}")
+                print(f"🛠️  Total de Ferramentas : {hub_status.total_tools}")
+                print("🔌 Servidores Conectados:")
+                for s in hub_status.active_servers:
+                    st = hub_status.circuit_states.get(s, "UNKNOWN")
+                    print(f"   • {s:<20} [Circuit: {st}]")
+                if hub_tools:
+                    print("\n📋 Ferramentas por Namespace:")
+                    for ht in hub_tools:
+                        print(f"   - {ht.namespaced_name:<25}: {ht.description}")
+                print(f"{'=' * 60}\n")
+            return 0
+
+    is_remote = getattr(args, "server", "local") == "remote"
 
     if is_remote:
         client = RemoteMCPSSEClient(endpoint=args.url, auth_token=args.token)

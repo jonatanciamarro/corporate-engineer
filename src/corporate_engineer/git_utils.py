@@ -18,6 +18,14 @@ def extract_github_repo_slug(remote_url: str) -> str:
     return "jonatanciamarro/corporate-engineer"
 
 
+def classify_commit_type(git_diff_or_message: str) -> Any:
+    """Classifica o tipo de Conventional Commit usando o System One Router."""
+    from corporate_engineer.system_one.router import SystemOneRouter
+
+    router = SystemOneRouter()
+    return router.classify_commit(git_diff_or_message)
+
+
 def get_current_branch(repo_path: Path | str = ".") -> str:
     """Retrieve the current active Git branch name."""
     try:

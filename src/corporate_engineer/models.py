@@ -209,3 +209,41 @@ class SystemOneReport(BaseModel):
     suggested_agent: str | None = None
     risk_level: str = "LOW"  # LOW | MEDIUM | HIGH | CRITICAL
     requires_human_approval: bool = False
+
+
+class TrainingSample(BaseModel):
+    instruction: str = Field(min_length=1)
+    input: str = ""
+    output: str = Field(min_length=1)
+    task_type: str = "classification"  # classification | noul | score
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class DatasetReport(BaseModel):
+    total_samples: int = 0
+    task_distribution: dict[str, int] = Field(default_factory=dict)
+    source: str = "corporate-engineer-synthetic"
+    export_path: str = ""
+    hash_sha256: str = ""
+
+
+class DatasetExportConfig(BaseModel):
+    format: str = "jsonl"  # jsonl | alpaca | chatml
+    include_metadata: bool = True
+    train_test_split: float = 0.8
+
+
+class FailureActionDecision(BaseModel):
+    action: str  # retry | rollback | dispatch_agent
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    target_agent: str | None = None
+    rationale: str | None = None
+
+
+class ContextPruningReport(BaseModel):
+    original_symbols_count: int = 0
+    pruned_symbols_count: int = 0
+    original_tokens_estimate: int = 0
+    pruned_tokens_estimate: int = 0
+    savings_percentage: float = 0.0
+    retained_symbols: list[str] = Field(default_factory=list)

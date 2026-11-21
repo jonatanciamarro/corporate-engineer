@@ -240,3 +240,54 @@ class AutonomousEngineeringGraph:
             lines.append(f"    {node_ids[i]} --> {node_ids[i + 1]}")
 
         return "\n".join(lines)
+
+
+class ExecutionGraph(AutonomousEngineeringGraph):
+    """Grafo de execução com nós dinâmicos e inteligência de decisão do Sistema 1."""
+
+    def __init__(self, task: TaskInput | None = None) -> None:
+        actual_task = task or TaskInput(
+            ticket_id="TASK-GRAPH-001",
+            description="DAG Execution Graph",
+            workspace_path=".",
+        )
+        super().__init__(actual_task)
+        self.nodes: dict[str, Callable[[], Any]] = {}
+        self.dependencies: dict[str, list[str]] = {}
+        self._system_one_router: Any = None
+
+    @property
+    def router(self) -> Any:
+        if self._system_one_router is None:
+            from corporate_engineer.system_one.router import SystemOneRouter
+
+            self._system_one_router = SystemOneRouter()
+        return self._system_one_router
+
+    def add_node(
+        self,
+        name: str,
+        fn: Callable[[], Any],
+        dependencies: list[str] | None = None,
+    ) -> None:
+        """Registra um nó no grafo de execução."""
+        self.nodes[name] = fn
+        self.dependencies[name] = dependencies or []
+
+    def should_skip_node(self, node_name: str, context: str) -> bool:
+        """Usa o Sistema 1 para avaliar se o nó pode ser ignorado."""
+        decision = self.router.should_skip_node(node_name=node_name, context=context)
+        return bool(decision.decision)
+
+    def triage_failure(
+        self,
+        node_name: str,
+        error_message: str,
+        traceback_snippet: str = "",
+    ) -> Any:
+        """Usa o Sistema 1 para classificar a falha e recomendar política de recuperação."""
+        return self.router.triage_failure(
+            node_name=node_name,
+            error_message=error_message,
+            traceback_snippet=traceback_snippet,
+        )

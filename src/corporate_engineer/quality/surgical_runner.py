@@ -8,7 +8,7 @@ import sys
 import time
 from pathlib import Path
 
-from corporate_engineer.models import SurgicalTestReport
+from corporate_engineer.models import NoulDecision, SurgicalTestReport
 from corporate_engineer.rag.impact import BlastRadiusAnalyzer
 
 
@@ -196,3 +196,27 @@ class SurgicalTestRunner:
             duration_ms=duration_ms,
             passed=(proc.returncode == 0),
         )
+
+    def evaluate_scope_expansion(
+        self,
+        git_diff: str,
+        direct_tests: list[str],
+    ) -> NoulDecision:
+        """Avalia via Sistema 1 se as mudanças exigem expansão para a suíte completa de testes."""
+        from corporate_engineer.system_one.router import SystemOneRouter
+
+        router = SystemOneRouter()
+        lowered = git_diff.lower()
+        if any(k in lowered for k in ["models.py", "contract", "auth", "security", "base.py"]):
+            return NoulDecision(
+                decision=True,
+                probability=0.94,
+                rationale="Mudança toca contratos centrais ou modelos de dados; expansão de suíte recomendada.",
+            )
+        if any(k in lowered for k in ["readme", "docs/", "test_", "cosmetic"]):
+            return NoulDecision(
+                decision=False,
+                probability=0.06,
+                rationale="Mudança puramente documental ou local; suíte cirúrgica direta é suficiente.",
+            )
+        return router.assess_risk(git_diff)

@@ -8,11 +8,13 @@ from corporate_engineer.mcp.circuit_breaker import (
     CircuitState,
 )
 from corporate_engineer.mcp.client import LocalMCPToolAdapter, RemoteMCPSSEClient
+from corporate_engineer.mcp.hub import MCPEnterpriseHub
 
 __all__ = [
     "CircuitBreaker",
     "CircuitBreakerOpenError",
     "CircuitState",
     "LocalMCPToolAdapter",
+    "MCPEnterpriseHub",
     "RemoteMCPSSEClient",
 ]

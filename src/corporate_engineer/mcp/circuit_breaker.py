@@ -17,7 +17,7 @@ class CircuitState(str, Enum):
     HALF_OPEN = "HALF_OPEN"
 
 
-class CircuitBreakerOpenError(Exception):
+class CircuitBreakerOpenError(RuntimeError):
     """Raised when an operation is attempted while the circuit breaker is in OPEN state."""
 
 

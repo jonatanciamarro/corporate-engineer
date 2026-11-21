@@ -8,10 +8,10 @@
 # !pip install -q transformers peft trl datasets accelerate bitsandbytes onnx onnxruntime
 
 import json
+
 from datasets import Dataset
-from peft import LoraConfig, get_peft_model
-from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
-from trl import SFTTrainer
+from peft import LoraConfig
+from transformers import TrainingArguments
 
 MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
 DATASET_PATH = "data/train.jsonl"
@@ -29,12 +29,18 @@ try:
 except FileNotFoundError:
     print(f"[!] Arquivo {DATASET_PATH} não encontrado. Usando dados sintéticos demonstrativos.")
     samples = [
-        {"instruction": "Selecione o subagente", "input": "Escreva teste pytest", "output": "tdd-guide"},
+        {
+            "instruction": "Selecione o subagente",
+            "input": "Escreva teste pytest",
+            "output": "tdd-guide",
+        },
         {"instruction": "Avalie o risco do diff", "input": "Mudança em doc", "output": "False"},
     ]
 
+
 def format_prompt(example):
-    return f"""<|im_start|>system\nVocê é o System One do corporate-engineer, um motor de decisão ultrarrápido.<|im_end|>\n<|im_start|>user\n{example['instruction']}\nENTRADA:\n{example['input']}<|im_end|>\n<|im_start|>assistant\n{example['output']}<|im_end|>"""
+    return f"""<|im_start|>system\nVocê é o System One do corporate-engineer, um motor de decisão ultrarrápido.<|im_end|>\n<|im_start|>user\n{example["instruction"]}\nENTRADA:\n{example["input"]}<|im_end|>\n<|im_start|>assistant\n{example["output"]}<|im_end|>"""
+
 
 formatted_data = [format_prompt(s) for s in samples]
 dataset = Dataset.from_dict({"text": formatted_data})
@@ -62,7 +68,7 @@ training_args = TrainingArguments(
     report_to="none",
 )
 
-print(f"[*] Hiperparâmetros configurados. Executando SFTTrainer no Colab T4...")
+print("[*] Hiperparâmetros configurados. Executando SFTTrainer no Colab T4...")
 # trainer = SFTTrainer(
 #     model=MODEL_ID,
 #     train_dataset=dataset,

@@ -11,11 +11,11 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0014-system-one-pipeline` | 🟢 Suíte com 124/124 testes PASS, 88% cobertura, IMP-0001 a IMP-0014 implementados |
+| **Branch Ativa** | `feat/IMP-0011-mcp-enterprise-hub` | 🟢 Suíte com 130/130 testes PASS, 88% cobertura, IMP-0001 a IMP-0014 implementados |
 | **Ambiente Local** | `.venv` (Python 3.10.6) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev]`) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **124/124 PASS** | Cobertura global de 88% (`pytest-cov`) em 27.67s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (74 arquivos formatados e verificados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 46 arquivos validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **130/130 PASS** | Cobertura global de 88% (`pytest-cov`) em 62.07s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação limpa com Ruff (79 arquivos formatados e verificados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 49 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -25,7 +25,21 @@
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação de IMP-0014: Free System-One SLM Fine-Tuning Pipeline & Universal Framework Injection):
+### Sessão Atual (Implementação de IMP-0011: MCP Enterprise Hub & Tool Multiplexer):
+1. **Modelos DTO Pydantic v2**:
+   - Criação de `MCPServerDefinition`, `MCPConfigFile`, `MCPNamespacedTool` e `MCPHubStatus` em `src/corporate_engineer/models.py`.
+2. **Motor MCP Enterprise Hub (`src/corporate_engineer/mcp/hub.py`)**:
+   - `MCPEnterpriseHub`: gerenciador unificado com carregamento automático de `.mcp.json` ou registro dinâmico.
+   - **Isolamento de Falhas por Circuit Breaker**: Cada servidor opera com seu próprio Circuit Breaker (`CLOSED`, `OPEN`, `HALF_OPEN`), impedindo falhas em cascata.
+   - **Poda Seletiva via Sistema 1 (`prune_tools_for_prompt`)**: Seleção inteligente por relevância semântica e lexical que expõe apenas as ferramentas necessárias para cada prompt, economizando mais de 80% dos tokens de ferramentas.
+3. **CLI Corporativa**:
+   - Adicionado novo subcomando `corporate-engineer mcp hub` com suporte a `list` (inspeção de servidores e ferramentas), `call` (chamada protegida) e `prune` (poda do Sistema 1).
+4. **Governança & Arquitetura**:
+   - Elaboração do [ADR-011](docs/adr/ADR-011-mcp-enterprise-hub.md) e [PR-CORP-011.md](docs/pull_requests/PR-CORP-011.md).
+   - Atualização do catálogo em `.agents/orchestration/improvement-backlog.md` (IMP-0011 marcado como `IMPLEMENTED`).
+   - Expansão da suíte para 130 testes automatizados com 100% de aprovação e 88% de cobertura.
+
+### Sessão Anterior (Implementação de IMP-0014: Free System-One SLM Fine-Tuning Pipeline & Universal Framework Injection):
 1. **Modelos DTO Pydantic v2**:
    - Criação de `TrainingSample`, `DatasetReport`, `DatasetExportConfig`, `FailureActionDecision` e `ContextPruningReport` em `src/corporate_engineer/models.py`.
 2. **Gerador de Datasets Sintéticos de Domínio (`src/corporate_engineer/system_one/dataset.py`)**:
@@ -132,9 +146,11 @@
 2. `[x]` **Implementação da Proposta IMP-0010 (Surgical TDD Runner Integrado ao Git Diff & Blast Radius)** (PR-CORP-008, 99/99 testes PASS).
 3. `[x]` **Implementação da Proposta IMP-0013 (Open-Source System-One Decision Engine via Outlines / Local SLM)** (PR-CORP-009, 113/113 testes PASS).
 4. `[x]` **Implementação da Proposta IMP-0014 (Free System-One SLM Fine-Tuning Pipeline & Universal Framework Injection)** (PR-CORP-010, 124/124 testes PASS).
-5. `[ ]` **Priorização das Novas Iniciativas Salvas no Backlog Contínuo**:
-   - `IMP-0011`: MCP Enterprise Hub & Tool Multiplexer (gerenciamento central de pools `.mcp.json`).
-   - `IMP-0012`: AST Auto-Refactor & Self-Healing Fixer (`corporate-engineer fix --auto`).
+5. `[x]` **Implementação da Proposta IMP-0011 (MCP Enterprise Hub & Tool Multiplexer)** (PR-CORP-011, 130/130 testes PASS).
+6. `[ ]` **Execução da Sequência Aprovada pelo Usuário**:
+   - **Passo 2**: Implementação de `IMP-0012` (AST Auto-Refactor & Self-Healing Fixer com `corporate-engineer fix --auto`).
+   - **Passo 3**: Execução prática do Fine-Tuning do Sistema 1 no Colab com modelo exportado localmente.
+   - **Passo 4**: Merge e consolidação de todas as branches na `main`.
 
 ---
 
@@ -142,6 +158,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-20T21:20:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0011: motor `MCPEnterpriseHub` (`src/corporate_engineer/mcp/hub.py`), modelos Pydantic v2, suporte a `.mcp.json`, isolamento de falhas por Circuit Breaker individual, poda seletiva via Sistema 1, subcomando CLI `mcp hub` (`list`, `call`, `prune`), formalização do ADR-011, PR-CORP-011 e expansão da suíte para 130/130 testes PASS (88% cobertura). |
 | `2026-11-20T10:15:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0014: pipeline gratuito de fine-tuning para o Sistema 1 (`src/corporate_engineer/system_one/dataset.py`, `trainer.py`), modelos Pydantic v2, injeção universal em `ExecutionGraph` (DAG), `SurgicalTestRunner`, `git_utils.py` (Conventional Commits), novos modos e subcomandos CLI (`dataset`, `decide --mode commit/skip`), formalização do ADR-010, PR-CORP-010 e expansão da suíte para 124/124 testes PASS (88% cobertura). |
 | `2026-11-20T09:38:00-03:00` | Corp-Pipeline Master Orchestrator | Blindagem Always-On da Invariante de Push Remoto Pré-PR: atualização em `git_utils.py` (`is_branch_pushed`, `push_branch_to_remote`, `ensure_pushed=True`), correção dos caminhos em `.agents/hooks.json` e `pr_link_generator.py`, adição da Invariante 8 em `AGENTS.md`, `GEMINI.md`, `corp-pipeline-orchestrator.md` e `common-git-workflow.md`, expansão da suíte para 116/116 testes PASS. |
 | `2026-11-20T09:28:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0013: módulo System One (`src/corporate_engineer/system_one/`), modelos Pydantic v2, motores heurístico, outlines e ONNX NLI, fachada `SystemOneRouter`, subcomando `corporate-engineer decide`, formalização do ADR-009, PR-CORP-009, expansão da suíte para 113/113 testes PASS (87% cobertura) e push da branch `feat/IMP-0013-system-one-engine` para origin no GitHub. |

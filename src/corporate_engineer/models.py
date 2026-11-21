@@ -247,3 +247,35 @@ class ContextPruningReport(BaseModel):
     pruned_tokens_estimate: int = 0
     savings_percentage: float = 0.0
     retained_symbols: list[str] = Field(default_factory=list)
+
+
+class MCPServerDefinition(BaseModel):
+    command: str | None = None
+    args: list[str] = Field(default_factory=list)
+    env: dict[str, str] = Field(default_factory=dict)
+    transport: str = "stdio"  # stdio | sse
+    url: str | None = None
+    bearer_token: str | None = None
+    enabled: bool = True
+    max_failures: int = 3
+    reset_timeout_seconds: float = 30.0
+
+
+class MCPConfigFile(BaseModel):
+    mcpServers: dict[str, MCPServerDefinition] = Field(default_factory=dict)
+
+
+class MCPNamespacedTool(BaseModel):
+    server_name: str
+    tool_name: str
+    namespaced_name: str
+    description: str = ""
+    input_schema: dict[str, Any] = Field(default_factory=dict)
+
+
+class MCPHubStatus(BaseModel):
+    total_servers: int = 0
+    active_servers: list[str] = Field(default_factory=list)
+    circuit_states: dict[str, str] = Field(default_factory=dict)
+    total_tools: int = 0
+    tools_by_server: dict[str, int] = Field(default_factory=dict)

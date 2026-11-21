@@ -165,7 +165,16 @@
 6. `[x]` **Implementação de `IMP-0012` (AST Auto-Refactor & Self-Healing Fixer com `corporate-engineer fix --auto`)** (PR-CORP-012, 138/138 testes PASS, Merged em `main`).
 7. `[x]` **Execução Prática do Fine-Tuning do Sistema 1 (Dataset Sintético 100 amostras & Receita Colab 1-Click)** (100 amostras geradas, validação CLI em todos os modos).
 8. `[x]` **Sincronização Git e Consolidação de Todas as Branches na `main`** (Todos os PRs #1-#15 mergeados, suíte com 138/138 testes verdes).
-9. `[ ]` **Novas Oportunidades & Expansão Futura do Framework** (Conforme novas demandas corporativas).
+9. `[ ]` **Trilha Estratégica 1: Execução do Treinamento Real no Google Colab (GPU T4 Grátis)**:
+   - Upload do `data/system_one_dataset.jsonl` no Google Colab.
+   - Execução do `scripts/train_system_one_colab.py` (LoRA, VRAM < 1.5GB, ~5-8 minutos).
+   - Exportação e quantização ONNX Int8 (`model_int8.onnx`) e download para `models/`.
+10. `[ ]` **Trilha Estratégica 2: Novas Fronteiras de Engenharia no Backlog (`IMP-0015` a `IMP-0017`)**:
+   - `IMP-0015`: Autonomous Benchmark & Eval Harness (comparação Heurístico vs SLM LoRA vs ONNX).
+   - `IMP-0016`: Multi-Agent Swarm Coordinator via MCP Hub.
+   - `IMP-0017`: GitHub Actions Workflow de Auto-Remediação em PRs (`.github/workflows/self-heal.yml`).
+11. `[ ]` **Trilha Estratégica 3: Dogfooding e Teste de Ponta a Ponta com Projeto Real**:
+   - Execução completa do comando `corporate-engineer run --ticket CORP-101 --task "..."`.
 
 ---
 
@@ -173,6 +182,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-21T13:32:00-03:00` | Corp-Pipeline Master Orchestrator | Atualização formal do state.md e sincronização no remote: consolidação de todas as 14 melhorias na main, 138/138 testes PASS (88% cobertura), 0 erros Ruff/Mypy, catalogação dos próximos passos estratégicos (Colab Fine-Tuning real, IMP-0015/016/017 e Dogfooding) e push para origin/main. |
 | `2026-11-21T10:14:00-03:00` | Corp-Pipeline Master Orchestrator | Consolidação completa das 4 etapas aprovadas pelo usuário na branch `main`: PR #11 (IMP-0011) e PR #15 (IMP-0012) mergeados com sucesso, dataset sintético do Sistema 1 de 100 amostras validado com receita Colab, testes de inferência reflexiva em todos os modos e suíte global 100% verde (138/138 PASS, 88% cobertura, 0 erros Ruff/Mypy). |
 | `2026-11-21T10:05:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0012: motor `ASTSelfHealingFixer` (`src/corporate_engineer/eval/fixer.py`), modelos Pydantic v2 `FixDetail` e `FixReport`, transformadores AST para `__init__ -> None`, argumentos padrão mutáveis e limpeza de `pass` redundante, guardrail do Sistema 1, subcomando CLI `fix`, formalização do ADR-012, PR-CORP-012 e expansão da suíte para 138/138 testes PASS (88% cobertura). |
 | `2026-11-20T21:20:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0011: motor `MCPEnterpriseHub` (`src/corporate_engineer/mcp/hub.py`), modelos Pydantic v2, suporte a `.mcp.json`, isolamento de falhas por Circuit Breaker individual, poda seletiva via Sistema 1, subcomando CLI `mcp hub` (`list`, `call`, `prune`), formalização do ADR-011, PR-CORP-011 e expansão da suíte para 130/130 testes PASS (88% cobertura). |

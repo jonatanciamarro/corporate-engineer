@@ -321,3 +321,36 @@ class StorageOptimizationReport(BaseModel):
     total_freed_gb: float = 0.0
     results: list[StorageCleanResult] = Field(default_factory=list)
     dry_run: bool = False
+
+
+class EngineLatencyStats(BaseModel):
+    p50_ms: float = 0.0
+    p95_ms: float = 0.0
+    p99_ms: float = 0.0
+    mean_ms: float = 0.0
+    min_ms: float = 0.0
+    max_ms: float = 0.0
+
+
+class EngineBenchmarkResult(BaseModel):
+    engine_name: str
+    total_samples: int = 0
+    successful_runs: int = 0
+    failed_runs: int = 0
+    accuracy_percent: float = 0.0
+    latency: EngineLatencyStats = Field(default_factory=EngineLatencyStats)
+    throughput_rps: float = 0.0
+    memory_rss_mb: float | None = None
+    per_mode_accuracy: dict[str, float] = Field(default_factory=dict)
+    error_summary: list[str] = Field(default_factory=list)
+
+
+class BenchmarkReport(BaseModel):
+    timestamp: str
+    dataset_path: str
+    sample_count: int = 0
+    iterations: int = 1
+    engines: dict[str, EngineBenchmarkResult] = Field(default_factory=dict)
+    winner_latency: str = ""
+    winner_accuracy: str = ""
+    recommendations: list[str] = Field(default_factory=list)

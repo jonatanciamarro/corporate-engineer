@@ -377,6 +377,52 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output format (default: text)",
     )
 
+    # Command: benchmark (IMP-0015)
+    bench_parser = subparsers.add_parser(
+        "benchmark",
+        help="Autonomous Benchmark & Eval Harness for System-One decision engines (IMP-0015)",
+    )
+    bench_parser.add_argument(
+        "--dataset",
+        default="data/system_one_dataset.jsonl",
+        help="Path to JSONL dataset (default: data/system_one_dataset.jsonl)",
+    )
+    bench_parser.add_argument(
+        "--engines",
+        nargs="+",
+        default=["heuristic", "onnx"],
+        help="Engines to benchmark: heuristic, onnx, outlines (default: heuristic onnx)",
+    )
+    bench_parser.add_argument(
+        "--iterations",
+        type=int,
+        default=1,
+        help="Number of iterations over the dataset (default: 1)",
+    )
+    bench_parser.add_argument(
+        "--max-samples",
+        type=int,
+        default=None,
+        help="Limit number of dataset samples to evaluate (default: all)",
+    )
+    bench_parser.add_argument(
+        "--warmup",
+        type=int,
+        default=1,
+        help="Warmup iterations before recording latencies (default: 1)",
+    )
+    bench_parser.add_argument(
+        "--format",
+        choices=["text", "json", "markdown"],
+        default="text",
+        help="Output format: text, json, or markdown (default: text)",
+    )
+    bench_parser.add_argument(
+        "--output",
+        default=None,
+        help="Optional file path to export benchmark report",
+    )
+
     return parser
 
 
@@ -1237,6 +1283,81 @@ def handle_clean(args: argparse.Namespace) -> int:
     return 0
 
 
+def handle_benchmark(args: argparse.Namespace) -> int:
+    from corporate_engineer.system_one.benchmark import SystemOneBenchmark
+
+    bench = SystemOneBenchmark(dataset_path=args.dataset)
+    report = bench.run(
+        engines=args.engines,
+        dataset_path=args.dataset,
+        max_samples=args.max_samples,
+        iterations=args.iterations,
+        warmup=args.warmup,
+    )
+
+    if args.format == "json":
+        output_str = report.model_dump_json(indent=2)
+    elif args.format == "markdown":
+        lines = [
+            f"# System-One Benchmark Report ({report.timestamp})",
+            f"- **Dataset**: `{report.dataset_path}` ({report.sample_count} samples)",
+            f"- **Iterations**: {report.iterations}",
+            f"- **Winner Latência**: 🏆 `{report.winner_latency}`",
+            f"- **Winner Acurácia**: 🎯 `{report.winner_accuracy}`",
+            "",
+            "| Motor | Acurácia (%) | P50 (ms) | P95 (ms) | P99 (ms) | Média (ms) | Throughput (RPS) |",
+            "|---|---|---|---|---|---|---|",
+        ]
+        for name, res in report.engines.items():
+            lines.append(
+                f"| `{name}` | {res.accuracy_percent}% | {res.latency.p50_ms} | "
+                f"{res.latency.p95_ms} | {res.latency.p99_ms} | {res.latency.mean_ms} | "
+                f"{res.throughput_rps} |"
+            )
+        lines.append("")
+        lines.append("### Recomendações:")
+        for rec in report.recommendations:
+            lines.append(f"- {rec}")
+        output_str = "\n".join(lines)
+    else:
+        lines = [
+            f"\n{'=' * 75}",
+            "⚡  SYSTEM-ONE AUTONOMOUS BENCHMARK & EVAL HARNESS (IMP-0015)",
+            f"{'=' * 75}",
+            f"📁 Dataset           : {report.dataset_path} ({report.sample_count} amostras)",
+            f"🔄 Iterações         : {report.iterations}",
+            f"🏆 Vencedor Latência : {report.winner_latency}",
+            f"🎯 Vencedor Acurácia : {report.winner_accuracy}",
+            f"{'-' * 75}",
+            f"{'MOTOR':<12} {'ACURÁCIA':<12} {'P50 (ms)':<10} {'P95 (ms)':<10} {'P99 (ms)':<10} {'THROUGHPUT':<12}",
+            f"{'-' * 75}",
+        ]
+        for name, res in report.engines.items():
+            acc_str = f"{res.accuracy_percent}%"
+            p50_str = f"{res.latency.p50_ms:.3f}"
+            p95_str = f"{res.latency.p95_ms:.3f}"
+            p99_str = f"{res.latency.p99_ms:.3f}"
+            rps_str = f"{res.throughput_rps:.1f} rps"
+            lines.append(
+                f"{name:<12} {acc_str:<12} {p50_str:<10} {p95_str:<10} {p99_str:<10} {rps_str:<12}"
+            )
+        lines.append(f"{'-' * 75}")
+        lines.append("💡 Recomendações:")
+        for rec in report.recommendations:
+            lines.append(f"   • {rec}")
+        lines.append(f"{'=' * 75}\n")
+        output_str = "\n".join(lines)
+
+    if args.output:
+        out_p = Path(args.output)
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(output_str, encoding="utf-8")
+        print(f"[✓] Benchmark report exported to {args.output}")
+
+    print(output_str)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -1269,6 +1390,8 @@ def main(argv: list[str] | None = None) -> int:
         return handle_fix(args)
     elif args.command == "clean":
         return handle_clean(args)
+    elif args.command == "benchmark":
+        return handle_benchmark(args)
     else:
         parser.print_help()
         return 0

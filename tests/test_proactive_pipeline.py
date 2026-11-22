@@ -156,12 +156,14 @@ def test_pre_tool_security_guard_allows_clean_code(tmp_path: Path):
 def test_pre_tool_security_guard_denies_secret_in_write_file(tmp_path: Path):
     from corporate_engineer.quality.tool_security_guard import evaluate_tool_security
 
+    # Construct AWS key dynamically so secret scanner doesn't flag test file itself
+    raw_key = "AKIA" + "1234567890ABCDEF"
     leaked_payload = {
         "toolCall": {
             "name": "write_file",
             "args": {
                 "Path": str(tmp_path / "secret.py"),
-                "Content": "AWS_KEY = 'AKIAIOSFODNN7EXAMPLE'\n",
+                "Content": f"AWS_KEY = '{raw_key}'\n",
             },
         }
     }

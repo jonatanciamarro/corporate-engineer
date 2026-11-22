@@ -11,12 +11,12 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0016-multi-agent-swarm-coordinator` | 🟢 Suíte com 170/170 testes PASS, 87% cobertura, IMP-0016 (Multi-Agent Swarm Coordinator via MCP Hub) implementado e testado |
+| **Branch Ativa** | `feat/IMP-0018-context-aware-metaprompt-engine` | 🟢 Suíte com 179/179 testes PASS, 88% cobertura global (95% em prompt), IMP-0018 (Context-Aware Metaprompt Engine & Prompt Refiner) implementado e testado |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **170/170 PASS** | Cobertura global robusta de 87% (`pytest-cov`) em 20.83s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (99 arquivos verificados e formatados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 59 arquivos validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **179/179 PASS** | Cobertura global robusta de 88% (`pytest-cov`) em 16.44s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (105 arquivos verificados e formatados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 62 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` (tempo de varredura otimizado para sub-1s) |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -26,7 +26,24 @@
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação de IMP-0016: Multi-Agent Swarm Coordinator via MCP Hub — ADR-016 / PR-CORP-016):
+### Sessão Atual (Implementação de IMP-0018: Context-Aware Metaprompt Engine & Prompt Refiner — ADR-018 / PR-CORP-018):
+1. **Modelos DTO Pydantic v2 (`src/corporate_engineer/models.py`)**:
+   - `RevisedPromptSpec`: Contrato tipado com `raw_prompt`, `target_domain`, `core_intent`, `functional_requirements`, `non_functional_requirements`, `affected_modules`, `out_of_scope`, `tdd_test_scenarios`, `metaprompt`, `confidence_score`, `is_bypassed`, `bypass_reason` e `timestamp`.
+2. **Motor de Refinamento Contextual (`src/corporate_engineer/prompt/refiner.py`)**:
+   - `ContextAwarePromptRefiner`: Fast-Path Bypass condicional para comandos operacionais (`pytest`, `git status`, `/preflight`, queries curtas) com override via `bypass_gate=True`.
+   - Mapeamento determinístico de domínios corporativos (`mcp`, `orchestrator`, `rag`, `system_one`, `quality`, `cli`).
+   - Extração e ancoragem de símbolos e classes via AST no workspace.
+   - Síntese estruturada de metaprompt em Markdown com requisitos funcionais, invariantes corporativas, guardrails de escopo e cenários TDD.
+3. **CLI Corporativa (`src/corporate_engineer/cli.py`)**:
+   - Adição do subcomando oficial `corporate-engineer prompt refine <prompt>` com flags `--bypass-gate`, `--format [text|json|markdown]`, `--workspace` e `--output`.
+4. **Suíte de Testes Automatizados (Shift-Left TDD)**:
+   - 9 novos testes unitários e de integração em `tests/test_metaprompt_engine.py` (100% PASS, 95% de cobertura).
+   - Expansão da suíte global para **179/179 testes PASS** em 16.44s.
+5. **Governança & Arquitetura**:
+   - Formalização do [ADR-018](docs/adr/ADR-018-context-aware-metaprompt-engine.md) e elaboração de [PR-CORP-018.md](docs/pull_requests/PR-CORP-018.md).
+   - Atualização do status de `IMP-0018` para `IMPLEMENTED` em `.agents/orchestration/improvement-backlog.md`.
+
+### Sessão Anterior (Implementação de IMP-0016: Multi-Agent Swarm Coordinator via MCP Hub — ADR-016 / PR-CORP-016):
 1. **Modelos DTO Pydantic v2 (`src/corporate_engineer/models.py`)**:
    - `SwarmMember`: Contrato tipado com `agent_id`, `role`, `task_prompt`, `allowed_tools` e `status` (`IDLE`, `WORKING`, `COMPLETED`, `FAILED`).
    - `SwarmTaskResult`: Resultado individual de execução com `agent_id`, `role`, `output`, `success`, `execution_time_ms`, `tools_called` e `error`.
@@ -143,9 +160,10 @@
 1. `[x]` **Trilha Operacional: CORP-DISK-CLEANUP & ADR-014** (Concluído: `SafeStorageCleaner`, modelos DTO, subcomando CLI `clean`, 155/155 testes PASS, 20.38 GB livres no C:).
 2. `[x]` **Trilha Estratégica 2 / IMP-0015: Autonomous Benchmark & Eval Harness** (Concluído: `SystemOneBenchmark`, modelos DTO `EngineBenchmarkResult`/`BenchmarkReport`, subcomando CLI `benchmark`, ADR-015, PR-CORP-015, 162/162 testes PASS).
 3. `[x]` **Trilha Estratégica 2 / IMP-0016: Multi-Agent Swarm Coordinator via MCP Hub** (Concluído: `SwarmCoordinator`, modelos DTO `SwarmMember`/`SwarmGoalReport`, subcomando CLI `swarm`, ADR-016, PR-CORP-016, 170/170 testes PASS).
-4. `[ ]` **Trilha Estratégica 2 / IMP-0017: GitHub Actions Workflow de Auto-Remediação em PRs (`.github/workflows/self-heal.yml`)**:
+4. `[x]` **Trilha Inteligência / IMP-0018: Context-Aware Metaprompt Engine & Prompt Refiner** (Concluído: `ContextAwarePromptRefiner`, modelo DTO `RevisedPromptSpec`, subcomando CLI `prompt refine`, Fast-Path Bypass condicional, ADR-018, PR-CORP-018, 179/179 testes PASS).
+5. `[ ]` **Trilha Estratégica 2 / IMP-0017: GitHub Actions Workflow de Auto-Remediação em PRs (`.github/workflows/self-heal.yml`)**:
    - Pipeline de CI acionando `corporate-engineer fix --auto` e `corporate-engineer audit` automaticamente em novos PRs.
-5. `[ ]` **Trilha Estratégica 3: Dogfooding e Teste de Ponta a Ponta com Projeto Real**:
+6. `[ ]` **Trilha Estratégica 3: Dogfooding e Teste de Ponta a Ponta com Projeto Real**:
    - Execução completa do comando `corporate-engineer run --ticket CORP-101 --task "..."`.
 
 ---
@@ -154,6 +172,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-22T11:50:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0018: motor `ContextAwarePromptRefiner` (`src/corporate_engineer/prompt/refiner.py`), modelo Pydantic v2 `RevisedPromptSpec`, Fast-Path Bypass condicional para comandos operacionais com override `--bypass-gate`, mapeamento para domínios corporativos (`mcp`, `orchestrator`, `rag`, `system_one`, `quality`, `cli`), ancoragem AST em símbolos de código, subcomando CLI `prompt refine`, formalização do ADR-018, elaboração do PR-CORP-018 e expansão da suíte global para 179/179 testes PASS com 95% de cobertura no módulo de prompt. |
 | `2026-11-22T11:30:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0016: motor `SwarmCoordinator` (`src/corporate_engineer/orchestrator/swarm.py`), modelos Pydantic v2 `SwarmMember`, `SwarmTaskResult` e `SwarmGoalReport`, modos Fan-Out/Fan-In e Consensus, injeção de ferramentas MCP com isolamento por Circuit Breaker individual, subcomando CLI `swarm`, formalização do ADR-016, elaboração do PR-CORP-016 e expansão da suíte global para 170/170 testes PASS com 85% de cobertura no módulo de swarm. |
 | `2026-11-22T10:40:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0015: motor `SystemOneBenchmark` (`src/corporate_engineer/system_one/benchmark.py`), modelos Pydantic v2 `EngineLatencyStats`, `EngineBenchmarkResult` e `BenchmarkReport`, cálculo de percentis P50/P95/P99, subcomando CLI `benchmark` com suporte a text/json/markdown, formalização do ADR-015, elaboração do PR-CORP-015 e expansão da suíte global para 162/162 testes PASS com 87% de cobertura. |
 | `2026-11-22T10:02:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para CORP-DISK-CLEANUP: motor `SafeStorageCleaner` (`src/corporate_engineer/quality/storage_cleaner.py`), modelos Pydantic v2 `StorageTarget`, `StorageCleanResult` e `StorageOptimizationReport`, subcomando CLI `clean`, otimização do `secret_scanner.py`, 10 novos testes unitários (155/155 testes PASS), elaboração do ADR-014 e PR-CORP-014, e recuperação de mais de 20.3 GB livres na partição C: (de 64 MB para 20.38 GB livres). |

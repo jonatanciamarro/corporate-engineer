@@ -297,3 +297,27 @@ class FixReport(BaseModel):
     dry_run: bool = False
     system_one_risk: str = "LOW"
     success: bool = True
+
+
+class StorageTarget(BaseModel):
+    category: str  # "cache", "model", "audio_cache", "temp"
+    name: str  # "gpt4all_model", "ollama_model", "spotify_cache", "pip_cache"
+    path: str
+    size_bytes: int = 0
+    is_safe: bool = True
+    description: str = ""
+
+
+class StorageCleanResult(BaseModel):
+    target_name: str
+    path: str
+    freed_bytes: int = 0
+    success: bool
+    error: str | None = None
+
+
+class StorageOptimizationReport(BaseModel):
+    total_freed_bytes: int = 0
+    total_freed_gb: float = 0.0
+    results: list[StorageCleanResult] = Field(default_factory=list)
+    dry_run: bool = False

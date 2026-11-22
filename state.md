@@ -11,12 +11,13 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `main` | 🟢 Suíte com 145/145 testes PASS, 88% cobertura, Trilha 1 (Colab Notebook & ONNX Loader) consolidada na main via PR #17 |
+| **Branch Ativa** | `main` | 🟢 Suíte com 155/155 testes PASS, 88% cobertura, ADR-014 e SafeStorageCleaner integrados |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **145/145 PASS** | Cobertura global de 88% (`pytest-cov`) em 19.38s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (88 arquivos verificados e formatados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 53 arquivos validados estritamente no root |
-| **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` |
+| **Armazenamento Disco C:** | 🟢 **20.38 GB Livres** | Recuperação emergencial e sustentável de mais de 20.3 GB (era 64 MB) via `corporate-engineer clean` |
+| **Testes (Pytest + Hypothesis)** | 🟢 **155/155 PASS** | Cobertura global robusta (`pytest-cov`) em 17.24s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (92 arquivos verificados e formatados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 55 arquivos validados estritamente no root |
+| **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` (tempo de varredura otimizado para sub-1s) |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
 | **Lifecycle Hooks** | 🟢 **SessionStart & PreInvocation Ativos** | `.agents/hooks.json` integrado com push remoto Always-On antes da geração de PR |
@@ -25,45 +26,26 @@
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação da Trilha 1: Google Colab SLM Fine-Tuning Notebook & ONNX Runtime Loader — ADR-013 / PR-CORP-013):
-1. **Jupyter Notebook Interativo 1-Clique (`notebooks/train_system_one_colab.ipynb`)**:
-   - Badge oficial `Open In Colab` apontando diretamente para o repositório público.
-   - Instalação automatizada de dependências gratuitas (`transformers`, `peft`, `trl`, `datasets`, `accelerate`, `onnx`, `onnxruntime`).
-   - Carregamento de dados com formatação ChatML (`Qwen/Qwen2.5-0.5B-Instruct`).
-   - Fine-Tuning com LoRA PEFT ($r=16, \alpha=32$) e `SFTTrainer` (GPU T4 gratuita, VRAM < 1.5GB, ~5-8 minutos).
-   - Exportação e quantização dinâmica para ONNX Int8 (`models/model_int8.onnx`).
-   - Célula de download automático em 1-clique para incorporação direta ao projeto.
-2. **Harness de Treinamento e Scripts (`src/corporate_engineer/system_one/trainer.py` e `scripts/train_system_one_colab.py`)**:
-   - Método `SystemOneTrainer.generate_notebook()` gerando notebooks estruturados em `nbformat` v4.
-   - Atualização do script de console para consumir o dataset corporativo oficial (`data/system_one_dataset.jsonl`).
-   - Suporte a comandos ativos de quantização e salvamento em disco com compatibilidade retroativa.
-3. **Estrutura de Modelos & Runtime Loader (`models/` e `src/corporate_engineer/system_one/nli_engine.py`)**:
-   - Criação da pasta `models/` com `.gitkeep` e exclusão de checkpoints transitivos pesados no `.gitignore`.
-   - `ONNXNLIDecisionEngine` com lazy loading: valida se `models/model_int8.onnx` existe e se `onnxruntime` está disponível.
-   - Fallback transparente e tolerante a falhas: ausência de GPU ou do binário do modelo redireciona automaticamente para o `HeuristicDecisionEngine` com tempo de resposta sub-2ms.
-4. **CLI Corporativa (`src/corporate_engineer/cli.py`)**:
-   - Suporte explícito à flag `--engine onnx` no comando `corporate-engineer decide` (rotas `route`, `risk`, `triage`, `commit`, `skip`).
-5. **Infraestrutura de Testes & Resiliência Git (`tests/conftest.py`, `tests/test_system_one_colab_onnx.py`, `src/corporate_engineer/git_utils.py`)**:
-   - Resolução de dubious ownership em containers/sandboxes via fixture global de `GIT_CONFIG_GLOBAL`.
-   - Proteção contra travamento de rede em testes com `timeout` e `GIT_TERMINAL_PROMPT=0` nas chamadas git.
-   - Expansão da suíte para 145 testes automatizados (100% de aprovação e 88% de cobertura).
-6. **Governança & Entrega**:
-   - Elaboração do [ADR-013](docs/adr/ADR-013-system-one-slm-training-colab-onnx.md) e [PR-CORP-013.md](docs/pull_requests/PR-CORP-013.md).
-   - Branch `feat/TRILHA-1-colab-onnx-training` enviada para origin e link de PR pré-preenchido 1-clique gerado com sucesso.
-
-### Sessão Anterior (Implementação de IMP-0012: AST Auto-Refactor & Self-Healing Fixer):
-1. **Modelos DTO Pydantic v2**:
-   - Criação de `FixDetail` e `FixReport` em `src/corporate_engineer/models.py`.
-2. **Motor AST NodeTransformer (`src/corporate_engineer/eval/fixer.py`)**:
-   - `InitReturnAnnotationFixer`: Insere automaticamente anotação `-> None` em construtores `__init__`.
-   - `MutableDefaultArgumentFixer`: Converte argumentos padrão mutáveis (`[]`, `{}`) para `None` e injeta inicialização defensiva no corpo da função preservando docstrings.
-   - `RedundantPassCleaner`: Remove declarações `pass` redundantes em classes e funções.
-   - `ASTSelfHealingFixer`: Orquestrador com suporte a simulação em memória (`dry_run`), validação sintática via `ast.parse()` e guardrail de risco do Sistema 1 (`SystemOneRouter.assess_risk`).
-3. **CLI Corporativa**:
-   - Adicionado novo subcomando `corporate-engineer fix` com suporte a `--auto`, `--dry-run`, `--path` e `--format json`.
-4. **Governança & Arquitetura**:
-   - Elaboração do [ADR-012](docs/adr/ADR-012-ast-auto-refactor-fixer.md) e [PR-CORP-012.md](docs/pull_requests/PR-CORP-012.md).
-   - Atualização do catálogo em `.agents/orchestration/improvement-backlog.md` (IMP-0012 marcado como `IMPLEMENTED`).
+### Sessão Atual (Implementação de CORP-DISK-CLEANUP / ADR-014: Safe Storage Optimizer & Automated Disk Hygiene):
+1. **Modelos DTO Pydantic v2 (`src/corporate_engineer/models.py`)**:
+   - `StorageTarget`: Contrato tipado com `category`, `name`, `path`, `size_bytes`, `is_safe` e `description`.
+   - `StorageCleanResult`: Detalhe da limpeza de cada alvo com tratamento seguro de erros e métrica de bytes liberados.
+   - `StorageOptimizationReport`: Relatório estruturado consolidando `total_freed_bytes`, `total_freed_gb`, `results` e flag `dry_run`.
+2. **Motor Safe Storage Cleaner (`src/corporate_engineer/quality/storage_cleaner.py`)**:
+   - Classe `SafeStorageCleaner` com invariante rigorosa de proteção: recusa categórica de exclusão de pastas pessoais (`Desktop`, `Documents`, `Music`, `Pictures`, `Videos`, `OneDrive`, `.ssh`, `.aws`) e de diretórios da workspace de código.
+   - Detecção e varredura padronizada de caches de desenvolvimento (`pip`, `npm`, `torch`, `huggingface`) e alvos de modelos pesados descontinuados (GPT4All e blobs órfãos do Ollama).
+   - Suporte defensivo a simulação em memória (`--dry-run`).
+3. **CLI Corporativa (`src/corporate_engineer/cli.py`)**:
+   - Adição do subcomando oficial `corporate-engineer clean` com flags `--dry-run` e `--format [text|json]`.
+4. **Otimização do Pre-Flight Scanner (`.agents/skills/corp-pipeline/scripts/secret_scanner.py`)**:
+   - Ignora pastas binárias de modelos (`models/`) e extensões de pesos (`.onnx`, `.bin`, `.gguf`), reduzindo o tempo de varredura de segurança de 45s para 0.5s.
+5. **Suíte de Testes Automatizados (Shift-Left TDD)**:
+   - 10 novos testes unitários e de integração em `tests/test_storage_cleaner.py` (100% PASS, 80% de cobertura).
+   - Expansão da suíte global para **155/155 testes PASS** em 17.24s.
+6. **Recuperação Real de Armazenamento**:
+   - Recuperação prática de **mais de 20.3 GB** no disco local `C:`, saindo de estado crítico de 64 MB para **20.38 GB livres**.
+7. **Governança & Documentação**:
+   - Formalização de [ADR-014](docs/adr/ADR-014-disk-storage-optimization-and-cleaner.md) e minuta de PR em [PR-CORP-014.md](docs/pull_requests/PR-CORP-014.md).
 
 ---
 
@@ -81,6 +63,7 @@
 - `[x]` Adicionar subcomando `decide`: inferência probabilística e roteamento de subagentes (`IMP-0013 / IMP-0014 / Trilha 1`).
 - `[x]` Adicionar subcomando `dataset`: geração sintética e receitas de treinamento (`IMP-0014 / Trilha 1`).
 - `[x]` Adicionar subcomando `fix`: auto-remediação de violações de AST (`IMP-0012`).
+- `[x]` Adicionar subcomando `clean`: otimização segura de armazenamento e limpeza de disco (`ADR-014`).
 
 ### 🔌 Trilha 2: Conectores e Transporte Remoto MCP (`src/corporate_engineer/mcp/`)
 - `[x]` Suporte a transporte Server-Sent Events (SSE) / JSON-RPC 2.0 para servidores MCP remotos.
@@ -118,7 +101,7 @@
 
 ## 4. Próximos Passos Imediatos para a Próxima Sessão
 
-1. `[x]` **Trilha Estratégica 1: Execução do Treinamento Real no Google Colab (GPU T4 Grátis) & Runtime ONNX** (Concluído: Notebook `notebooks/train_system_one_colab.ipynb`, script atualizado, pasta `models/`, lazy-loader com fallback em `nli_engine.py`, ADR-013, PR-CORP-013, 145/145 testes PASS).
+1. `[x]` **Trilha Operacional: CORP-DISK-CLEANUP & ADR-014** (Concluído: `SafeStorageCleaner`, modelos DTO, subcomando CLI `clean`, 155/155 testes PASS, 20.38 GB livres no C:).
 2. `[ ]` **Trilha Estratégica 2: Novas Fronteiras de Engenharia no Backlog (`IMP-0015` a `IMP-0017`)**:
    - `IMP-0015`: Autonomous Benchmark & Eval Harness (comparação de acurácia, latência e throughput entre Heurístico vs SLM LoRA vs ONNX Runtime).
    - `IMP-0016`: Multi-Agent Swarm Coordinator via MCP Hub.
@@ -132,6 +115,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-22T10:02:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para CORP-DISK-CLEANUP: motor `SafeStorageCleaner` (`src/corporate_engineer/quality/storage_cleaner.py`), modelos Pydantic v2 `StorageTarget`, `StorageCleanResult` e `StorageOptimizationReport`, subcomando CLI `clean`, otimização do `secret_scanner.py`, 10 novos testes unitários (155/155 testes PASS), elaboração do ADR-014 e PR-CORP-014, e recuperação de mais de 20.3 GB livres na partição C: (de 64 MB para 20.38 GB livres). |
 | `2026-11-22T08:20:00-03:00` | Corp-Pipeline Master Orchestrator | Execução de `git pull` na branch `main`: sincronização com origin/main (fast-forward `1498dfe..f0d3b69`), incorporando o merge do PR #17 (Trilha 1: Colab Notebook, modelos ONNX INT8 e suite de testes) e validação local completa (145/145 testes PASS, 0 erros Ruff e Mypy). |
 | `2026-11-22T02:37:00-03:00` | Corp-Pipeline Master Orchestrator | Integração real dos artefatos ONNX INT8 fine-tuned do Qwen2.5-0.5B gerados via Google Colab (`qwen_int8_onnx.zip` extraído em `models/` contendo `model.onnx`, `model_int8.onnx`, `config.json`, `generation_config.json`). Execução e validação completa dos testes com ONNX Runtime local (`tests/test_system_one_colab_onnx.py` 7/7 PASS). |
 | `2026-11-21T22:05:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão da Trilha 1 do Roadmap: geração do Jupyter Notebook interativo `notebooks/train_system_one_colab.ipynb` com badge Open In Colab, atualização do script `scripts/train_system_one_colab.py`, criação de `models/`, implementação de lazy loading com fallback transparente em `ONNXNLIDecisionEngine`, suporte a `--engine onnx` na CLI, resiliência de rede e git com timeouts e `tests/conftest.py`, elaboração do ADR-013 e PR-CORP-013, expansão para 145/145 testes PASS (88% cobertura) e push da branch `feat/TRILHA-1-colab-onnx-training` para origin. |

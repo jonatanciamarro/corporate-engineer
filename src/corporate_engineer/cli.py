@@ -360,6 +360,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional file path to write fix report",
     )
 
+    # Command: clean (ADR-014)
+    clean_parser = subparsers.add_parser(
+        "clean",
+        help="Safe storage optimizer and disk hygiene engine (ADR-014)",
+    )
+    clean_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simulate cleanup and display space to be freed without deleting",
+    )
+    clean_parser.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format (default: text)",
+    )
+
     return parser
 
 
@@ -1189,6 +1206,37 @@ def handle_fix(args: argparse.Namespace) -> int:
     return 0
 
 
+def handle_clean(args: argparse.Namespace) -> int:
+    from corporate_engineer.quality.storage_cleaner import SafeStorageCleaner
+
+    cleaner = SafeStorageCleaner()
+    report = cleaner.clean_all(dry_run=args.dry_run)
+
+    if args.format == "json":
+        output_str = json.dumps(report.model_dump(), indent=2, ensure_ascii=False)
+    else:
+        status_mode = "[SIMULAÇÃO / DRY RUN]" if report.dry_run else "[LIMPEZA EXECUTADA]"
+        lines = [
+            f"\n{'=' * 60}",
+            "🧹  Safe Storage Optimizer & Disk Hygiene Engine (ADR-014)",
+            f"{'=' * 60}",
+            f"⚙️  Modo               : {status_mode}",
+            f"📊 Total Liberado     : {report.total_freed_gb} GB ({report.total_freed_bytes:,} bytes)",
+            f"🎯 Alvos Processados  : {len(report.results)}",
+            f"{'-' * 60}",
+        ]
+        for res in report.results:
+            status_symbol = "✅" if res.success else "❌"
+            error_msg = f" ({res.error})" if res.error else ""
+            mb = round(res.freed_bytes / (1024**2), 2)
+            lines.append(f"   {status_symbol} [{res.target_name}] {res.path} -> {mb} MB{error_msg}")
+        lines.append(f"{'=' * 60}\n")
+        output_str = "\n".join(lines)
+
+    print(output_str)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -1219,6 +1267,8 @@ def main(argv: list[str] | None = None) -> int:
         return handle_dataset(args)
     elif args.command == "fix":
         return handle_fix(args)
+    elif args.command == "clean":
+        return handle_clean(args)
     else:
         parser.print_help()
         return 0

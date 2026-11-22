@@ -46,7 +46,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0018` | Context-Aware Metaprompt Engine & Prompt Refiner | `INTELLIGENCE` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0019` | Autonomous End-to-End Engineering Runner & Dogfooding Pipeline | `ORCHESTRATION` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0020` | Blindagem de Concorrência & Thread-Safety no Swarm e Tracer | `RELIABILITY` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
-| `IMP-0021` | Isolamento Atômico do Motor de Testes de Mutação | `QUALITY` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0021` | Isolamento Atômico do Motor de Testes de Mutação | `QUALITY` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0022` | Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos | `RELIABILITY` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 | `IMP-0023` | Modularização da CLI Corporativa (Decomposição do Monólito) | `MAINTAINABILITY` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 | `IMP-0024` | Gemini LoRA Modular Pipeline para Motion Graphics & Tool Calling (DarkFactory) | `CAPABILITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
@@ -391,7 +391,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0021: Isolamento Atômico do Motor de Testes de Mutação (Safe Sandbox & Atomic Reversion)
 - **Categoria**: `QUALITY` | `RELIABILITY`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-022`, `PR-CORP-021.md`)
 - **Data de Descoberta**: 2026-11-22
 - **Problema / Limitação Atual**: O motor `MutationTestingEngine` (`src/corporate_engineer/quality/mutation.py:198-257`) sobrescreve diretamente os arquivos de código-fonte no disco (`target_path.write_text(mutated_code)`). Caso o processo seja interrompido abruptamente (SIGINT/Ctrl+C, timeout, queda de energia ou crash do pytest), o código de produção permanece mutado/corrompido no disco sem reversão automática.
 - **Solução Proposta**:

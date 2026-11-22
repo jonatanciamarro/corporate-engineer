@@ -11,12 +11,12 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0024-gemini-lora-pipeline` | 🟢 Suíte com 219/219 testes PASS, 0 erros Ruff e Mypy, Zero-Secret Guard ativo |
+| **Branch Ativa** | `feat/IMP-0021-atomic-mutation-testing` | 🟢 Suíte com 243/243 testes PASS, 0 erros Ruff e Mypy, Zero-Secret Guard ativo |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **234/234 PASS** | Cobertura global robusta de 88% (`pytest-cov`) em 20.75s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (121 arquivos verificados e formatados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 70 arquivos validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **243/243 PASS** | Cobertura global robusta de 88% (`pytest-cov`) em 23.37s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (123 arquivos verificados e formatados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 71 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` (tempo de varredura otimizado para sub-1s) |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -244,7 +244,7 @@
    - Execução do Swarm multi-agente (`gemini-3.8-flash-low`) com 4 agentes especialistas (`audit-core-orch`, `audit-mcp-telemetry`, `audit-quality-eval`, `audit-system1-rag`). Identificados 35 apontamentos consolidados (11 Alta, 15 Média, 9 Baixa) com elaboração do relatório técnico e propostas formais de governança (IMP-0020 a IMP-0023).
 8. `[x]` **Triagem e Implementação das Melhorias da Auditoria**:
    - `IMP-0020`: Blindagem de Concorrência & Thread-Safety no Swarm e Tracer (RLock & ContextVars) - `IMPLEMENTED` (ADR-021, PR-CORP-020, 15 novos testes, 234/234 PASS).
-   - `IMP-0021`: Isolamento Atômico do Motor de Testes de Mutação (Safe Sandbox & Atomic Reversion) - `SAVED_NOT_APPROVED`.
+   - `IMP-0021`: Isolamento Atômico do Motor de Testes de Mutação (Safe Sandbox & Atomic Reversion) - `IMPLEMENTED` (ADR-022, PR-CORP-021, 9 novos testes, 243/243 PASS).
    - `IMP-0022`: Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos no Pre-Flight - `SAVED_NOT_APPROVED`.
    - `IMP-0023`: Modularização da CLI Corporativa (Decomposição do Monólito de 1661 Linhas) - `SAVED_NOT_APPROVED`.
 
@@ -254,6 +254,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-22T20:05:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0021 (Isolamento Atômico do Motor de Testes de Mutação): implementação de `AtomicFileSandbox` com traps de sinal (`SIGINT`/`SIGTERM`) e `atexit` para reversão garantida de código em disco, substituição de `ast.walk` por `_MutationScannerVisitor(ast.NodeVisitor)` garantindo alinhamento estrito 1:1 de `node_id`, captura detalhada de `error_message` no modelo Pydantic v2 `Mutant`, suporte a sandbox temporário via `use_temp_sandbox=True`, 9 novos testes em `tests/test_atomic_mutation_sandbox.py` (243/243 PASS), formalização do ADR-022 e PR-CORP-021. |
 | `2026-11-22T19:18:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0020 (Blindagem de Concorrência & Thread-Safety no Swarm e Tracer): adição de `threading.RLock()` e migração para `time.monotonic()` em `CircuitBreaker`, proteção de `_active_stack`/spans e resolução de precedência estrita no cálculo de tokens OTel (`gen_ai.usage.total_tokens` > `tokens` > soma de parciais) em `AgentTracer`, sincronização de mutação de membros com `threading.Lock()` em `SwarmCoordinator`, 15 novos testes em `tests/test_concurrency_thread_safety.py` (234/234 PASS), formalização do ADR-021 e PR-CORP-020. |
 | `2026-11-22T18:25:00-03:00` | Corp-Pipeline Master Orchestrator | Salvamento formal e catalogação das 4 propostas de melhoria estruturais da auditoria (`IMP-0020`, `IMP-0021`, `IMP-0022`, `IMP-0023`) em `.agents/orchestration/improvement-backlog.md` com status `SAVED_NOT_APPROVED`, em conformidade com o protocolo estrito de governança corporativa. |
 | `2026-11-22T14:15:00-03:00` | Corp-Pipeline Master Orchestrator | Auditoria Técnica Profunda de dívidas técnicas, bugs e erros silenciosos via Swarm nativo com Economia de Tokens ativada (`gemini-3.8-flash-low`): 4 agentes especializados varrendo 100% de `src/corporate_engineer/` (23 arquivos Python). Total de 35 apontamentos catalogados (11 Alta, 15 Média, 9 Baixa), incluindo race conditions em concorrência, contagem duplicada de tokens no tracer, corrupção potencial em mutation testing, symlink traversal em cleaner, e omissão silenciosa de falhas em subprocessos/NLI. Geração do artefato de relatório técnico e 4 propostas formais de melhoria (IMP-0020 a IMP-0023). |

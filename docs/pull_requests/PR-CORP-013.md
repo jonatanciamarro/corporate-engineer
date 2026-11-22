@@ -38,6 +38,12 @@ Implementação completa da **Trilha 1 do Roadmap Corporativo**, viabilizando o 
    - Proteção contra travamento de rede em testes com `timeout` e `GIT_TERMINAL_PROMPT=0` nas chamadas git.
    - Expansão da suíte para 145 testes automatizados (100% de aprovação e 88% de cobertura).
 
+6. **Validação e Integração Prática do Artefato ONNX INT8 Real (`models/`)**:
+   - Treinamento e quantização de alta fidelidade executados no Google Colab com Qwen2.5-0.5B.
+   - Extração e validação do artefato `models/model_int8.onnx` (~602MB descompactado, ~396MB compactado).
+   - Inclusão de proteção em `.gitignore` (`models/*.onnx`, `models/*.onnx_data`) para prevenir violação de limites de tamanho no GitHub (>100MB).
+   - Teste de inferência real executado com sucesso através da CLI com `--engine onnx`.
+
 ---
 
 ## 🧪 Evidências de Teste & Qualidade

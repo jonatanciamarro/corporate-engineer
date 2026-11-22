@@ -41,7 +41,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0013` | Open-Source System-One Decision Engine (Outlines / Local SLM) | `EFFICIENCY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
 | `IMP-0014` | Free System-One SLM Fine-Tuning Pipeline & Universal Framework Injection | `EFFICIENCY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
 | `IMP-0015` | Autonomous Benchmark & Eval Harness (Heuristic vs Outlines vs ONNX) | `QUALITY` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
-| `IMP-0016` | Multi-Agent Swarm Coordinator via MCP Hub | `ORCHESTRATION` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0016` | Multi-Agent Swarm Coordinator via MCP Hub | `ORCHESTRATION` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0017` | GitHub Actions Workflow de Auto-Remediação em PRs (`self-heal.yml`) | `AUTOMATION` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 
 ---
@@ -272,6 +272,28 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Complexidade**: Média (M).
 - **Riscos**: Variação de latência em ambientes sem GPU ou com carga concorrente de CPU. Mitigação: fases de aquecimento (*warmup*) e múltiplas iterações com percentis P50/P95.
 - **Critérios de Aceite**: Módulo de benchmark funcional, subcomando CLI registrado, relatórios text/json/markdown válidos, 100% dos testes unitários passando e aprovação no Pre-Flight.
+
+---
+
+### 🔹 IMP-0016: Multi-Agent Swarm Coordinator via MCP Hub
+- **Categoria**: `ORCHESTRATION` | `INTEGRATION` | `CAPABILITY`
+- **Status**: `IMPLEMENTED` (Ref: `PR-CORP-016.md`, `ADR-016`)
+- **Data de Descoberta**: 2026-11-22
+- **Problema / Limitação Atual**: O framework dispõe de um catálogo canônico de 8 subagentes (`architect`, `tdd-guide`, `code-reviewer`, `python-reviewer`, `security-reviewer`, etc.) e do `MCPEnterpriseHub` (IMP-0011) com circuit breakers e poda semântica. No entanto, a execução multi-agente ainda ocorre de modo sequencial ou em tarefas isoladas na DAG. Não há um **Swarm Coordinator** nativo que despache sub-tarefas especializadas em paralelo (Fan-Out/Fan-In), injete dinamicamente apenas o subset de ferramentas MCP apropriado para cada subagente com circuit breaker individual, e agregue pareceres para formação de consenso (ex.: revisão tripartite entre arquitetura, segurança e código).
+- **Solução Proposta**:
+  1. *Modelos DTO Pydantic v2 (`models.py`)*: `SwarmMember`, `SwarmTaskResult`, `SwarmGoalReport`.
+  2. *Motor Swarm Coordinator (`orchestrator/swarm.py`)*:
+     - `SwarmCoordinator` integrado ao `MCPEnterpriseHub` e ao `SystemOneRouter`.
+     - Despacho paralelo concorrente (ThreadPool/Async) com barreira de sincronização (*join*) e agregação de consenso.
+     - Poda seletiva de ferramentas MCP por papel do subagente (`prune_tools_for_prompt`).
+     - Isolamento de falhas por Circuit Breaker individual por ferramenta/servidor.
+  3. *CLI Corporativa (`cli.py`)*: Subcomando `corporate-engineer swarm` com modos `run` (Fan-Out/Fan-In para metas distribuídas) e `consensus` (revisão multi-agente concorrente com votação).
+- **Benefícios Esperados**: Execução distribuída de alta velocidade para tarefas complexas de engenharia, redução de gargalos sequenciais e governança coletiva multi-perspectiva com ferramentas seguras.
+- **Componentes Afetados**: `src/corporate_engineer/models.py`, `src/corporate_engineer/orchestrator/swarm.py`, `src/corporate_engineer/cli.py`, `tests/test_swarm_coordinator.py`.
+- **Complexidade**: Média-Alta (M-L).
+- **Riscos**: Concorrência de subprocessos stdio de ferramentas MCP no Windows. Mitigação: isolamento por membro do swarm e fallback seguro com circuit breaker.
+- **Critérios de Aceite**: `SwarmCoordinator` despacha tarefas concorrentes, injeta ferramentas MCP com circuit breaker, agrega consenso e atinge 100% de testes passando e aprovação no Pre-Flight.
+
 
 
 

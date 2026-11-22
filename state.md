@@ -11,12 +11,12 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0015-system-one-benchmark-harness` | 🟢 Suíte com 162/162 testes PASS, 87% cobertura, IMP-0015 (Autonomous Benchmark & Eval Harness) implementado e testado |
+| **Branch Ativa** | `feat/IMP-0016-multi-agent-swarm-coordinator` | 🟢 Suíte com 170/170 testes PASS, 87% cobertura, IMP-0016 (Multi-Agent Swarm Coordinator via MCP Hub) implementado e testado |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **162/162 PASS** | Cobertura global robusta de 87% (`pytest-cov`) em 22.33s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (95 arquivos verificados e formatados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 57 arquivos validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **170/170 PASS** | Cobertura global robusta de 87% (`pytest-cov`) em 20.83s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (99 arquivos verificados e formatados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 59 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` (tempo de varredura otimizado para sub-1s) |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -26,7 +26,27 @@
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação de IMP-0015: Autonomous Benchmark & Eval Harness — ADR-015 / PR-CORP-015):
+### Sessão Atual (Implementação de IMP-0016: Multi-Agent Swarm Coordinator via MCP Hub — ADR-016 / PR-CORP-016):
+1. **Modelos DTO Pydantic v2 (`src/corporate_engineer/models.py`)**:
+   - `SwarmMember`: Contrato tipado com `agent_id`, `role`, `task_prompt`, `allowed_tools` e `status` (`IDLE`, `WORKING`, `COMPLETED`, `FAILED`).
+   - `SwarmTaskResult`: Resultado individual de execução com `agent_id`, `role`, `output`, `success`, `execution_time_ms`, `tools_called` e `error`.
+   - `SwarmGoalReport`: Relatório executivo consolidando meta, total de agentes, sucessos/falhas, tempo de execução, consenso e recomendações contextuais.
+2. **Motor Swarm Coordinator (`src/corporate_engineer/orchestrator/swarm.py`)**:
+   - `SwarmCoordinator` integrado ao `MCPEnterpriseHub` e ao `SystemOneRouter`.
+   - `create_swarm`: Alocação de subagentes com poda semântica de ferramentas MCP via Sistema 1 (`prune_tools_for_prompt`).
+   - `dispatch_task`: Execução protegida com isolamento por Circuit Breaker individual por ferramenta MCP.
+   - `run_fan_out`: Paralelização concorrente com `ThreadPoolExecutor` e barreira de sincronização (*Fan-In*).
+   - `run_consensus`: Rodadas de revisão multi-agente concorrente sintetizando deliberação unificada (`APPROVED` / `REJECTED`).
+3. **CLI Corporativa (`src/corporate_engineer/cli.py`)**:
+   - Adição do subcomando oficial `corporate-engineer swarm` com flags `--goal`, `--roles`, `--mode [fanout|consensus]`, `--target`, `--workers`, `--format [text|json|markdown]` e `--output`.
+4. **Suíte de Testes Automatizados (Shift-Left TDD)**:
+   - 8 novos testes unitários e de integração em `tests/test_swarm_coordinator.py` (100% PASS, 85% de cobertura).
+   - Expansão da suíte global para **170/170 testes PASS** em 20.83s.
+5. **Governança & Arquitetura**:
+   - Formalização do [ADR-016](docs/adr/ADR-016-multi-agent-swarm-coordinator-mcp.md) e elaboração de [PR-CORP-016.md](docs/pull_requests/PR-CORP-016.md).
+   - Atualização do status de `IMP-0016` para `IMPLEMENTED` em `.agents/orchestration/improvement-backlog.md`.
+
+### Sessão Anterior (Implementação de IMP-0015: Autonomous Benchmark & Eval Harness — ADR-015 / PR-CORP-015):
 1. **Modelos DTO Pydantic v2 (`src/corporate_engineer/models.py`)**:
    - `EngineLatencyStats`: Contrato tipado com `p50_ms`, `p95_ms`, `p99_ms`, `mean_ms`, `min_ms` e `max_ms`.
    - `EngineBenchmarkResult`: Resultados estruturados por motor (acurácia global, latências, throughput RPS, erros e acurácia por modo de decisão).
@@ -82,6 +102,7 @@
 - `[x]` Adicionar subcomando `fix`: auto-remediação de violações de AST (`IMP-0012`).
 - `[x]` Adicionar subcomando `clean`: otimização segura de armazenamento e limpeza de disco (`ADR-014`).
 - `[x]` Adicionar subcomando `benchmark`: harness autônomo de benchmark e avaliação do Sistema 1 (`IMP-0015 / ADR-015`).
+- `[x]` Adicionar subcomando `swarm`: coordenador de enxame multi-agente via MCP Hub (`IMP-0016 / ADR-016`).
 
 ### 🔌 Trilha 2: Conectores e Transporte Remoto MCP (`src/corporate_engineer/mcp/`)
 - `[x]` Suporte a transporte Server-Sent Events (SSE) / JSON-RPC 2.0 para servidores MCP remotos.
@@ -121,8 +142,7 @@
 
 1. `[x]` **Trilha Operacional: CORP-DISK-CLEANUP & ADR-014** (Concluído: `SafeStorageCleaner`, modelos DTO, subcomando CLI `clean`, 155/155 testes PASS, 20.38 GB livres no C:).
 2. `[x]` **Trilha Estratégica 2 / IMP-0015: Autonomous Benchmark & Eval Harness** (Concluído: `SystemOneBenchmark`, modelos DTO `EngineBenchmarkResult`/`BenchmarkReport`, subcomando CLI `benchmark`, ADR-015, PR-CORP-015, 162/162 testes PASS).
-3. `[ ]` **Trilha Estratégica 2 / IMP-0016: Multi-Agent Swarm Coordinator via MCP Hub**:
-   - Orquestração concorrente de múltiplos agentes especializados consumindo o pool de ferramentas do `MCPEnterpriseHub` com isolamento de falhas por circuit breaker.
+3. `[x]` **Trilha Estratégica 2 / IMP-0016: Multi-Agent Swarm Coordinator via MCP Hub** (Concluído: `SwarmCoordinator`, modelos DTO `SwarmMember`/`SwarmGoalReport`, subcomando CLI `swarm`, ADR-016, PR-CORP-016, 170/170 testes PASS).
 4. `[ ]` **Trilha Estratégica 2 / IMP-0017: GitHub Actions Workflow de Auto-Remediação em PRs (`.github/workflows/self-heal.yml`)**:
    - Pipeline de CI acionando `corporate-engineer fix --auto` e `corporate-engineer audit` automaticamente em novos PRs.
 5. `[ ]` **Trilha Estratégica 3: Dogfooding e Teste de Ponta a Ponta com Projeto Real**:
@@ -134,6 +154,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-22T11:30:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0016: motor `SwarmCoordinator` (`src/corporate_engineer/orchestrator/swarm.py`), modelos Pydantic v2 `SwarmMember`, `SwarmTaskResult` e `SwarmGoalReport`, modos Fan-Out/Fan-In e Consensus, injeção de ferramentas MCP com isolamento por Circuit Breaker individual, subcomando CLI `swarm`, formalização do ADR-016, elaboração do PR-CORP-016 e expansão da suíte global para 170/170 testes PASS com 85% de cobertura no módulo de swarm. |
 | `2026-11-22T10:40:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0015: motor `SystemOneBenchmark` (`src/corporate_engineer/system_one/benchmark.py`), modelos Pydantic v2 `EngineLatencyStats`, `EngineBenchmarkResult` e `BenchmarkReport`, cálculo de percentis P50/P95/P99, subcomando CLI `benchmark` com suporte a text/json/markdown, formalização do ADR-015, elaboração do PR-CORP-015 e expansão da suíte global para 162/162 testes PASS com 87% de cobertura. |
 | `2026-11-22T10:02:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para CORP-DISK-CLEANUP: motor `SafeStorageCleaner` (`src/corporate_engineer/quality/storage_cleaner.py`), modelos Pydantic v2 `StorageTarget`, `StorageCleanResult` e `StorageOptimizationReport`, subcomando CLI `clean`, otimização do `secret_scanner.py`, 10 novos testes unitários (155/155 testes PASS), elaboração do ADR-014 e PR-CORP-014, e recuperação de mais de 20.3 GB livres na partição C: (de 64 MB para 20.38 GB livres). |
 | `2026-11-22T08:20:00-03:00` | Corp-Pipeline Master Orchestrator | Execução de `git pull` na branch `main`: sincronização com origin/main (fast-forward `1498dfe..f0d3b69`), incorporando o merge do PR #17 (Trilha 1: Colab Notebook, modelos ONNX INT8 e suite de testes) e validação local completa (145/145 testes PASS, 0 erros Ruff e Mypy). |

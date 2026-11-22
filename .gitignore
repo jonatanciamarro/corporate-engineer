@@ -58,5 +58,7 @@ coverage/
 .gitconfig_sandbox
 models/*.bin
 models/*.safetensors
+models/*.onnx
+models/*.onnx_data
 models/system_one_lora/
 

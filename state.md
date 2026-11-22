@@ -11,7 +11,7 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/TRILHA-1-colab-onnx-training` | 🟢 Suíte com 145/145 testes PASS, 88% cobertura, Trilha 1 (Colab Notebook & ONNX Loader) concluída e enviada ao origin |
+| **Branch Ativa** | `main` | 🟢 Suíte com 145/145 testes PASS, 88% cobertura, Trilha 1 (Colab Notebook & ONNX Loader) consolidada na main via PR #17 |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
 | **Testes (Pytest + Hypothesis)** | 🟢 **145/145 PASS** | Cobertura global de 88% (`pytest-cov`) em 19.38s |
 | **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (88 arquivos verificados e formatados) |
@@ -132,6 +132,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-22T08:20:00-03:00` | Corp-Pipeline Master Orchestrator | Execução de `git pull` na branch `main`: sincronização com origin/main (fast-forward `1498dfe..f0d3b69`), incorporando o merge do PR #17 (Trilha 1: Colab Notebook, modelos ONNX INT8 e suite de testes) e validação local completa (145/145 testes PASS, 0 erros Ruff e Mypy). |
 | `2026-11-22T02:37:00-03:00` | Corp-Pipeline Master Orchestrator | Integração real dos artefatos ONNX INT8 fine-tuned do Qwen2.5-0.5B gerados via Google Colab (`qwen_int8_onnx.zip` extraído em `models/` contendo `model.onnx`, `model_int8.onnx`, `config.json`, `generation_config.json`). Execução e validação completa dos testes com ONNX Runtime local (`tests/test_system_one_colab_onnx.py` 7/7 PASS). |
 | `2026-11-21T22:05:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão da Trilha 1 do Roadmap: geração do Jupyter Notebook interativo `notebooks/train_system_one_colab.ipynb` com badge Open In Colab, atualização do script `scripts/train_system_one_colab.py`, criação de `models/`, implementação de lazy loading com fallback transparente em `ONNXNLIDecisionEngine`, suporte a `--engine onnx` na CLI, resiliência de rede e git com timeouts e `tests/conftest.py`, elaboração do ADR-013 e PR-CORP-013, expansão para 145/145 testes PASS (88% cobertura) e push da branch `feat/TRILHA-1-colab-onnx-training` para origin. |
 | `2026-11-21T13:32:00-03:00` | Corp-Pipeline Master Orchestrator | Atualização formal do state.md e sincronização no remote: consolidação de todas as 14 melhorias na main, 138/138 testes PASS (88% cobertura), 0 erros Ruff/Mypy, catalogação dos próximos passos estratégicos (Colab Fine-Tuning real, IMP-0015/016/017 e Dogfooding) e push para origin/main. |

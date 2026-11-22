@@ -2,6 +2,12 @@
 Domain models and DTO contracts for Corporate Autonomous Engineer.
 """
 
+try:
+    from datetime import UTC, datetime
+except ImportError:
+    from datetime import datetime, timezone
+
+    UTC = timezone.utc  # noqa: UP017 # type: ignore[assignment]
 from enum import Enum
 from typing import Any
 
@@ -472,3 +478,44 @@ class LoraExportResult(BaseModel):
     estimated_tokens: int
     success: bool = True
     sanitized_secrets_count: int = 0
+
+
+class AnticipationStep(BaseModel):
+    step_index: int = Field(
+        ge=1, description="Index of the anticipation step (1 for immediate, 2 for subsequent)"
+    )
+    phase: str = Field(
+        description="Pipeline phase, e.g. PLANNING, CONTRACT/TDD, IMPLEMENT, AUDIT, DELIVER"
+    )
+    action: str = Field(description="Concise description of the recommended action")
+    rationale: str = Field(
+        default="", description="Why this step is critical before moving forward"
+    )
+    target_files: list[str] = Field(
+        default_factory=list, description="Files expected to be created or modified"
+    )
+    tdd_scenario: str = Field(default="", description="Shift-Left TDD scenario to prove behavior")
+
+
+class AnticipationPlan(BaseModel):
+    raw_prompt: str
+    target_domain: str = Field(
+        default="orchestrator", description="Target domain detected by context refiner"
+    )
+    risk_level: str = Field(default="LOW", description="Risk level (LOW, MEDIUM, HIGH)")
+    recommended_agents: list[str] = Field(
+        default_factory=list, description="Subagents mapped to execute the task"
+    )
+    step_immediate_1: AnticipationStep = Field(
+        description="Step 1: Immediate action (e.g. contracts, ADR, TDD red test)"
+    )
+    step_subsequent_2: AnticipationStep = Field(
+        description="Step 2: Subsequent action (e.g. implementation, blast radius, audit)"
+    )
+    blast_radius_estimate: list[str] = Field(
+        default_factory=list, description="Files likely affected downstream"
+    )
+    structured_metaprompt: str = Field(
+        default="", description="Refined metaprompt guidance for LLM execution"
+    )
+    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())

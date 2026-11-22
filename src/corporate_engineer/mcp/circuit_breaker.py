@@ -3,6 +3,7 @@ Circuit Breaker Pattern implementation for MCP Client and Network Adapters.
 Manages failure states (CLOSED, OPEN, HALF_OPEN) and handles automatic reconnection / backoff.
 """
 
+import threading
 import time
 from collections.abc import Callable
 from enum import Enum
@@ -41,54 +42,60 @@ class CircuitBreaker:
         self._state: CircuitState = CircuitState.CLOSED
         self._failure_count: int = 0
         self._success_count: int = 0
-        self._last_state_change: float = time.time()
+        self._last_state_change: float = time.monotonic()
         self._last_failure_time: float | None = None
+        self._lock: threading.RLock = threading.RLock()
 
     @property
     def state(self) -> CircuitState:
-        if self._state == CircuitState.OPEN:
-            elapsed = time.time() - self._last_state_change
-            if elapsed >= self.recovery_timeout:
-                self._state = CircuitState.HALF_OPEN
-                self._last_state_change = time.time()
-                self._success_count = 0
-        return self._state
+        with self._lock:
+            if self._state == CircuitState.OPEN:
+                elapsed = time.monotonic() - self._last_state_change
+                if elapsed >= self.recovery_timeout:
+                    self._state = CircuitState.HALF_OPEN
+                    self._last_state_change = time.monotonic()
+                    self._success_count = 0
+            return self._state
 
     @property
     def failure_count(self) -> int:
-        return self._failure_count
+        with self._lock:
+            return self._failure_count
 
     def can_execute(self) -> bool:
         """Check if execution is currently permitted by circuit state."""
-        current = self.state
-        return current in (CircuitState.CLOSED, CircuitState.HALF_OPEN)
+        with self._lock:
+            current = self.state
+            return current in (CircuitState.CLOSED, CircuitState.HALF_OPEN)
 
     def record_success(self) -> None:
         """Record successful execution."""
-        current = self.state
-        if current == CircuitState.HALF_OPEN:
-            self._success_count += 1
-            if self._success_count >= self.half_open_success_threshold:
-                self._state = CircuitState.CLOSED
+        with self._lock:
+            current = self.state
+            if current == CircuitState.HALF_OPEN:
+                self._success_count += 1
+                if self._success_count >= self.half_open_success_threshold:
+                    self._state = CircuitState.CLOSED
+                    self._failure_count = 0
+                    self._success_count = 0
+                    self._last_state_change = time.monotonic()
+            elif current == CircuitState.CLOSED:
                 self._failure_count = 0
-                self._success_count = 0
-                self._last_state_change = time.time()
-        elif current == CircuitState.CLOSED:
-            self._failure_count = 0
 
     def record_failure(self) -> None:
         """Record failure during execution."""
-        current = self.state
-        self._last_failure_time = time.time()
-        if current == CircuitState.HALF_OPEN:
-            self._state = CircuitState.OPEN
-            self._last_state_change = time.time()
-            self._failure_count = self.failure_threshold
-        elif current == CircuitState.CLOSED:
-            self._failure_count += 1
-            if self._failure_count >= self.failure_threshold:
+        with self._lock:
+            current = self.state
+            self._last_failure_time = time.monotonic()
+            if current == CircuitState.HALF_OPEN:
                 self._state = CircuitState.OPEN
-                self._last_state_change = time.time()
+                self._last_state_change = time.monotonic()
+                self._failure_count = self.failure_threshold
+            elif current == CircuitState.CLOSED:
+                self._failure_count += 1
+                if self._failure_count >= self.failure_threshold:
+                    self._state = CircuitState.OPEN
+                    self._last_state_change = time.monotonic()
 
     def execute(self, fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
         """Wrap and execute a callable through circuit breaker protections."""
@@ -106,8 +113,9 @@ class CircuitBreaker:
 
     def reset(self) -> None:
         """Reset circuit breaker to initial closed state."""
-        self._state = CircuitState.CLOSED
-        self._failure_count = 0
-        self._success_count = 0
-        self._last_state_change = time.time()
-        self._last_failure_time = None
+        with self._lock:
+            self._state = CircuitState.CLOSED
+            self._failure_count = 0
+            self._success_count = 0
+            self._last_state_change = time.monotonic()
+            self._last_failure_time = None

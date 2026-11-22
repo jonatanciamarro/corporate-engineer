@@ -40,6 +40,9 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0012` | AST Auto-Refactor & Self-Healing Fixer (Auto-Remediação) | `AUTOMATION` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-20` |
 | `IMP-0013` | Open-Source System-One Decision Engine (Outlines / Local SLM) | `EFFICIENCY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
 | `IMP-0014` | Free System-One SLM Fine-Tuning Pipeline & Universal Framework Injection | `EFFICIENCY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
+| `IMP-0015` | Autonomous Benchmark & Eval Harness (Heuristic vs Outlines vs ONNX) | `QUALITY` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
+| `IMP-0016` | Multi-Agent Swarm Coordinator via MCP Hub | `ORCHESTRATION` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0017` | GitHub Actions Workflow de Auto-Remediação em PRs (`self-heal.yml`) | `AUTOMATION` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 
 ---
 
@@ -251,6 +254,25 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Complexidade**: Média (M).
 - **Riscos**: Dependências opcionais pesadas no ambiente corporativo padrão. Mitigação: arquitetura pura desacoplada, fallback heurístico nativo e receitas standalone para Colab.
 - **Critérios de Aceite**: Modelos Pydantic v2 tipados (`TrainingSample`, `DatasetReport`), gerador de dataset funcional com exportação JSONL, métodos de integração nos módulos do framework, receita de fine-tuning gratuita e 100% dos testes passando com 0 erros de linter e tipagem.
+
+---
+
+### 🔹 IMP-0015: Autonomous Benchmark & Eval Harness (Heuristic vs Outlines vs ONNX)
+- **Categoria**: `QUALITY` | `EFFICIENCY` | `OBSERVABILITY`
+- **Status**: `IMPLEMENTED` (Ref: `PR-CORP-015.md`, `ADR-015`)
+- **Data de Descoberta**: 2026-11-22
+- **Problema / Limitação Atual**: Com três motores de decisão disponíveis no framework (`HeuristicDecisionEngine`, `OutlinesDecisionEngine` e `ONNXNLIDecisionEngine`), não existe um comando ou módulo padronizado de benchmark que compare quantitativamente e empiricamente a acurácia, latência (P50/P95/P99), throughput (RPS) e consumo de recursos entre eles no dataset de domínio.
+- **Solução Proposta**:
+  1. *Modelos DTO Pydantic v2 (`models.py`)*: `EngineLatencyStats`, `EngineBenchmarkResult`, `BenchmarkReport` com validação estrita.
+  2. *Motor de Benchmark (`system_one/benchmark.py`)*: `SystemOneBenchmark` que executa baterias de testes em lote e isolados com temporização de alta precisão (`time.perf_counter`), cálculo estatístico de percentis e avaliação de acurácia contra outputs esperados.
+  3. *CLI Corporativa (`cli.py`)*: Subcomando `corporate-engineer benchmark` suportando `--dataset`, `--engines`, `--iterations`, `--max-samples`, `--format [text|json|markdown]` e `--output`.
+  4. *Recomendações Automáticas*: Geração de scorecard comparativo destacando o motor vencedor em latência e acurácia.
+- **Benefícios Esperados**: Evidências científicas e reprodutíveis para guiar decisões de roteamento e dimensionamento de infraestrutura em produção.
+- **Componentes Afetados**: `src/corporate_engineer/models.py`, `src/corporate_engineer/system_one/benchmark.py`, `src/corporate_engineer/cli.py`, `tests/test_system_one_benchmark.py`.
+- **Complexidade**: Média (M).
+- **Riscos**: Variação de latência em ambientes sem GPU ou com carga concorrente de CPU. Mitigação: fases de aquecimento (*warmup*) e múltiplas iterações com percentis P50/P95.
+- **Critérios de Aceite**: Módulo de benchmark funcional, subcomando CLI registrado, relatórios text/json/markdown válidos, 100% dos testes unitários passando e aprovação no Pre-Flight.
+
 
 
 

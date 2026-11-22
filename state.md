@@ -11,7 +11,7 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0019-autonomous-engineering-runner` | 🟢 Suíte com 190/190 testes PASS, IMP-0019 (Autonomous End-to-End Engineering Runner & Dogfooding Pipeline) implementado e validado |
+| **Branch Ativa** | `main` | 🟢 Sincronizado com origin/main (PR #23 mesclado). Suíte com 190/190 testes PASS, 0 erros Ruff e Mypy |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
 | **Testes (Pytest + Hypothesis)** | 🟢 **190/190 PASS** | Cobertura global robusta de 88% (`pytest-cov`) em 19.24s |

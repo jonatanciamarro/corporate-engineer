@@ -384,3 +384,19 @@ class SwarmGoalReport(BaseModel):
     results: list[SwarmTaskResult] = Field(default_factory=list)
     execution_time_ms: float = 0.0
     recommendations: list[str] = Field(default_factory=list)
+
+
+class RevisedPromptSpec(BaseModel):
+    raw_prompt: str
+    target_domain: str = "general"
+    core_intent: str = ""
+    functional_requirements: list[str] = Field(default_factory=list)
+    non_functional_requirements: list[str] = Field(default_factory=list)
+    affected_modules: list[str] = Field(default_factory=list)
+    out_of_scope: list[str] = Field(default_factory=list)
+    tdd_test_scenarios: list[str] = Field(default_factory=list)
+    metaprompt: str = ""
+    confidence_score: float = 0.0
+    is_bypassed: bool = False
+    bypass_reason: str | None = None
+    timestamp: str = ""

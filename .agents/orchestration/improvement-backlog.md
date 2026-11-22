@@ -43,6 +43,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0015` | Autonomous Benchmark & Eval Harness (Heuristic vs Outlines vs ONNX) | `QUALITY` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0016` | Multi-Agent Swarm Coordinator via MCP Hub | `ORCHESTRATION` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0017` | GitHub Actions Workflow de Auto-Remediação em PRs (`self-heal.yml`) | `AUTOMATION` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0018` | Context-Aware Metaprompt Engine & Prompt Refiner | `INTELLIGENCE` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
 
 ---
 
@@ -293,6 +294,27 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Complexidade**: Média-Alta (M-L).
 - **Riscos**: Concorrência de subprocessos stdio de ferramentas MCP no Windows. Mitigação: isolamento por membro do swarm e fallback seguro com circuit breaker.
 - **Critérios de Aceite**: `SwarmCoordinator` despacha tarefas concorrentes, injeta ferramentas MCP com circuit breaker, agrega consenso e atinge 100% de testes passando e aprovação no Pre-Flight.
+
+---
+
+### 🔹 IMP-0018: Context-Aware Metaprompt Engine & Prompt Refiner
+- **Categoria**: `INTELLIGENCE` | `ORCHESTRATION` | `QUALITY`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-018`, `PR-CORP-018.md`)
+- **Data de Descoberta**: 2026-11-22
+- **Problema / Limitação Atual**: O pipeline do framework depende da qualidade e clareza do prompt inicial do usuário. Prompts informais ou sucintos (ex.: "adicione timeout no mcp") levam a desvios de escopo, ambiguidades nos testes TDD e sobrecarga na fase de perguntas investigativas do `/grill-me_v2`. Não havia uma camada formal de pré-processamento para transformar o input humano em um metaprompt técnico ancorado no contexto real do repositório (AST, domínios e contratos).
+- **Solução Proposta**:
+  1. *Modelos DTO Pydantic v2 (`models.py`)*: `RevisedPromptSpec` com requisitos funcionais, não-funcionais corporativos, módulos afetados, restrições out-of-scope, cenários TDD e score de confiança.
+  2. *Motor Context-Aware Refiner (`prompt/refiner.py`)*:
+     - Detecção léxica de domínios corporativos (`mcp`, `orchestrator`, `quality`, `rag`, `system_one`, `cli`).
+     - Fast-Path Bypass determinístico para comandos operacionais (`pytest`, `git status`, `/preflight`).
+     - Síntese de metaprompt técnico em Markdown para alimentar o orquestrador e subagentes.
+  3. *CLI Corporativa (`cli.py`)*: Subcomando `corporate-engineer prompt refine <prompt>` com flags `--bypass-gate`, `--format [text|json|markdown]`, `--workspace` e `--output`.
+- **Benefícios Esperados**: Redução de ambiguidades na entrada do pipeline, delimitação precisa de escopo, geração antecipada de casos de teste TDD e transparência via preview de refinamento.
+- **Componentes Afetados**: `src/corporate_engineer/models.py`, `src/corporate_engineer/prompt/`, `src/corporate_engineer/cli.py`, `tests/test_metaprompt_engine.py`.
+- **Complexidade**: Média (M).
+- **Riscos**: Reescritas desnecessárias em comandos simples. Mitigação: Fast-Path Bypass automático para comandos operacionais e queries curtas.
+- **Critérios de Aceite**: `ContextAwarePromptRefiner` funcional com suporte a bypass e enriquecimento, subcomando CLI registrado, 100% dos testes unitários passando e aprovação no Pre-Flight.
+
 
 
 

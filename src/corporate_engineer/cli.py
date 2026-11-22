@@ -280,7 +280,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     decide_parser.add_argument(
         "--engine",
-        choices=["heuristic", "outlines", "nli", "auto"],
+        choices=["heuristic", "outlines", "nli", "onnx", "auto"],
         default="auto",
         help="Decision engine backend (default: auto)",
     )
@@ -976,7 +976,7 @@ def handle_decide(args: argparse.Namespace) -> int:
     engine: SystemOneEngine
     if args.engine == "outlines":
         engine = OutlinesDecisionEngine(fallback_to_heuristic=True)
-    elif args.engine == "nli":
+    elif args.engine in ("nli", "onnx"):
         engine = ONNXNLIDecisionEngine(fallback_to_heuristic=True)
     else:
         engine = HeuristicDecisionEngine()

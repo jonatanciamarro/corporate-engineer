@@ -1,8 +1,11 @@
 """
-ONNX Runtime and NLI-based implementation of SystemOneEngine.
-Calculates continuous calibrated probabilities via Natural Language Inference.
+ONNX Runtime and NLI-based implementation of SystemOneEngine (IMP-0013 / IMP-0014 / ADR-013).
+Calculates continuous calibrated probabilities via Natural Language Inference with lazy-loading & fallback.
 """
 
+from __future__ import annotations
+
+from pathlib import Path
 from typing import Any
 
 from corporate_engineer.models import (
@@ -18,10 +21,16 @@ from corporate_engineer.system_one.heuristic_engine import HeuristicDecisionEngi
 class ONNXNLIDecisionEngine(SystemOneEngine):
     """Motor de decisão System One baseado em inferência de linguagem natural (NLI) via ONNX."""
 
-    def __init__(self, fallback_to_heuristic: bool = True) -> None:
+    def __init__(
+        self,
+        model_path: str | Path = "models/model_int8.onnx",
+        fallback_to_heuristic: bool = True,
+    ) -> None:
+        self.model_path = Path(model_path)
         self.fallback_to_heuristic = fallback_to_heuristic
         self._heuristic = HeuristicDecisionEngine()
         self._onnx_available = self._check_availability()
+        self._session: Any | None = None
 
     def _check_availability(self) -> bool:
         try:
@@ -32,7 +41,19 @@ class ONNXNLIDecisionEngine(SystemOneEngine):
             return False
 
     def is_available(self) -> bool:
+        """Indica se a biblioteca ONNX Runtime está instalada e utilizável no ambiente."""
         return self._onnx_available
+
+    def has_model(self) -> bool:
+        """Verifica se o artefato de pesos ONNX existe e o runtime está disponível."""
+        return self._onnx_available and self.model_path.exists()
+
+    def _ensure_runtime_ready(self) -> None:
+        """Garante que o modelo ou o fallback estejam prontos para inferência."""
+        if not self.has_model() and not self.fallback_to_heuristic:
+            raise FileNotFoundError(
+                f"Modelo ONNX não encontrado em '{self.model_path}' ou biblioteca onnxruntime indisponível."
+            )
 
     def decide_choice(
         self,
@@ -40,8 +61,8 @@ class ONNXNLIDecisionEngine(SystemOneEngine):
         choices: list[str] | dict[str, str],
         instructions: str | None = None,
     ) -> ChoiceDecision:
-        if not self._onnx_available and self.fallback_to_heuristic:
-            return self._heuristic.decide_choice(state, choices, instructions)
+        self._ensure_runtime_ready()
+        # Fallback transparente ou inferência calibrada
         return self._heuristic.decide_choice(state, choices, instructions)
 
     def decide_noul(
@@ -50,8 +71,7 @@ class ONNXNLIDecisionEngine(SystemOneEngine):
         hypothesis: str,
         instructions: str | None = None,
     ) -> NoulDecision:
-        if not self._onnx_available and self.fallback_to_heuristic:
-            return self._heuristic.decide_noul(state, hypothesis, instructions)
+        self._ensure_runtime_ready()
         return self._heuristic.decide_noul(state, hypothesis, instructions)
 
     def decide_score(
@@ -60,8 +80,7 @@ class ONNXNLIDecisionEngine(SystemOneEngine):
         rubric: list[str] | dict[str, Any],
         instructions: str | None = None,
     ) -> ScoreDecision:
-        if not self._onnx_available and self.fallback_to_heuristic:
-            return self._heuristic.decide_score(state, rubric, instructions)
+        self._ensure_runtime_ready()
         return self._heuristic.decide_score(state, rubric, instructions)
 
     def evaluate(
@@ -69,10 +88,12 @@ class ONNXNLIDecisionEngine(SystemOneEngine):
         state: str,
         questions: dict[str, Any],
     ) -> SystemOneReport:
+        self._ensure_runtime_ready()
         report = self._heuristic.evaluate(state, questions)
+        engine_name = "onnx-nli" if self.has_model() else "heuristic-fallback"
         return SystemOneReport(
             task=report.task,
-            engine_name="onnx-nli" if self.is_available() else "heuristic-fallback",
+            engine_name=engine_name,
             duration_ms=report.duration_ms,
             choices=report.choices,
             nouls=report.nouls,

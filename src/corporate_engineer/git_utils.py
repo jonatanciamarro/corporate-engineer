@@ -2,6 +2,7 @@
 Git utilities and pre-filled GitHub Pull Request URL generator for Corporate Pipelines.
 """
 
+import os
 import re
 import subprocess
 import urllib.parse
@@ -96,12 +97,15 @@ def is_branch_pushed(
 
     # Check ls-remote for target branch
     try:
+        git_env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
         proc = subprocess.run(
             ["git", "ls-remote", "--heads", remote_name, target_branch],
             check=False,
             capture_output=True,
             text=True,
             cwd=str(resolved_path),
+            timeout=2.0,
+            env=git_env,
         )
         if proc.returncode != 0 or not proc.stdout.strip():
             return False
@@ -115,6 +119,8 @@ def is_branch_pushed(
             capture_output=True,
             text=True,
             cwd=str(resolved_path),
+            timeout=2.0,
+            env=git_env,
         )
         if proc_head.returncode == 0:
             local_hash = proc_head.stdout.strip()
@@ -141,12 +147,15 @@ def push_branch_to_remote(
     cmd.extend([remote_name, target_branch])
 
     try:
+        git_env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
         proc = subprocess.run(
             cmd,
             check=False,
             capture_output=True,
             text=True,
             cwd=str(resolved_path),
+            timeout=3.0,
+            env=git_env,
         )
         return proc.returncode == 0
     except (OSError, subprocess.SubprocessError):

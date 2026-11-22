@@ -11,11 +11,11 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0017-github-actions-self-heal` | 🟢 Suíte com 184/184 testes PASS, IMP-0017 (GitHub Actions Workflow de Auto-Remediação em PRs) implementado e testado |
+| **Branch Ativa** | `main` | 🟢 Sincronizado com origin/main (PRs #20, #21 e #22 mesclados). Suíte com 184/184 testes PASS, 0 erros Ruff e Mypy |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **184/184 PASS** | Cobertura global robusta de 88% (`pytest-cov`) em 19.75s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (106 arquivos verificados e formatados) |
+| **Testes (Pytest + Hypothesis)** | 🟢 **184/184 PASS** | Cobertura global robusta de 88% (`pytest-cov`) em 28.96s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (109 arquivos verificados e formatados) |
 | **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 63 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` (tempo de varredura otimizado para sub-1s) |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
@@ -26,7 +26,22 @@
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação de IMP-0017: GitHub Actions Workflow de Auto-Remediação em PRs — ADR-017 / PR-CORP-017):
+### Sessão Atual (Sincronização & Consolidação na branch `main` — PRs #21 e #22):
+1. **Integração dos PRs no Remote**:
+   - PR #21 (`IMP-0018: Context-Aware Metaprompt Engine & Prompt Refiner`) e PR #22 (`IMP-0017: GitHub Actions Workflow de Auto-Remediação em PRs`) aprovados e mesclados com sucesso no GitHub.
+   - O workflow de auto-cura (`.github/workflows/self-heal.yml`) executou com sucesso no PR #22, gerando commit de bot automatizado `3934411` (`chore(self-heal): apply automated AST fixes [skip ci]`).
+2. **Sincronização Local (`git pull origin main`)**:
+   - Fast-forward limpo da branch `main` (`9b2c169..f1898f3`).
+   - Normalização de formatação e ordenação de imports pós-remediação de AST.
+   - Adição de `# noqa: BLE001` nos pontos de contenção de erros globais em `AutonomousEngineeringGraph` e `MutationTestingEngine`.
+   - Adição de `ruff check --fix src/ || true` e `ruff format src/` ao workflow `.github/workflows/self-heal.yml` para assegurar formatação limpa automática de pós-remediação.
+3. **Validação Completa de Pre-Flight**:
+   - 184/184 testes unitários e de integração verdes (`pytest`) em 28.96s.
+   - 0 erros de linter e formatação (`ruff check` e `ruff format` em 109 arquivos).
+   - 0 erros de tipagem estrita (`mypy` em 63 arquivos).
+   - 0 segredos detectados (`secret_scanner.py`).
+
+### Sessão Anterior (Implementação de IMP-0017: GitHub Actions Workflow de Auto-Remediação em PRs — ADR-017 / PR-CORP-017):
 1. **Workflow de Integração Contínua (`.github/workflows/self-heal.yml`)**:
    - Acionamento restrito a eventos `pull_request` (`opened`, `synchronize`, `reopened`) apontando para `main`.
    - Permissões mínimas de privilégio: `contents: write` e `pull-requests: write`.
@@ -189,6 +204,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-22T13:30:00-03:00` | Corp-Pipeline Master Orchestrator | Sincronização e consolidação da branch `main` com origin: merge dos PRs #21 (IMP-0018) e #22 (IMP-0017), comprovação prática da auto-remediação do workflow de GitHub Actions no PR #22 (commit 3934411), ajustes de linting pós-remediação, aprimoramento do `.github/workflows/self-heal.yml` com formatação automática e validação global completa (184/184 testes PASS em 28.96s, 0 erros Ruff/Mypy). |
 | `2026-11-22T12:35:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0017: workflow GitHub Actions `.github/workflows/self-heal.yml` com auto-remediação de AST via `corporate-engineer fix --auto --path src/`, commit condicional do bot com `[skip ci]`, verificação estrita via `audit --strict`, 5 novos testes em `tests/test_self_heal_workflow.py` (184/184 testes PASS), elaboração do ADR-017 e PR-CORP-017. |
 | `2026-11-22T11:50:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0018: motor `ContextAwarePromptRefiner` (`src/corporate_engineer/prompt/refiner.py`), modelo Pydantic v2 `RevisedPromptSpec`, Fast-Path Bypass condicional para comandos operacionais com override `--bypass-gate`, mapeamento para domínios corporativos (`mcp`, `orchestrator`, `rag`, `system_one`, `quality`, `cli`), ancoragem AST em símbolos de código, subcomando CLI `prompt refine`, formalização do ADR-018, elaboração do PR-CORP-018 e expansão da suíte global para 179/179 testes PASS com 95% de cobertura no módulo de prompt. |
 | `2026-11-22T11:30:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0016: motor `SwarmCoordinator` (`src/corporate_engineer/orchestrator/swarm.py`), modelos Pydantic v2 `SwarmMember`, `SwarmTaskResult` e `SwarmGoalReport`, modos Fan-Out/Fan-In e Consensus, injeção de ferramentas MCP com isolamento por Circuit Breaker individual, subcomando CLI `swarm`, formalização do ADR-016, elaboração do PR-CORP-016 e expansão da suíte global para 170/170 testes PASS com 85% de cobertura no módulo de swarm. |

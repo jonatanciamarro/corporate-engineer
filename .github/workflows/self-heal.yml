@@ -33,9 +33,11 @@ jobs:
           pip install ruff mypy pytest-cov
           pip install -e ".[dev,test]"
 
-      - name: Run AST Self-Healing Remediation
+      - name: Run AST Self-Healing Remediation & Formatter
         run: |
           corporate-engineer fix --auto --path src/
+          ruff check --fix src/ || true
+          ruff format src/
 
       - name: Commit & Push Self-Healing Fixes (if any)
         run: |

@@ -42,8 +42,13 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0014` | Free System-One SLM Fine-Tuning Pipeline & Universal Framework Injection | `EFFICIENCY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
 | `IMP-0015` | Autonomous Benchmark & Eval Harness (Heuristic vs Outlines vs ONNX) | `QUALITY` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0016` | Multi-Agent Swarm Coordinator via MCP Hub | `ORCHESTRATION` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
-| `IMP-0017` | GitHub Actions Workflow de Auto-Remediação em PRs (`self-heal.yml`) | `AUTOMATION` | Baixa-Média (S-M) | `IN_PROGRESS` | `2026-11-22` |
+| `IMP-0017` | GitHub Actions Workflow de Auto-Remediação em PRs (`self-heal.yml`) | `AUTOMATION` | Baixa-Média (S-M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0018` | Context-Aware Metaprompt Engine & Prompt Refiner | `INTELLIGENCE` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
+| `IMP-0019` | Autonomous End-to-End Engineering Runner & Dogfooding Pipeline | `ORCHESTRATION` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
+| `IMP-0020` | Blindagem de Concorrência & Thread-Safety no Swarm e Tracer | `RELIABILITY` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0021` | Isolamento Atômico do Motor de Testes de Mutação | `QUALITY` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0022` | Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos | `RELIABILITY` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0023` | Modularização da CLI Corporativa (Decomposição do Monólito) | `MAINTAINABILITY` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 
 ---
 
@@ -360,6 +365,83 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Complexidade**: Média (M).
 - **Riscos**: Execução indevida de alterações no código em modo dogfooding. Mitigação: flag `--dry-run` para simulação segura e idempotente sem mutações de arquivos de código.
 - **Critérios de Aceite**: Suíte de testes automatizados com cobertura do ciclo completo, suporte a `--dry-run`, geração de checkpoints válidos, aprovação no Pre-Flight e relatório de execução emitido com sucesso.
+
+---
+
+### 🔹 IMP-0020: Blindagem de Concorrência & Thread-Safety no Swarm e Tracer (RLock & ContextVars)
+- **Categoria**: `RELIABILITY` | `OBSERVABILITY` | `ORCHESTRATION`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-22
+- **Problema / Limitação Atual**:
+  1. No `SwarmCoordinator` (`src/corporate_engineer/orchestrator/swarm.py:93-119`), o status dos membros (`member.status = "WORKING" / "COMPLETED"`) é mutado concorrentemente em threads do `ThreadPoolExecutor` sem controle de concorrência ou sincronização, gerando potenciais *race conditions*.
+  2. No `AgentTracer` (`src/corporate_engineer/telemetry/tracer.py:42-43`), a pilha de spans ativos `_active_stack` e a lista `spans` não são thread-safe. Quando múltiplos nós paralelos no DAG ou tarefas concorrentes compartilham o mesmo tracer, a manipulação de spans pode colidir. Além disso, em `export_trace` (L131-L141), se um span possuir tanto `tokens` quanto `gen_ai.usage.total_tokens`, os tokens são somados em duplicidade.
+  3. No `CircuitBreaker` (`src/corporate_engineer/mcp/circuit_breaker.py:48-55`), as transições de estado (`OPEN`, `HALF_OPEN`) não possuem locks de thread.
+- **Solução Proposta**:
+  1. *Swarm Imutável*: Tratar `SwarmMember` como DTO Pydantic imutável (`member.model_copy(update={"status": ...})`) e proteger acessos ao hub com `threading.Lock`.
+  2. *Tracer Context-Aware*: Proteger manipuladores de spans com `threading.RLock()` ou `contextvars.ContextVar` para pilhas isoladas por contexto/thread. Corrigir cálculo de métricas em `export_trace` com ordem de precedência explícita (`gen_ai.usage.total_tokens` prioritário com break).
+  3. *Circuit Breaker*: Adicionar `threading.RLock()` para proteger `record_success`, `record_failure`, `can_execute` e `state`.
+- **Benefícios Esperados**: Execução concorrente 100% thread-safe sem corrupção de estado interno, isolamento real entre threads no Swarm/DAG e métricas precisas de consumo de tokens OTel.
+- **Componentes Afetados**: `src/corporate_engineer/orchestrator/swarm.py`, `src/corporate_engineer/telemetry/tracer.py`, `src/corporate_engineer/mcp/circuit_breaker.py`, `tests/test_swarm_coordinator.py`, `tests/test_tracer.py`.
+- **Complexidade**: Média (M).
+- **Riscos**: Mínimos, desde que os locks sejam reentrantes (`RLock`) evitando deadlocks.
+- **Critérios de Aceite**: Testes com concorrência paralela sob carga passando sem race conditions e verificação estrita de contagem única de tokens no tracer.
+
+---
+
+### 🔹 IMP-0021: Isolamento Atômico do Motor de Testes de Mutação (Safe Sandbox & Atomic Reversion)
+- **Categoria**: `QUALITY` | `RELIABILITY`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-22
+- **Problema / Limitação Atual**: O motor `MutationTestingEngine` (`src/corporate_engineer/quality/mutation.py:198-257`) sobrescreve diretamente os arquivos de código-fonte no disco (`target_path.write_text(mutated_code)`). Caso o processo seja interrompido abruptamente (SIGINT/Ctrl+C, timeout, queda de energia ou crash do pytest), o código de produção permanece mutado/corrompido no disco sem reversão automática.
+- **Solução Proposta**:
+  1. Implementar mecanismo de sandbox atômico via `tempfile.TemporaryDirectory` ou context manager com garantia de backup (`.bak`) e reversão atômica em bloco `try/finally`.
+  2. Registrar e capturar sinais de SO (`signal.SIGINT`, `signal.SIGTERM`) durante a execução de mutações para garantir reversão imediata antes do encerramento do processo.
+  3. No `_SingleNodeMutator`, evitar dessincronização de contagem de nós em geradores/comprehensions e capturar erros de sintaxe com logging explícito em vez de engolir exceções.
+- **Benefícios Esperados**: Blindagem contra corrupção acidental do repositório durante testes de mutação e maior confiabilidade no cálculo do Mutation Score.
+- **Componentes Afetados**: `src/corporate_engineer/quality/mutation.py`, `tests/test_mutation_testing.py`.
+- **Complexidade**: Média (M).
+- **Riscos**: Overhead de I/O em disco ao criar cópias temporárias. Mitigação: usar cópia atômica em memória ou backup localizado pontual.
+- **Critérios de Aceite**: Simulação de interrupção abrupta comprova reversão 100% confiável do código original.
+
+---
+
+### 🔹 IMP-0022: Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos no Pre-Flight
+- **Categoria**: `RELIABILITY` | `QUALITY`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-22
+- **Problema / Limitação Atual**:
+  1. Em `src/corporate_engineer/git_utils.py:107, 122, 157`, comandos como `git ls-remote` e `git push` usam timeouts agressivos de 2s-3s e capturam genericamente `(OSError, subprocess.SubprocessError): return False`. Em caso de latência de rede, VPN ou autenticação pendente, a falha é mascarada como "branch não existe" ou "push falhou sem motivo".
+  2. Em `src/corporate_engineer/quality/surgical_runner.py:48, 71`, comandos `git status` e `git diff` falham silenciosamente com `pass` em caso de erro, gerando lista vazia de arquivos e abortando testes cirúrgicos sem aviso.
+  3. Em `src/corporate_engineer/quality/gate.py:65-73`, `subprocess.run(actual_cmd, shell=True)` usa interpolação de string e timeout hardcoded de 120s.
+- **Solução Proposta**:
+  1. Capturar explicitamente `subprocess.TimeoutExpired` em `git_utils.py`, emitindo logs com `logger.warning` / `logger.error` e mensagens de erro estruturadas.
+  2. Permitir configuração de timeout ajustável para operações remotas (ex: 15s padrão).
+  3. No `surgical_runner.py`, emitir aviso ou erro claro quando `git status`/`diff` falhar (ex: `.git/index.lock` presente).
+  4. No `gate.py`, migrar para `shell=False` com lista de argumentos e timeout configurável.
+- **Benefícios Esperados**: Diagnósticos transparentes de conectividade Git, eliminação de falsos negativos no pipeline e redução de risco de segurança por shell injection.
+- **Componentes Afetados**: `src/corporate_engineer/git_utils.py`, `src/corporate_engineer/quality/surgical_runner.py`, `src/corporate_engineer/quality/gate.py`.
+- **Complexidade**: Baixa-Média (S-M).
+- **Riscos**: Mínimos.
+- **Critérios de Aceite**: Falhas de timeout no git geram logs descritivos; `gate.py` executa via `shell=False`.
+
+---
+
+### 🔹 IMP-0023: Modularização da CLI Corporativa (Decomposição do Monólito de 1661 Linhas)
+- **Categoria**: `MAINTAINABILITY` | `ARCHITECTURE`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-22
+- **Problema / Limitação Atual**: O arquivo `src/corporate_engineer/cli.py` atingiu 1661 linhas, concentrando o parsing de argumentos, formatação de saída e execução lógica de mais de 15 subcomandos (`audit`, `index`, `dag`, `mcp`, `eval`, `blast-radius`, `telemetry`, `test-surgical`, `decide`, `dataset`, `fix`, `clean`, `benchmark`, `swarm`, `prompt`, `run`). Isso viola as regras de design corporativo (limite suave de 800 linhas por arquivo), dificulta revisões de código e obriga o uso de imports tardios espalhados pelo arquivo.
+- **Solução Proposta**:
+  1. Criar o subpacote `src/corporate_engineer/cli/commands/`:
+     - `cmd_audit.py`, `cmd_index.py`, `cmd_dag.py`, `cmd_mcp.py`, `cmd_swarm.py`, `cmd_run.py`, etc.
+  2. Manter em `src/corporate_engineer/cli.py` (ou `cli/main.py`) apenas o parser central, configuração de subparsers e despacho limpo.
+  3. Assegurar compatibilidade retroativa total de todos os subcomandos e argumentos existentes.
+- **Benefícios Esperados**: Redução do tamanho do arquivo principal para <200 linhas, alta coesão e baixo acoplamento por subcomando, facilidade para adição de novos comandos sem risco de merge conflicts.
+- **Componentes Afetados**: `src/corporate_engineer/cli.py`, `src/corporate_engineer/cli/commands/`, `tests/test_cli.py`.
+- **Complexidade**: Média-Alta (M-L).
+- **Riscos**: Quebra inadvertida de algum subcomando ou flag. Mitigação: suíte abrangente de testes CLI existentes (`tests/test_cli.py`) executada como gate antes e depois da refatoração.
+- **Critérios de Aceite**: CLI decomposta em módulos dedicados, 100% dos testes CLI verdes sem quebra de interface e `cli.py` reduzido para <250 linhas.
+
 
 
 

@@ -2,6 +2,7 @@
 Domain models and DTO contracts for Corporate Autonomous Engineer.
 """
 
+from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -417,3 +418,56 @@ class RunExecutionReport(BaseModel):
     trace_id: str | None = None
     dry_run: bool = False
     details: dict[str, Any] = Field(default_factory=dict)
+
+
+class LoraDomain(str, Enum):
+    MOTION_REMOTION = "MOTION_REMOTION"
+    MOTION_MANIM = "MOTION_MANIM"
+    MOTION_BLENDER = "MOTION_BLENDER"
+    TOOL_CALLING = "TOOL_CALLING"
+
+
+class LoraTrainingSample(BaseModel):
+    id: str
+    domain: LoraDomain
+    system_instruction: str = ""
+    user_prompt: str
+    target_response: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    is_valid: bool = True
+    syntax_errors: list[str] = Field(default_factory=list)
+
+
+class LoraDatasetConfig(BaseModel):
+    domains: list[LoraDomain] = Field(
+        default_factory=lambda: [
+            LoraDomain.MOTION_REMOTION,
+            LoraDomain.MOTION_MANIM,
+            LoraDomain.MOTION_BLENDER,
+            LoraDomain.TOOL_CALLING,
+        ]
+    )
+    samples_per_domain: int = 10
+    train_split_ratio: float = Field(default=0.8, gt=0.0, lt=1.0)
+    seed: int = 42
+    sanitize_secrets: bool = True
+    darkfactory_aesthetic: bool = True
+
+
+class LoraValidationReport(BaseModel):
+    total_samples: int
+    valid_samples: int
+    invalid_samples: int
+    domain_breakdown: dict[str, int] = Field(default_factory=dict)
+    errors: list[str] = Field(default_factory=list)
+    is_approved: bool = True
+
+
+class LoraExportResult(BaseModel):
+    train_file: str
+    validation_file: str
+    train_count: int
+    validation_count: int
+    estimated_tokens: int
+    success: bool = True
+    sanitized_secrets_count: int = 0

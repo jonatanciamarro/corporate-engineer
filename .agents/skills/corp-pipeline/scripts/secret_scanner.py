@@ -28,12 +28,13 @@ SECRET_PATTERNS = [
 IGNORE_DIRS = {
     ".git", ".venv", "venv", "node_modules", "__pycache__",
     ".pytest_cache", "dist", "build", "target", "bin", "obj", ".idea", ".vscode",
-    "chrome_session", "data"
+    "chrome_session", "data", "models"
 }
 
 IGNORE_EXTENSIONS = {
     ".png", ".jpg", ".jpeg", ".gif", ".ico", ".pdf", ".zip", ".tar", ".gz",
-    ".exe", ".dll", ".so", ".dylib", ".pyc", ".lock", ".svg", ".woff", ".woff2"
+    ".exe", ".dll", ".so", ".dylib", ".pyc", ".lock", ".svg", ".woff", ".woff2",
+    ".onnx", ".bin", ".gguf"
 }
 
 

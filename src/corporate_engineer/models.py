@@ -354,3 +354,33 @@ class BenchmarkReport(BaseModel):
     winner_latency: str = ""
     winner_accuracy: str = ""
     recommendations: list[str] = Field(default_factory=list)
+
+
+class SwarmMember(BaseModel):
+    agent_id: str
+    role: str
+    task_prompt: str = ""
+    allowed_tools: list[str] = Field(default_factory=list)
+    status: str = "IDLE"  # IDLE, WORKING, COMPLETED, FAILED
+
+
+class SwarmTaskResult(BaseModel):
+    agent_id: str
+    role: str
+    output: str
+    success: bool
+    execution_time_ms: float = 0.0
+    tools_called: list[str] = Field(default_factory=list)
+    error: str | None = None
+
+
+class SwarmGoalReport(BaseModel):
+    goal: str
+    swarm_name: str
+    total_agents: int = 0
+    successful_tasks: int = 0
+    failed_tasks: int = 0
+    aggregated_consensus: str = ""
+    results: list[SwarmTaskResult] = Field(default_factory=list)
+    execution_time_ms: float = 0.0
+    recommendations: list[str] = Field(default_factory=list)

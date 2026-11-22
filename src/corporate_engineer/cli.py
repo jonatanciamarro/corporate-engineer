@@ -423,6 +423,51 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional file path to export benchmark report",
     )
 
+    # Command: swarm (IMP-0016)
+    swarm_parser = subparsers.add_parser(
+        "swarm",
+        help="Multi-Agent Swarm Coordinator via MCP Hub (IMP-0016)",
+    )
+    swarm_parser.add_argument(
+        "--goal",
+        default="Revisão Tripartite de Arquitetura e Qualidade",
+        help="Main goal or directive for the agent swarm",
+    )
+    swarm_parser.add_argument(
+        "--roles",
+        nargs="+",
+        default=["architect", "security-reviewer", "code-reviewer"],
+        help="Specialized agent roles to deploy in the swarm",
+    )
+    swarm_parser.add_argument(
+        "--mode",
+        choices=["fanout", "consensus"],
+        default="fanout",
+        help="Swarm execution mode: fanout (concurrent tasks) or consensus (multi-perspective review)",
+    )
+    swarm_parser.add_argument(
+        "--target",
+        default="",
+        help="Target artifact, module or description for consensus review",
+    )
+    swarm_parser.add_argument(
+        "--workers",
+        type=int,
+        default=4,
+        help="Max concurrent worker threads (default: 4)",
+    )
+    swarm_parser.add_argument(
+        "--format",
+        choices=["text", "json", "markdown"],
+        default="text",
+        help="Output format: text, json, or markdown (default: text)",
+    )
+    swarm_parser.add_argument(
+        "--output",
+        default=None,
+        help="Optional file path to export swarm goal report",
+    )
+
     return parser
 
 
@@ -1358,6 +1403,86 @@ def handle_benchmark(args: argparse.Namespace) -> int:
     return 0
 
 
+def handle_swarm(args: argparse.Namespace) -> int:
+    from corporate_engineer.orchestrator.swarm import SwarmCoordinator
+
+    coordinator = SwarmCoordinator()
+
+    if args.mode == "consensus":
+        target = args.target or args.goal
+        report = coordinator.run_consensus(
+            target_description=target,
+            reviewer_roles=args.roles,
+            max_workers=args.workers,
+        )
+    else:
+        subtasks = [{"role": role, "task": f"{args.goal} - foco em {role}"} for role in args.roles]
+        report = coordinator.run_fan_out(
+            goal=args.goal,
+            subtasks=subtasks,
+            max_workers=args.workers,
+        )
+
+    if args.format == "json":
+        output_str = report.model_dump_json(indent=2)
+    elif args.format == "markdown":
+        lines = [
+            f"# Swarm Goal Report: {report.goal}",
+            f"- **Swarm**: `{report.swarm_name}`",
+            f"- **Agentes**: {report.total_agents} ({report.successful_tasks} sucessos, {report.failed_tasks} falhas)",
+            f"- **Tempo Total**: {report.execution_time_ms} ms",
+            f"- **Consenso**: {report.aggregated_consensus}",
+            "",
+            "## Pareceres dos Especialistas",
+            "| Agente | Papel | Status | Latência (ms) | Parecer |",
+            "|---|---|---|---|---|",
+        ]
+        for res in report.results:
+            status_symbol = "✅" if res.success else "❌"
+            lines.append(
+                f"| `{res.agent_id}` | `{res.role}` | {status_symbol} | {res.execution_time_ms} | {res.output} |"
+            )
+        lines.append("")
+        lines.append("## Recomendações:")
+        for rec in report.recommendations:
+            lines.append(f"- {rec}")
+        output_str = "\n".join(lines)
+    else:
+        lines = [
+            f"\n{'=' * 75}",
+            "🐝  MULTI-AGENT SWARM COORDINATOR VIA MCP HUB (IMP-0016)",
+            f"{'=' * 75}",
+            f"🎯 Meta Geral      : {report.goal}",
+            f"👥 Agentes Ativos  : {report.total_agents} ({report.successful_tasks} concluídas, {report.failed_tasks} falhas)",
+            f"⏱️  Tempo Total     : {report.execution_time_ms} ms",
+            f"⚖️  Consenso        : {report.aggregated_consensus}",
+            f"{'-' * 75}",
+            f"{'AGENTE':<10} {'PAPEL':<20} {'STATUS':<8} {'TEMPO (ms)':<12} {'PARECER RESUMIDO'}",
+            f"{'-' * 75}",
+        ]
+        for res in report.results:
+            status_text = "OK" if res.success else "ERRO"
+            short_out = (res.output[:45] + "...") if len(res.output) > 45 else res.output
+            lines.append(
+                f"{res.agent_id:<10} {res.role:<20} {status_text:<8} {res.execution_time_ms:<12.3f} {short_out}"
+            )
+        lines.append(f"{'-' * 75}")
+        lines.append("💡 Recomendações do Enxame:")
+        for rec in report.recommendations:
+            lines.append(f"   • {rec}")
+        lines.append(f"{'=' * 75}\n")
+        output_str = "\n".join(lines)
+
+    if args.output:
+        out_p = Path(args.output)
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(output_str, encoding="utf-8")
+        print(f"[✓] Swarm report exported to {args.output}")
+
+    print(output_str)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -1392,6 +1517,8 @@ def main(argv: list[str] | None = None) -> int:
         return handle_clean(args)
     elif args.command == "benchmark":
         return handle_benchmark(args)
+    elif args.command == "swarm":
+        return handle_swarm(args)
     else:
         parser.print_help()
         return 0

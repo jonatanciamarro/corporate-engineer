@@ -338,6 +338,30 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Riscos**: Loops de trigger caso o commit do bot dispare o workflow novamente. Mitigação: usar `[skip ci]` ou token padrão `GITHUB_TOKEN` que por padrão não re-dispara workflows.
 - **Critérios de Aceite**: Workflow `.github/workflows/self-heal.yml` sintaticamente válido, testado via suite automatizada, com mitigação de loops e aprovação no Pre-Flight.
 
+---
+
+### 🔹 IMP-0019: Autonomous End-to-End Engineering Runner & Dogfooding Pipeline (`cli run`)
+- **Categoria**: `ORCHESTRATION` | `CAPABILITY` | `QUALITY`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-019`, `PR-CORP-019.md`)
+- **Data de Descoberta**: 2026-11-22
+- **Problema / Limitação Atual**: O framework dispõe da máquina de estados finitos (`AutonomousEngineeringGraph`), motor de refinamento contextual (`ContextAwarePromptRefiner`), auto-remediação de AST (`ASTSelfHealingFixer`), portão de qualidade (`QualityGateRunner`) e telemetria OpenTelemetry. Contudo, o subcomando `corporate-engineer run` apenas inicializava o grafo e imprimia o estado inicial, sem conduzir a execução autônoma completa das 5 fases de engenharia (`PLANNING` -> `TDD` -> `IMPLEMENT` -> `AUDIT` -> `DELIVER`), sem salvar checkpoints em cada transição e sem gerar relatório consolidado de entrega (`RunExecutionReport`).
+- **Solução Proposta**:
+  1. *Modelos DTO Pydantic v2 (`models.py`)*: `RunExecutionReport` com status, fase final, iterações, checkpoints gerados, plano refinado, arquivos de teste, contagem de alterações, status de auditoria, duração e suporte a `--dry-run`.
+  2. *Motor de Execução de Ciclo de Vida Completo (`orchestrator/graph.py`)*:
+     - Método `run_pipeline(dry_run=False, auto_deliver=True, strict_audit=True) -> RunExecutionReport`.
+     - Fase `PLANNING`: refinamento contextual com ancoragem semântica via `ContextAwarePromptRefiner`, avanço de fase e checkpoint.
+     - Fase `TDD`: identificação/execução cirúrgica de cenários de teste, avanço de fase e checkpoint.
+     - Fase `IMPLEMENT`: execução de auto-remediação de AST ou registro de diffs, avanço de fase e checkpoint.
+     - Fase `AUDIT`: execução de secret scan e verificação estrita via `QualityGateRunner`. Se aprovado, transição para `DELIVER`; se reprovado, transição e triagem de falhas.
+     - Fase `DELIVER`: fechamento com spans de rastreamento OpenTelemetry e exportação do relatório.
+  3. *CLI Corporativa (`cli.py`)*: Subcomando `corporate-engineer run` atualizado com suporte a `--dry-run`, `--strict-audit`, `--format [text|json|markdown]` e `--output`.
+- **Benefícios Esperados**: Capacidade real de dogfooding end-to-end do framework em repositórios corporativos, rastreabilidade determinística por checkpoints e relatórios executivos estruturados.
+- **Componentes Afetados**: `src/corporate_engineer/models.py`, `src/corporate_engineer/orchestrator/graph.py`, `src/corporate_engineer/cli.py`, `tests/test_autonomous_runner.py`.
+- **Complexidade**: Média (M).
+- **Riscos**: Execução indevida de alterações no código em modo dogfooding. Mitigação: flag `--dry-run` para simulação segura e idempotente sem mutações de arquivos de código.
+- **Critérios de Aceite**: Suíte de testes automatizados com cobertura do ciclo completo, suporte a `--dry-run`, geração de checkpoints válidos, aprovação no Pre-Flight e relatório de execução emitido com sucesso.
+
+
 
 
 

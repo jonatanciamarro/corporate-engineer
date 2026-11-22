@@ -3,7 +3,7 @@
 - **Status**: Aceito
 - **Data**: 2026-11-22
 - **Autor**: Corp-Pipeline Master Orchestrator & Arquiteto de Sistemas
-- **Ticket / Item**: IMP-0020 / DarkFactory LoRA Specialization Engine
+- **Ticket / Item**: IMP-0024 / DarkFactory LoRA Specialization Engine
 - **Decisores**: Equipe de Arquitetura e Engenheiro Corporativo
 
 ---

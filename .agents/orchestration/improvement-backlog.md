@@ -49,6 +49,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0021` | Isolamento Atômico do Motor de Testes de Mutação | `QUALITY` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 | `IMP-0022` | Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos | `RELIABILITY` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 | `IMP-0023` | Modularização da CLI Corporativa (Decomposição do Monólito) | `MAINTAINABILITY` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0024` | Gemini LoRA Modular Pipeline para Motion Graphics & Tool Calling (DarkFactory) | `CAPABILITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
 
 ---
 
@@ -441,6 +442,31 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Complexidade**: Média-Alta (M-L).
 - **Riscos**: Quebra inadvertida de algum subcomando ou flag. Mitigação: suíte abrangente de testes CLI existentes (`tests/test_cli.py`) executada como gate antes e depois da refatoração.
 - **Critérios de Aceite**: CLI decomposta em módulos dedicados, 100% dos testes CLI verdes sem quebra de interface e `cli.py` reduzido para <250 linhas.
+
+---
+
+### 🔹 IMP-0024: Gemini LoRA Modular Pipeline para Motion Graphics & Tool Calling (DarkFactory)
+- **Categoria**: `CAPABILITY` | `INTELLIGENCE` | `QUALITY`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-020`, `PR-CORP-020.md`)
+- **Data de Descoberta**: 2026-11-22
+- **Problema / Limitação Atual**: O projeto DarkFactory necessitava de modelos capazes de gerar motion graphics de alta fidelidade visual (Remotion, Manim, Blender Python) e chamadas de ferramentas determinísticas para orquestração. O Gemini 3.8 Flash zero-shot genérico apresentava falhas esporádicas de sintaxe e interpolação. Faltava no framework um pipeline de dados especializado em preparar, validar e exportar datasets de fine-tuning (LoRA/PEFT) no formato canônico da Vertex AI.
+- **Solução Proposta**:
+  1. *Modelos DTO Pydantic v2 (`src/corporate_engineer/models.py`)*:
+     - `LoraDomain`: `MOTION_REMOTION`, `MOTION_MANIM`, `MOTION_BLENDER`, `TOOL_CALLING`.
+     - `LoraTrainingSample`, `LoraDatasetConfig`, `LoraValidationReport`, `LoraExportResult`.
+  2. *Gerador de Datasets Sintéticos (`src/corporate_engineer/lora/generator.py`)*:
+     - Geração de templates com estética cyber-industrial da DarkFactory, curvas de mola (*spring mechanics*), interpolações e schemas JSON multi-turn.
+  3. *Validador de Sintaxe & AST (`src/corporate_engineer/lora/validator.py`)*:
+     - `ast.parse` para Python (Manim e Blender `bpy`), validação estrutural de TSX/JSX para Remotion e validação estrita de JSON Schema para Tool Calling.
+  4. *Formatador e Exportador Vertex AI (`src/corporate_engineer/lora/exporter.py`)*:
+     - Exportação em JSONL no padrão Google Cloud Vertex AI / AI Studio SFT com Zero-Secret Guard integrado (`[REDACTED_SECRET]`), particionamento determinístico 80/20 train/validation e estimativa de tokens.
+  5. *CLI Corporativa (`src/corporate_engineer/cli.py`)*:
+     - Subcomando `corporate-engineer lora` com ações `generate`, `validate` e `export`.
+- **Benefícios Esperados**: Viabilidade real de especialização modular de LLMs leves (Gemini Flash) para geração de código de motion no nível de modelos de fronteira e orquestração de ferramentas 100% determinística.
+- **Componentes Afetados**: `src/corporate_engineer/models.py`, `src/corporate_engineer/lora/`, `src/corporate_engineer/cli.py`, `tests/test_gemini_lora_pipeline.py`.
+- **Complexidade**: Média-Alta (M-L).
+- **Critérios de Aceite**: 29 testes unitários passando em `tests/test_gemini_lora_pipeline.py`, 0 erros Ruff/Mypy, Zero-Secret Guard ativo e CLI funcional.
+
 
 
 

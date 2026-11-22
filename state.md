@@ -11,7 +11,7 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `main` | 🟢 Sincronizado com origin/main (PR #23 mesclado). Suíte com 190/190 testes PASS, 0 erros Ruff e Mypy |
+| **Branch Ativa** | `feat/IMP-0024-gemini-lora-pipeline` | 🟢 Suíte com 219/219 testes PASS, 0 erros Ruff e Mypy, Zero-Secret Guard ativo |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
 | **Testes (Pytest + Hypothesis)** | 🟢 **234/234 PASS** | Cobertura global robusta de 88% (`pytest-cov`) em 20.75s |
@@ -26,7 +26,28 @@
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação de IMP-0019 / Trilha Estratégica 3: Autonomous End-to-End Engineering Runner & Dogfooding Pipeline — ADR-019 / PR-CORP-019):
+### Sessão Atual (Implementação de IMP-0024 / ADR-020: Gemini LoRA Modular Pipeline para Motion Graphics & Tool-Calling — DarkFactory):
+1. **Governança & Arquitetura Formal (Fase 1 - Gate 1)**:
+   - Entrevista de requisitos via `grill-me_v2` alinhando escopo, multi-stack (Remotion, Manim, Blender), particionamento estrito e Zero-Secret Guard.
+   - Formalização do [ADR-020](docs/adr/ADR-020-gemini-lora-motion-and-tool-calling-pipeline.md) e do Plano de Engenharia (`plan_v2_gemini_lora_pipeline.md`) com aprovação humana explícita.
+2. **Execução Autônoma via Swarm High (`gemini-3.8-flash-high`)**:
+   - Coordenação de 3 agentes especializados: `tdd-engineer`, `lora-engineer` e `quality-auditor`.
+3. **Modelos DTO Pydantic v2 (`src/corporate_engineer/models.py`)**:
+   - `LoraDomain`: Enum tipado (`MOTION_REMOTION`, `MOTION_MANIM`, `MOTION_BLENDER`, `TOOL_CALLING`).
+   - `LoraTrainingSample`, `LoraDatasetConfig`, `LoraValidationReport`, `LoraExportResult`.
+4. **Gerador de Datasets Sintéticos (`src/corporate_engineer/lora/generator.py`)**:
+   - `LoraDatasetGenerator` com templates de estética cyber-industrial da DarkFactory, curvas de mola (`spring`), interpolação e traces de tool-calling multi-turn.
+5. **Validador de Sintaxe & AST (`src/corporate_engineer/lora/validator.py`)**:
+   - `LoraSyntaxValidator`: análise estática por `ast.parse` para Python, validação estrutural JSX/TSX para Remotion e validação de JSON Schema.
+6. **Formatador & Exportador Vertex AI SFT (`src/corporate_engineer/lora/exporter.py`)**:
+   - `LoraVertexExporter`: exportação oficial JSONL para Vertex AI / AI Studio SFT, Zero-Secret Guard integrado (`[REDACTED_SECRET]`), split determinístico 80/20 e estimativa de tokens.
+7. **CLI Corporativa (`src/corporate_engineer/cli.py`)**:
+   - Subcomando `corporate-engineer lora` com `generate`, `validate` e `export`.
+8. **Suíte de Testes Automatizados (Shift-Left TDD)**:
+   - 29 novos testes em `tests/test_gemini_lora_pipeline.py` (100% PASS).
+   - Suíte global expandida para **219/219 testes PASS** em 21.06s.
+
+### Sessão Anterior (Implementação de IMP-0019 / Trilha Estratégica 3: Autonomous End-to-End Engineering Runner & Dogfooding Pipeline — ADR-019 / PR-CORP-019):
 1. **Modelos DTO Pydantic v2 (`src/corporate_engineer/models.py`)**:
    - `RunExecutionReport`: Contrato com `ticket_id`, `task_description`, `status` (`SUCCESS`, `AUDIT_FAILED`, `FAILED`), `final_phase`, `iterations`, `checkpoints_created`, `refined_plan`, `test_files`, `code_changes_count`, `audit_passed`, `duration_seconds`, `dry_run` e `details`.
 2. **Motor de Execução de Ciclo de Vida Completo (`src/corporate_engineer/orchestrator/graph.py`)**:

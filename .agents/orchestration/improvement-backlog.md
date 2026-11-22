@@ -42,7 +42,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0014` | Free System-One SLM Fine-Tuning Pipeline & Universal Framework Injection | `EFFICIENCY` | Média (M) | `IMPLEMENTED` | `2026-11-20` |
 | `IMP-0015` | Autonomous Benchmark & Eval Harness (Heuristic vs Outlines vs ONNX) | `QUALITY` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0016` | Multi-Agent Swarm Coordinator via MCP Hub | `ORCHESTRATION` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
-| `IMP-0017` | GitHub Actions Workflow de Auto-Remediação em PRs (`self-heal.yml`) | `AUTOMATION` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0017` | GitHub Actions Workflow de Auto-Remediação em PRs (`self-heal.yml`) | `AUTOMATION` | Baixa-Média (S-M) | `IN_PROGRESS` | `2026-11-22` |
 | `IMP-0018` | Context-Aware Metaprompt Engine & Prompt Refiner | `INTELLIGENCE` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
 
 ---
@@ -314,6 +314,30 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Complexidade**: Média (M).
 - **Riscos**: Reescritas desnecessárias em comandos simples. Mitigação: Fast-Path Bypass automático para comandos operacionais e queries curtas.
 - **Critérios de Aceite**: `ContextAwarePromptRefiner` funcional com suporte a bypass e enriquecimento, subcomando CLI registrado, 100% dos testes unitários passando e aprovação no Pre-Flight.
+
+---
+
+### 🔹 IMP-0017: GitHub Actions Workflow de Auto-Remediação em PRs (`self-heal.yml`)
+- **Categoria**: `AUTOMATION` | `QUALITY` | `CI/CD`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-017`, `PR-CORP-017.md`)
+- **Data de Descoberta**: 2026-11-22
+- **Problema / Limitação Atual**: O framework dispõe do motor `ASTSelfHealingFixer` (`src/corporate_engineer/eval/fixer.py`) e do subcomando `corporate-engineer fix --auto`, capazes de corrigir automaticamente violações estruturais comuns (`__init__ -> None`, mutabilidade em defaults, limpeza de declarações `pass` redundantes). Contudo, essa capacidade só é executada se o desenvolvedor rodar o comando localmente. Em Pull Requests abertos no GitHub, essas falhas podem quebrar o CI ou degradar a qualidade do código caso passem desapercebidas.
+- **Solução Proposta**:
+  1. *Workflow de CI (`.github/workflows/self-heal.yml`)*: Acionado em eventos `pull_request` (`opened`, `synchronize`, `reopened`).
+  2. *Etapas de Execução*:
+     - Checkout do repositório no branch do PR (`ref: ${{ github.head_ref }}`).
+     - Setup do ambiente Python e instalação de dependências mínimas.
+     - Execução de `corporate-engineer fix --auto --path src/`.
+     - Verificação de diffs locais via `git status --porcelain`.
+     - Se houver alterações aplicadas, commit e push automáticos no branch do PR (`chore(self-heal): apply automated AST fixes`).
+     - Execução da auditoria de qualidade `corporate-engineer audit --strict` com verificação estrita.
+  3. *Script / Módulo Auxiliar & Testes*: Testes automatizados em `tests/test_self_heal_workflow.py` validando sintaxe YAML do workflow, conformidade de segurança e integração com a suíte de testes.
+- **Benefícios Esperados**: Manutenção contínua e autônoma da qualidade da base de código sem exigir esforço manual de revisão em detalhes sintáticos triviais.
+- **Componentes Afetados**: `.github/workflows/self-heal.yml`, `tests/test_self_heal_workflow.py`.
+- **Complexidade**: Baixa-Média (S-M).
+- **Riscos**: Loops de trigger caso o commit do bot dispare o workflow novamente. Mitigação: usar `[skip ci]` ou token padrão `GITHUB_TOKEN` que por padrão não re-dispara workflows.
+- **Critérios de Aceite**: Workflow `.github/workflows/self-heal.yml` sintaticamente válido, testado via suite automatizada, com mitigação de loops e aprovação no Pre-Flight.
+
 
 
 

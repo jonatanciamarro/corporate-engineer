@@ -1,0 +1,55 @@
+name: Corporate Self-Healing PR Gate (IMP-0017)
+
+"on":
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  self-heal-and-verify:
+    name: AST Self-Healing & Quality Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff mypy pytest-cov
+          pip install -e ".[dev,test]"
+
+      - name: Run AST Self-Healing Remediation
+        run: |
+          corporate-engineer fix --auto --path src/
+
+      - name: Commit & Push Self-Healing Fixes (if any)
+        run: |
+          if [ -n "$(git status --porcelain src/)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add src/
+            git commit -m "chore(self-heal): apply automated AST fixes [skip ci]"
+            git push
+            echo "[✓] Auto-remediação aplicada e comitada com sucesso."
+          else
+            echo "[✓] Nenhuma auto-remediação pendente; código limpo."
+          fi
+
+      - name: Run Strict Quality & Security Audit
+        run: |
+          corporate-engineer audit --strict

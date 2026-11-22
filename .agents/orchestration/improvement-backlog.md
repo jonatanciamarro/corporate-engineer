@@ -50,6 +50,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0022` | Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos | `RELIABILITY` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 | `IMP-0023` | Modularização da CLI Corporativa (Decomposição do Monólito) | `MAINTAINABILITY` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 | `IMP-0024` | Gemini LoRA Modular Pipeline para Motion Graphics & Tool Calling (DarkFactory) | `CAPABILITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
+| `IMP-0025` | Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite | `ORCHESTRATION` | Média-Alta (M-L) | `IN_PROGRESS` | `2026-11-22` |
 
 ---
 
@@ -466,6 +467,36 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Componentes Afetados**: `src/corporate_engineer/models.py`, `src/corporate_engineer/lora/`, `src/corporate_engineer/cli.py`, `tests/test_gemini_lora_pipeline.py`.
 - **Complexidade**: Média-Alta (M-L).
 - **Critérios de Aceite**: 29 testes unitários passando em `tests/test_gemini_lora_pipeline.py`, 0 erros Ruff/Mypy, Zero-Secret Guard ativo e CLI funcional.
+
+---
+
+### 🔹 IMP-0025: Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite
+- **Categoria**: `ORCHESTRATION` | `INTELLIGENCE` | `AUTOMATION` | `TRANSCENDENCE`
+- **Status**: `IN_PROGRESS` (Ref: `ADR-023`)
+- **Data de Descoberta**: 2026-11-22
+- **Problema / Limitação Atual**: O projeto desenvolveu dezenas de componentes autônomos (prompt refiner, System 1 router, AST self-healing fixer, blast radius calculator, OTel tracer, safe storage cleaner, git link generator), mas muitos operavam sob demanda via CLI manual. Faltava integrá-los de forma 100% automática e contínua nos eventos de ciclo de vida do Antigravity (`SessionStart`, `PreInvocation`, `PreToolUse`, `PostToolUse`, `Stop`) e no Git local (`pre-commit`, `pre-push`), mantendo o orquestrador sempre 2 passos à frente.
+- **Solução Proposta**:
+  1. *Modelos DTO Pydantic v2 (`src/corporate_engineer/models.py`)*:
+     - `AnticipationStep`, `AnticipationPlan`.
+  2. *Motor de Antecipação Proativa (`src/corporate_engineer/orchestrator/anticipator.py`)*:
+     - `ProactiveAnticipator`: integra `ContextAwarePromptRefiner` e `SystemOneRouter`, formula passo +1 (imediato) e passo +2 (subsequente) e gera relatórios de orientação em tempo real.
+  3. *Suíte de Hooks do Ciclo de Vida (`.agents/orchestration/hooks/`)*:
+     - `session_start.py` (diagnóstico de saúde, disco via `SafeStorageCleaner`, branch e living state).
+     - `proactive_advisor.py` (PreInvocation: inteligência 2 passos à frente e link PR 1-clique).
+     - `pre_tool_security_guard.py` (PreToolUse: Zero-Secret Guard em `write_file|edit_file`).
+     - `post_tool_auto_healer.py` (PostToolUse: AST self-healing fixer, ruff format e cálculo de blast radius).
+     - `session_turnover_gate.py` (Stop: portão de integridade de `state.md`).
+  4. *Ativação em `.agents/hooks.json`*:
+     - Mapeamento oficial dos 5 hooks com isolamento e timeouts seguros.
+  5. *Git Hooks Locais (`scripts/install_git_hooks.py`)*:
+     - Instalação de hooks `pre-commit` e `pre-push` garantindo pre-flight limpo antes de qualquer commit ou push.
+  6. *CLI Corporativa (`src/corporate_engineer/cli.py`)*:
+     - Subcomando `corporate-engineer anticipate <prompt>`.
+- **Benefícios Esperados**: Sistema completamente unificado, auto-reflexivo e proativo, antecipando riscos e dependências em tempo real.
+- **Componentes Afetados**: `src/corporate_engineer/models.py`, `src/corporate_engineer/orchestrator/anticipator.py`, `.agents/orchestration/hooks/`, `.agents/hooks.json`, `scripts/install_git_hooks.py`, `src/corporate_engineer/cli.py`, `tests/test_proactive_pipeline.py`.
+- **Complexidade**: Média-Alta (M-L).
+- **Critérios de Aceite**: Suíte de testes TDD verde, 0 erros Ruff/Mypy, todos os 5 hooks testados com sucesso, pre-flight 100% aprovado.
+
 
 
 

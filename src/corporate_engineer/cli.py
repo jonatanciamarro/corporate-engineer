@@ -599,6 +599,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="Disable credential sanitization",
     )
 
+    # Command: anticipate (IMP-0025)
+    anticipate_parser = subparsers.add_parser(
+        "anticipate",
+        help="Proactive Anticipation Engine (2 passos à frente) (IMP-0025)",
+    )
+    anticipate_parser.add_argument("prompt", help="Prompt or task to anticipate")
+    anticipate_parser.add_argument(
+        "--format",
+        choices=["text", "json", "markdown"],
+        default="markdown",
+        help="Output format: text, json, or markdown (default: markdown)",
+    )
+    anticipate_parser.add_argument(
+        "--workspace",
+        "-w",
+        default=".",
+        help="Workspace path for AST and code context (default: .)",
+    )
+    anticipate_parser.add_argument(
+        "--output",
+        "-o",
+        default=None,
+        help="Optional file path to write anticipation plan",
+    )
+
     return parser
 
 
@@ -1779,6 +1804,35 @@ def handle_lora(args: argparse.Namespace) -> int:
         return 0
 
 
+def handle_anticipate(args: argparse.Namespace) -> int:
+    from corporate_engineer.orchestrator.anticipator import ProactiveAnticipator
+
+    workspace = Path(args.workspace).resolve()
+    anticipator = ProactiveAnticipator(workspace_path=workspace)
+    plan = anticipator.anticipate(args.prompt)
+
+    fmt = getattr(args, "format", "markdown")
+    if fmt == "json":
+        output_text = plan.model_dump_json(indent=2)
+    elif fmt == "markdown":
+        output_text = anticipator.format_markdown(plan)
+    else:
+        output_text = (
+            f"Domínio: {plan.target_domain} | Risco: {plan.risk_level}\n"
+            f"Passo 1 ({plan.step_immediate_1.phase}): {plan.step_immediate_1.action}\n"
+            f"Passo 2 ({plan.step_subsequent_2.phase}): {plan.step_subsequent_2.action}\n"
+        )
+
+    out_file = getattr(args, "output", None)
+    if out_file:
+        Path(out_file).write_text(output_text, encoding="utf-8")
+        print(f"Plano antecipatório exportado para: {out_file}")
+    else:
+        print(output_text)
+
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -1819,6 +1873,8 @@ def main(argv: list[str] | None = None) -> int:
         return handle_prompt(args)
     elif args.command == "lora":
         return handle_lora(args)
+    elif args.command == "anticipate":
+        return handle_anticipate(args)
     else:
         parser.print_help()
         return 0

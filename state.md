@@ -11,22 +11,48 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0021-atomic-mutation-testing` | 🟢 Suíte com 243/243 testes PASS, 0 erros Ruff e Mypy, Zero-Secret Guard ativo |
+| **Branch Ativa** | `feat/IMP-0025-autonomous-proactive-e2e-pipeline` | 🟢 Suíte com 255/255 testes PASS, 0 erros Ruff e Mypy, Zero-Secret Guard ativo |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **243/243 PASS** | Cobertura global robusta de 88% (`pytest-cov`) em 23.37s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (123 arquivos verificados e formatados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 71 arquivos validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **255/255 PASS** | Cobertura global robusta de 88% (`pytest-cov`) em 23.95s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (132 arquivos verificados e formatados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 45 arquivos-fonte e 72 arquivos totais validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` (tempo de varredura otimizado para sub-1s) |
-| **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
+| **Orquestrador Central** | 🟢 **Corp-Pipeline Proativo Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance (2 passos à frente) |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
-| **Lifecycle Hooks** | 🟢 **SessionStart & PreInvocation Ativos** | `.agents/hooks.json` integrado com push remoto Always-On antes da geração de PR |
+| **Lifecycle Hooks E2E** | 🟢 **5 Hooks Antigravity & Git Hooks Ativos** | `SessionStart`, `PreInvocation`, `PreToolUse`, `PostToolUse`, `Stop` + `pre-commit`/`pre-push` |
 
 ---
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação de IMP-0024 / ADR-020: Gemini LoRA Modular Pipeline para Motion Graphics & Tool-Calling — DarkFactory):
+### Sessão Atual (Implementação de IMP-0025 / ADR-023: Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite):
+1. **Governança & Arquitetura Formal (Fase 1 - Gate 1)**:
+   - Identificação da necessidade de unificar todas as 24 capacidades construídas sob automação total e reflexiva ("2 passos à frente").
+   - Formalização do [ADR-023](docs/adr/ADR-023-autonomous-proactive-intelligence-and-full-e2e-hook-suite.md) e atualização de `.agents/orchestration/improvement-backlog.md` (`IMP-0025`).
+2. **Modelos DTO Pydantic v2 (`src/corporate_engineer/models.py`)**:
+   - `AnticipationStep`: Contrato estruturado de passos com fase do pipeline, justificativa, arquivos-alvo e cenário TDD.
+   - `AnticipationPlan`: Contrato completo com prompt bruto, domínio de código detectado, nível de risco, subagentes recomendados, Passo 1 (Imediato), Passo 2 (Subsequente), estimativa de blast radius e metaprompt estruturado.
+3. **Motor de Antecipação Proativa (`src/corporate_engineer/orchestrator/anticipator.py`)**:
+   - Classe `ProactiveAnticipator` integrando `ContextAwarePromptRefiner` e `SystemOneRouter`.
+   - Síntese da matriz 2 passos à frente: formula Passo 1 (Contratos e TDD RED) e Passo 2 (Implementação cirúrgica, auto-cura e gates de entrega).
+4. **Suíte Completa de Lifecycle Hooks Antigravity (`.agents/orchestration/hooks/` & `.agents/hooks.json`)**:
+   - `session_start.py` (`SessionStart`): Auditoria de disco, diagnóstico de branch e instalação automática de git hooks locais.
+   - `proactive_advisor.py` (`PreInvocation`): Antecipação de intenção em tempo real antes de cada resposta do modelo + injeção de URL de PR 1-clique.
+   - `pre_tool_security_guard.py` (`PreToolUse` em `write_file|edit_file`): Zero-Secret Guard bloqueando vazamentos de credenciais na origem.
+   - `post_tool_auto_healer.py` (`PostToolUse` em `write_file|edit_file`): Auto-remediação sintática via `ASTSelfHealingFixer`, formatação via `ruff format` e cálculo de blast radius em tempo real.
+   - `session_turnover_gate.py` (`Stop`): Verificação de integridade e lembrete de atualização mandatória de `state.md`.
+5. **Git Hooks Locais Automáticos (`scripts/install_git_hooks.py` & `.git/hooks/`)**:
+   - Script instalador e hooks ativos em `.git/hooks/pre-commit` (Zero-Secret Scanner e Ruff) e `.git/hooks/pre-push` (`corporate-engineer audit --strict`).
+6. **CLI Corporativa (`src/corporate_engineer/cli.py`)**:
+   - Subcomando `corporate-engineer anticipate <prompt>` com saídas em `markdown`, `json` e `text`.
+7. **Suíte de Testes Automatizados (Shift-Left TDD)**:
+   - 12 novos testes em `tests/test_proactive_pipeline.py` (100% PASS).
+   - Suíte global expandida para **255/255 testes PASS** em 23.95s.
+8. **Documentação de PR**:
+   - Criação da minuta técnica completa em `docs/pull_requests/PR-CORP-025.md`.
+
+### Sessão Anterior (Implementação de IMP-0021 / ADR-022: Isolamento Atômico do Motor de Testes de Mutação):
 1. **Governança & Arquitetura Formal (Fase 1 - Gate 1)**:
    - Entrevista de requisitos via `grill-me_v2` alinhando escopo, multi-stack (Remotion, Manim, Blender), particionamento estrito e Zero-Secret Guard.
    - Formalização do [ADR-020](docs/adr/ADR-020-gemini-lora-motion-and-tool-calling-pipeline.md) e do Plano de Engenharia (`plan_v2_gemini_lora_pipeline.md`) com aprovação humana explícita.
@@ -254,6 +280,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-22T20:25:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0025 (Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite): implementação do motor `ProactiveAnticipator` (matriz 2 passos à frente), modelos DTO Pydantic v2 `AnticipationStep` e `AnticipationPlan`, suíte completa de 5 lifecycle hooks Antigravity em `.agents/hooks.json` (`session_start.py`, `proactive_advisor.py`, `pre_tool_security_guard.py` Zero-Secret Guard, `post_tool_auto_healer.py` AST auto-remediation & blast radius, `session_turnover_gate.py`), instalação de git hooks locais `pre-commit` e `pre-push` (`scripts/install_git_hooks.py`), novo subcomando CLI `corporate-engineer anticipate`, 12 novos testes em `tests/test_proactive_pipeline.py` (255/255 PASS em 23.95s), formalização do ADR-023 e PR-CORP-025. |
 | `2026-11-22T20:05:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0021 (Isolamento Atômico do Motor de Testes de Mutação): implementação de `AtomicFileSandbox` com traps de sinal (`SIGINT`/`SIGTERM`) e `atexit` para reversão garantida de código em disco, substituição de `ast.walk` por `_MutationScannerVisitor(ast.NodeVisitor)` garantindo alinhamento estrito 1:1 de `node_id`, captura detalhada de `error_message` no modelo Pydantic v2 `Mutant`, suporte a sandbox temporário via `use_temp_sandbox=True`, 9 novos testes em `tests/test_atomic_mutation_sandbox.py` (243/243 PASS), formalização do ADR-022 e PR-CORP-021. |
 | `2026-11-22T19:18:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0020 (Blindagem de Concorrência & Thread-Safety no Swarm e Tracer): adição de `threading.RLock()` e migração para `time.monotonic()` em `CircuitBreaker`, proteção de `_active_stack`/spans e resolução de precedência estrita no cálculo de tokens OTel (`gen_ai.usage.total_tokens` > `tokens` > soma de parciais) em `AgentTracer`, sincronização de mutação de membros com `threading.Lock()` em `SwarmCoordinator`, 15 novos testes em `tests/test_concurrency_thread_safety.py` (234/234 PASS), formalização do ADR-021 e PR-CORP-020. |
 | `2026-11-22T18:25:00-03:00` | Corp-Pipeline Master Orchestrator | Salvamento formal e catalogação das 4 propostas de melhoria estruturais da auditoria (`IMP-0020`, `IMP-0021`, `IMP-0022`, `IMP-0023`) em `.agents/orchestration/improvement-backlog.md` com status `SAVED_NOT_APPROVED`, em conformidade com o protocolo estrito de governança corporativa. |

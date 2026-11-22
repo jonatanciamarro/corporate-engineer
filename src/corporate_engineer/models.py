@@ -74,6 +74,7 @@ class Mutant(BaseModel):
     mutated_op: str
     status: str = "SURVIVED"  # KILLED | SURVIVED | ERROR
     killed_by_test: str | None = None
+    error_message: str | None = None
 
 
 class MutationReport(BaseModel):

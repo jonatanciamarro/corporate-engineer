@@ -11,12 +11,12 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0018-context-aware-metaprompt-engine` | 🟢 Suíte com 179/179 testes PASS, 88% cobertura global (95% em prompt), IMP-0018 (Context-Aware Metaprompt Engine & Prompt Refiner) implementado e testado |
+| **Branch Ativa** | `feat/IMP-0017-github-actions-self-heal` | 🟢 Suíte com 184/184 testes PASS, IMP-0017 (GitHub Actions Workflow de Auto-Remediação em PRs) implementado e testado |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **179/179 PASS** | Cobertura global robusta de 88% (`pytest-cov`) em 16.44s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (105 arquivos verificados e formatados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 62 arquivos validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **184/184 PASS** | Cobertura global robusta de 88% (`pytest-cov`) em 19.75s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (106 arquivos verificados e formatados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 63 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` (tempo de varredura otimizado para sub-1s) |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -26,7 +26,24 @@
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação de IMP-0018: Context-Aware Metaprompt Engine & Prompt Refiner — ADR-018 / PR-CORP-018):
+### Sessão Atual (Implementação de IMP-0017: GitHub Actions Workflow de Auto-Remediação em PRs — ADR-017 / PR-CORP-017):
+1. **Workflow de Integração Contínua (`.github/workflows/self-heal.yml`)**:
+   - Acionamento restrito a eventos `pull_request` (`opened`, `synchronize`, `reopened`) apontando para `main`.
+   - Permissões mínimas de privilégio: `contents: write` e `pull-requests: write`.
+   - Checkout do branch do PR (`ref: ${{ github.head_ref }}`) com histórico completo (`fetch-depth: 0`).
+   - Setup automatizado de Python 3.11 com cache pip e dependências de qualidade (`ruff`, `mypy`, `pytest-cov`).
+   - Execução oficial do motor de remediação estrutural `corporate-engineer fix --auto --path src/`.
+   - Identificação de diffs locais via `git status --porcelain src/` e commit assinado por `github-actions[bot]`.
+   - Mecanismo de prevenção de loops de CI recursivos via trailer `[skip ci]` no commit e push direto para o branch de origem.
+   - Auditoria final estrita com `corporate-engineer audit --strict`.
+2. **Suíte de Testes Automatizados (Shift-Left TDD)**:
+   - 5 novos testes unitários e de integração em `tests/test_self_heal_workflow.py` validando presença do workflow, sintaxe YAML, triggers de PR, passos do job com prevenção de loop e auto-remediação prática via CLI.
+   - Expansão da suíte global para **184/184 testes PASS** em 19.75s.
+3. **Governança & Arquitetura**:
+   - Formalização do [ADR-017](docs/adr/ADR-017-github-actions-self-healing-ci.md) e elaboração de [PR-CORP-017.md](docs/pull_requests/PR-CORP-017.md).
+   - Atualização do status de `IMP-0017` para `IMPLEMENTED` em `.agents/orchestration/improvement-backlog.md`.
+
+### Sessão Anterior (Implementação de IMP-0018: Context-Aware Metaprompt Engine & Prompt Refiner — ADR-018 / PR-CORP-018):
 1. **Modelos DTO Pydantic v2 (`src/corporate_engineer/models.py`)**:
    - `RevisedPromptSpec`: Contrato tipado com `raw_prompt`, `target_domain`, `core_intent`, `functional_requirements`, `non_functional_requirements`, `affected_modules`, `out_of_scope`, `tdd_test_scenarios`, `metaprompt`, `confidence_score`, `is_bypassed`, `bypass_reason` e `timestamp`.
 2. **Motor de Refinamento Contextual (`src/corporate_engineer/prompt/refiner.py`)**:
@@ -161,8 +178,8 @@
 2. `[x]` **Trilha Estratégica 2 / IMP-0015: Autonomous Benchmark & Eval Harness** (Concluído: `SystemOneBenchmark`, modelos DTO `EngineBenchmarkResult`/`BenchmarkReport`, subcomando CLI `benchmark`, ADR-015, PR-CORP-015, 162/162 testes PASS).
 3. `[x]` **Trilha Estratégica 2 / IMP-0016: Multi-Agent Swarm Coordinator via MCP Hub** (Concluído: `SwarmCoordinator`, modelos DTO `SwarmMember`/`SwarmGoalReport`, subcomando CLI `swarm`, ADR-016, PR-CORP-016, 170/170 testes PASS).
 4. `[x]` **Trilha Inteligência / IMP-0018: Context-Aware Metaprompt Engine & Prompt Refiner** (Concluído: `ContextAwarePromptRefiner`, modelo DTO `RevisedPromptSpec`, subcomando CLI `prompt refine`, Fast-Path Bypass condicional, ADR-018, PR-CORP-018, 179/179 testes PASS).
-5. `[ ]` **Trilha Estratégica 2 / IMP-0017: GitHub Actions Workflow de Auto-Remediação em PRs (`.github/workflows/self-heal.yml`)**:
-   - Pipeline de CI acionando `corporate-engineer fix --auto` e `corporate-engineer audit` automaticamente em novos PRs.
+5. `[x]` **Trilha Estratégica 2 / IMP-0017: GitHub Actions Workflow de Auto-Remediação em PRs (`.github/workflows/self-heal.yml`)**:
+   - Pipeline de CI acionando `corporate-engineer fix --auto` e `corporate-engineer audit` automaticamente em novos PRs. Concluído com 5 testes automatizados, ADR-017 e PR-CORP-017.
 6. `[ ]` **Trilha Estratégica 3: Dogfooding e Teste de Ponta a Ponta com Projeto Real**:
    - Execução completa do comando `corporate-engineer run --ticket CORP-101 --task "..."`.
 
@@ -172,6 +189,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-22T12:35:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0017: workflow GitHub Actions `.github/workflows/self-heal.yml` com auto-remediação de AST via `corporate-engineer fix --auto --path src/`, commit condicional do bot com `[skip ci]`, verificação estrita via `audit --strict`, 5 novos testes em `tests/test_self_heal_workflow.py` (184/184 testes PASS), elaboração do ADR-017 e PR-CORP-017. |
 | `2026-11-22T11:50:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0018: motor `ContextAwarePromptRefiner` (`src/corporate_engineer/prompt/refiner.py`), modelo Pydantic v2 `RevisedPromptSpec`, Fast-Path Bypass condicional para comandos operacionais com override `--bypass-gate`, mapeamento para domínios corporativos (`mcp`, `orchestrator`, `rag`, `system_one`, `quality`, `cli`), ancoragem AST em símbolos de código, subcomando CLI `prompt refine`, formalização do ADR-018, elaboração do PR-CORP-018 e expansão da suíte global para 179/179 testes PASS com 95% de cobertura no módulo de prompt. |
 | `2026-11-22T11:30:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0016: motor `SwarmCoordinator` (`src/corporate_engineer/orchestrator/swarm.py`), modelos Pydantic v2 `SwarmMember`, `SwarmTaskResult` e `SwarmGoalReport`, modos Fan-Out/Fan-In e Consensus, injeção de ferramentas MCP com isolamento por Circuit Breaker individual, subcomando CLI `swarm`, formalização do ADR-016, elaboração do PR-CORP-016 e expansão da suíte global para 170/170 testes PASS com 85% de cobertura no módulo de swarm. |
 | `2026-11-22T10:40:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0015: motor `SystemOneBenchmark` (`src/corporate_engineer/system_one/benchmark.py`), modelos Pydantic v2 `EngineLatencyStats`, `EngineBenchmarkResult` e `BenchmarkReport`, cálculo de percentis P50/P95/P99, subcomando CLI `benchmark` com suporte a text/json/markdown, formalização do ADR-015, elaboração do PR-CORP-015 e expansão da suíte global para 162/162 testes PASS com 87% de cobertura. |

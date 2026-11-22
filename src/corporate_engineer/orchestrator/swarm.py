@@ -7,6 +7,7 @@ isolated circuit breakers, fan-out/fan-in parallel execution, and consensus aggr
 from __future__ import annotations
 
 import concurrent.futures
+import threading
 import time
 from typing import ClassVar
 
@@ -40,6 +41,7 @@ class SwarmCoordinator:
     ) -> None:
         self.hub: MCPEnterpriseHub = hub or MCPEnterpriseHub()
         self.router: SystemOneRouter = router or SystemOneRouter()
+        self._lock: threading.Lock = threading.Lock()
 
     def create_swarm(
         self,
@@ -90,42 +92,49 @@ class SwarmCoordinator:
         Executa uma tarefa para um membro específico do swarm, interagindo
         com ferramentas MCP protegidas por Circuit Breakers individuais.
         """
-        member.status = "WORKING"
+        with self._lock:
+            member.status = "WORKING"
         t0 = time.perf_counter()
         tools_called: list[str] = []
         error_msg: str | None = None
         success = True
 
-        # Invocação defensiva das ferramentas alocadas ao agente
-        for tool_name in member.allowed_tools:
-            try:
-                res = self.hub.call_tool(tool_name, {})
-                tools_called.append(tool_name)
-                if hasattr(res, "is_error") and res.is_error:
-                    error_msg = res.content
-            except Exception as exc:  # noqa: BLE001
-                # O Circuit Breaker do hub isola a falha impedindo travamento do processo
-                error_msg = f"Falha isolada na ferramenta '{tool_name}': {exc}"
-                tools_called.append(f"{tool_name} (circuit-isolated)")
+        try:
+            # Invocação defensiva das ferramentas alocadas ao agente
+            for tool_name in member.allowed_tools:
+                try:
+                    res = self.hub.call_tool(tool_name, {})
+                    tools_called.append(tool_name)
+                    if hasattr(res, "is_error") and res.is_error:
+                        error_msg = res.content
+                except Exception as exc:  # noqa: BLE001
+                    # O Circuit Breaker do hub isola a falha impedindo travamento do processo
+                    error_msg = f"Falha isolada na ferramenta '{tool_name}': {exc}"
+                    tools_called.append(f"{tool_name} (circuit-isolated)")
 
-        # Geração do parecer estruturado do subagente especialista
-        output = self.ROLE_SPECIALIZATIONS.get(
-            member.role,
-            f"Parecer do especialista {member.role}: Análise da tarefa '{prompt}' concluída com sucesso.",
-        )
+            # Geração do parecer estruturado do subagente especialista
+            output = self.ROLE_SPECIALIZATIONS.get(
+                member.role,
+                f"Parecer do especialista {member.role}: Análise da tarefa '{prompt}' concluída com sucesso.",
+            )
 
-        elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 3)
-        member.status = "COMPLETED"
+            elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 3)
+            with self._lock:
+                member.status = "COMPLETED"
 
-        return SwarmTaskResult(
-            agent_id=member.agent_id,
-            role=member.role,
-            output=output,
-            success=success,
-            execution_time_ms=elapsed_ms,
-            tools_called=tools_called,
-            error=error_msg,
-        )
+            return SwarmTaskResult(
+                agent_id=member.agent_id,
+                role=member.role,
+                output=output,
+                success=success,
+                execution_time_ms=elapsed_ms,
+                tools_called=tools_called,
+                error=error_msg,
+            )
+        except Exception:
+            with self._lock:
+                member.status = "FAILED"
+            raise
 
     def run_fan_out(
         self,
@@ -163,6 +172,8 @@ class SwarmCoordinator:
                     results.append(res)
                 except Exception as exc:  # noqa: BLE001
                     m = future_to_member[future]
+                    with self._lock:
+                        m.status = "FAILED"
                     results.append(
                         SwarmTaskResult(
                             agent_id=m.agent_id,

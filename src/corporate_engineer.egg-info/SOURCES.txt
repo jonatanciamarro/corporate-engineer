@@ -14,6 +14,10 @@ src/corporate_engineer.egg-info/top_level.txt
 src/corporate_engineer/eval/__init__.py
 src/corporate_engineer/eval/fixer.py
 src/corporate_engineer/eval/scorecard.py
+src/corporate_engineer/lora/__init__.py
+src/corporate_engineer/lora/exporter.py
+src/corporate_engineer/lora/generator.py
+src/corporate_engineer/lora/validator.py
 src/corporate_engineer/mcp/__init__.py
 src/corporate_engineer/mcp/circuit_breaker.py
 src/corporate_engineer/mcp/client.py
@@ -48,8 +52,10 @@ tests/test_autonomous_runner.py
 tests/test_cached_ast_indexer.py
 tests/test_circuit_breaker.py
 tests/test_cli.py
+tests/test_concurrency_thread_safety.py
 tests/test_eval.py
 tests/test_fixer.py
+tests/test_gemini_lora_pipeline.py
 tests/test_impact.py
 tests/test_mcp_client.py
 tests/test_mcp_hub.py

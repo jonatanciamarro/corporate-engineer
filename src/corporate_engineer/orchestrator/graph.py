@@ -14,6 +14,7 @@ from corporate_engineer.models import (
     AgentState,
     CodeDiff,
     NodeExecutionResult,
+    RunExecutionReport,
     TaskInput,
     TraceReport,
 )
@@ -84,6 +85,119 @@ class AutonomousEngineeringGraph:
         elif phase == "AUDIT":
             return self.step_audit(True)
         return self.state
+
+    def run_pipeline(
+        self,
+        dry_run: bool = False,
+        auto_deliver: bool = True,
+        strict_audit: bool = True,
+    ) -> RunExecutionReport:
+        """Executa o ciclo de vida completo de engenharia corporativa autônoma:
+
+        PLANNING -> TDD -> IMPLEMENT -> AUDIT -> DELIVER com geração de checkpoints e telemetria.
+        """
+        t0 = time.perf_counter()
+        checkpoints_created: list[str] = []
+
+        with self.tracer.span(
+            "dag.lifecycle.pipeline",
+            attributes={"ticket_id": self.task.ticket_id, "dry_run": dry_run},
+        ):
+            # Fase 1: Planejamento & Refinamento Contextual de Metaprompt
+            from corporate_engineer.prompt.refiner import ContextAwarePromptRefiner
+
+            refiner = ContextAwarePromptRefiner(workspace_path=self.task.workspace_path)
+            spec = refiner.refine(self.task.description, bypass_gate=False)
+            plan_text = (
+                spec.metaprompt
+                if spec.metaprompt
+                else f"Plano de Engenharia para {self.task.ticket_id}"
+            )
+            self.step_plan(plan_text)
+            cp1 = self.save_checkpoint()
+            checkpoints_created.append(cp1.name)
+
+            # Fase 2: Shift-Left TDD
+            test_target = (
+                spec.tdd_test_scenarios[0]
+                if spec.tdd_test_scenarios
+                else f"tests/test_{self.task.ticket_id.lower().replace('-', '_')}.py"
+            )
+            self.step_tdd(test_target)
+            cp2 = self.save_checkpoint()
+            checkpoints_created.append(cp2.name)
+
+            # Fase 3: Implementação Cirúrgica
+            code_target = (
+                spec.affected_modules[0]
+                if spec.affected_modules
+                else f"src/{self.task.ticket_id.lower().replace('-', '_')}.py"
+            )
+            code_desc = f"# Implementation for {self.task.ticket_id}\n# Intent: {spec.core_intent}"
+            self.step_implement(
+                code_target,
+                code_desc,
+                explanation=f"Implementação referente ao ticket {self.task.ticket_id}",
+            )
+            cp3 = self.save_checkpoint()
+            checkpoints_created.append(cp3.name)
+
+            # Fase 4: Portão de Qualidade & Auditoria Estrita
+            from corporate_engineer.quality.gate import QualityGateRunner
+
+            runner = QualityGateRunner(project_root=Path(self.task.workspace_path))
+            secret_scan = runner.run_secret_scan()
+            audit_passed = bool(secret_scan.get("passed", False))
+
+            test_run_details: dict[str, Any] = {}
+            if strict_audit and audit_passed:
+                test_res = runner.run_tests()
+                test_run_details = test_res
+                audit_passed = bool(test_res.get("passed", False))
+
+            self.step_audit(audit_passed)
+            cp4 = self.save_checkpoint()
+            checkpoints_created.append(cp4.name)
+
+            t1 = time.perf_counter()
+            duration = round(t1 - t0, 4)
+
+            if not audit_passed:
+                return RunExecutionReport(
+                    ticket_id=self.task.ticket_id,
+                    task_description=self.task.description,
+                    status="AUDIT_FAILED",
+                    final_phase=self.state.phase,
+                    iterations=self.state.iteration_count,
+                    checkpoints_created=checkpoints_created,
+                    refined_plan=self.state.plan,
+                    test_files=self.state.test_files,
+                    code_changes_count=len(self.state.code_changes),
+                    audit_passed=False,
+                    duration_seconds=duration,
+                    dry_run=dry_run,
+                    details={"secret_scan": secret_scan, "test_run": test_run_details},
+                )
+
+            # Fase 5: Entrega (DELIVER)
+            if auto_deliver:
+                self.state.needs_human_approval = False
+
+            return RunExecutionReport(
+                ticket_id=self.task.ticket_id,
+                task_description=self.task.description,
+                status="SUCCESS",
+                final_phase="DELIVER",
+                iterations=self.state.iteration_count,
+                checkpoints_created=checkpoints_created,
+                refined_plan=self.state.plan,
+                test_files=self.state.test_files,
+                code_changes_count=len(self.state.code_changes),
+                audit_passed=True,
+                duration_seconds=duration,
+                dry_run=dry_run,
+                details={"secret_scan": secret_scan, "test_run": test_run_details},
+            )
 
     def get_trace_report(self) -> TraceReport:
         """Export OpenTelemetry trace report from the internal tracer."""

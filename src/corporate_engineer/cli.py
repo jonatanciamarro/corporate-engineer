@@ -40,6 +40,27 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--task", required=True, help="Task description")
     run_parser.add_argument("--workspace", default=".", help="Workspace path")
     run_parser.add_argument("--max-turns", type=int, default=20, help="Max iteration turns")
+    run_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Run in safe simulation mode without mutating repository source files",
+    )
+    run_parser.add_argument(
+        "--strict-audit",
+        action="store_true",
+        help="Run strict test suite verification in audit gate",
+    )
+    run_parser.add_argument(
+        "--format",
+        choices=["text", "json", "markdown"],
+        default="text",
+        help="Output report format (default: text)",
+    )
+    run_parser.add_argument(
+        "--output",
+        default=None,
+        help="Optional file path to export execution report",
+    )
 
     # Command: index
     index_parser = subparsers.add_parser("index", help="Index codebase using AST")
@@ -514,11 +535,61 @@ def handle_run(args: argparse.Namespace) -> int:
         max_iterations=args.max_turns,
     )
     graph = AutonomousEngineeringGraph(task=task)
-    print(f"🚀 Iniciando Engenheiro Autônomo para o ticket: {task.ticket_id}")
-    print(f"📝 Descrição: {task.description}")
-    print(f"🔄 Fase Inicial: {graph.state.phase}")
-    print("✅ Grafo inicializado com sucesso.")
-    return 0
+    dry_run = getattr(args, "dry_run", False)
+    strict_audit = getattr(args, "strict_audit", False)
+    fmt = getattr(args, "format", "text")
+    output_path = getattr(args, "output", None)
+
+    # Executa o ciclo de vida completo autônomo
+    report = graph.run_pipeline(
+        dry_run=dry_run,
+        auto_deliver=True,
+        strict_audit=strict_audit,
+    )
+
+    if fmt == "json":
+        output_str = report.model_dump_json(indent=2)
+    elif fmt == "markdown":
+        output_str = (
+            f"# Relatório de Execução de Engenharia Autônoma: {report.ticket_id}\n\n"
+            f"- **Ticket**: `{report.ticket_id}`\n"
+            f"- **Status**: `{report.status}`\n"
+            f"- **Fase Final**: `{report.final_phase}`\n"
+            f"- **Iterações**: {report.iterations}\n"
+            f"- **Modo**: {'Simulação (Dry-Run)' if report.dry_run else 'Produção (Live)'}\n"
+            f"- **Auditoria de Qualidade**: {'APROVADA' if report.audit_passed else 'REPROVADA'}\n"
+            f"- **Duração**: {report.duration_seconds}s\n\n"
+            f"## Checkpoints Salvos\n"
+            + "\n".join(f"- `{cp}`" for cp in report.checkpoints_created)
+            + f"\n\n## Plano Refinado\n```text\n{report.refined_plan}\n```\n"
+        )
+    else:
+        lines = [
+            f"🚀 Iniciando Engenheiro Autônomo para o ticket: {task.ticket_id}",
+            f"📝 Descrição: {task.description}",
+            "🔄 Fase Inicial: PLANNING",
+            "✅ Grafo inicializado com sucesso.",
+            f"⚡ Executando ciclo de vida: PLANNING -> TDD -> IMPLEMENT -> AUDIT -> {report.final_phase}",
+            f"📊 Status Final: {report.status} (Fase: {report.final_phase})",
+            f"⏱️ Duração: {report.duration_seconds}s | Iterações: {report.iterations}",
+            f"💾 Checkpoints Gerados ({len(report.checkpoints_created)}): {', '.join(report.checkpoints_created)}",
+        ]
+        if report.audit_passed:
+            lines.append("🛡️ Portão de Auditoria & Pre-Flight: PASS")
+        else:
+            lines.append("⚠️ Portão de Auditoria: FAILED")
+        output_str = "\n".join(lines)
+
+    if output_path:
+        out_p = Path(output_path).resolve()
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(output_str, encoding="utf-8")
+        if fmt != "json":
+            print(f"✅ Relatório de execução salvo com sucesso em: {out_p}")
+    else:
+        print(output_str)
+
+    return 0 if report.status == "SUCCESS" else 1
 
 
 def handle_index(args: argparse.Namespace) -> int:

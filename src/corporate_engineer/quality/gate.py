@@ -23,8 +23,8 @@ SECRET_PATTERNS = [
 
 
 class QualityGateRunner:
-    def __init__(self, project_root: Path) -> None:
-        self.project_root = project_root.resolve()
+    def __init__(self, project_root: str | Path) -> None:
+        self.project_root = Path(project_root).resolve()
 
     def run_secret_scan(self) -> dict[str, Any]:
         findings = []

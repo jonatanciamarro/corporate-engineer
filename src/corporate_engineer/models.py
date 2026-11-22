@@ -400,3 +400,20 @@ class RevisedPromptSpec(BaseModel):
     is_bypassed: bool = False
     bypass_reason: str | None = None
     timestamp: str = ""
+
+
+class RunExecutionReport(BaseModel):
+    ticket_id: str
+    task_description: str
+    status: str = "SUCCESS"  # SUCCESS | FAILED | AUDIT_FAILED | BUDGET_EXCEEDED | PENDING_APPROVAL
+    final_phase: str = "DELIVER"
+    iterations: int = 0
+    checkpoints_created: list[str] = Field(default_factory=list)
+    refined_plan: str | None = None
+    test_files: list[str] = Field(default_factory=list)
+    code_changes_count: int = 0
+    audit_passed: bool = True
+    duration_seconds: float = 0.0
+    trace_id: str | None = None
+    dry_run: bool = False
+    details: dict[str, Any] = Field(default_factory=dict)

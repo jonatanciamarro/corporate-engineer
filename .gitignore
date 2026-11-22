@@ -53,3 +53,10 @@ Thumbs.db
 htmlcov/
 coverage/
 .nyc_output/
+
+# Sandboxed configs & large checkpoints
+.gitconfig_sandbox
+models/*.bin
+models/*.safetensors
+models/system_one_lora/
+

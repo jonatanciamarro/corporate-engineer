@@ -57,14 +57,14 @@ def test_generate_pr_url_prefilled(tmp_path: Path):
 
 
 def test_cli_pr_link(capsys):
-    ret = main(["pr-link"])
+    ret = main(["pr-link", "--no-push"])
     captured = capsys.readouterr()
     assert ret == 0
     assert "https://github.com/" in captured.out or "quick_pull=1" in captured.out
 
 
 def test_cli_pr_link_json(capsys):
-    ret = main(["pr-link", "--format", "json"])
+    ret = main(["pr-link", "--no-push", "--format", "json"])
     captured = capsys.readouterr()
     assert ret == 0
     assert "url" in captured.out

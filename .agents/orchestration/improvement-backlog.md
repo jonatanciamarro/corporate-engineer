@@ -45,7 +45,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0017` | GitHub Actions Workflow de Auto-Remediação em PRs (`self-heal.yml`) | `AUTOMATION` | Baixa-Média (S-M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0018` | Context-Aware Metaprompt Engine & Prompt Refiner | `INTELLIGENCE` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0019` | Autonomous End-to-End Engineering Runner & Dogfooding Pipeline | `ORCHESTRATION` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
-| `IMP-0020` | Blindagem de Concorrência & Thread-Safety no Swarm e Tracer | `RELIABILITY` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0020` | Blindagem de Concorrência & Thread-Safety no Swarm e Tracer | `RELIABILITY` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0021` | Isolamento Atômico do Motor de Testes de Mutação | `QUALITY` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 | `IMP-0022` | Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos | `RELIABILITY` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 | `IMP-0023` | Modularização da CLI Corporativa (Decomposição do Monólito) | `MAINTAINABILITY` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
@@ -370,7 +370,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0020: Blindagem de Concorrência & Thread-Safety no Swarm e Tracer (RLock & ContextVars)
 - **Categoria**: `RELIABILITY` | `OBSERVABILITY` | `ORCHESTRATION`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-021`, `PR-CORP-020.md`)
 - **Data de Descoberta**: 2026-11-22
 - **Problema / Limitação Atual**:
   1. No `SwarmCoordinator` (`src/corporate_engineer/orchestrator/swarm.py:93-119`), o status dos membros (`member.status = "WORKING" / "COMPLETED"`) é mutado concorrentemente em threads do `ThreadPoolExecutor` sem controle de concorrência ou sincronização, gerando potenciais *race conditions*.

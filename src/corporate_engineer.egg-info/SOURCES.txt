@@ -48,6 +48,7 @@ src/corporate_engineer/system_one/trainer.py
 src/corporate_engineer/telemetry/__init__.py
 src/corporate_engineer/telemetry/tracer.py
 tests/test_ast_indexer.py
+tests/test_atomic_mutation_sandbox.py
 tests/test_autonomous_runner.py
 tests/test_cached_ast_indexer.py
 tests/test_circuit_breaker.py

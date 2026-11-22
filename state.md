@@ -13,7 +13,7 @@
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
 | **Branch Ativa** | `main` | 🟢 Suíte com 155/155 testes PASS, 88% cobertura, ADR-014 e SafeStorageCleaner integrados |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
-| **Armazenamento Disco C:** | 🟢 **20.38 GB Livres** | Recuperação emergencial e sustentável de mais de 20.3 GB (era 64 MB) via `corporate-engineer clean` |
+| **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
 | **Testes (Pytest + Hypothesis)** | 🟢 **155/155 PASS** | Cobertura global robusta (`pytest-cov`) em 17.24s |
 | **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (92 arquivos verificados e formatados) |
 | **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 55 arquivos validados estritamente no root |

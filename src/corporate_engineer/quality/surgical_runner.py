@@ -3,6 +3,8 @@ Surgical TDD Runner integrated with Git Diff & Blast Radius (IMP-0010).
 Computes blast radius of modified code and runs only affected test suites.
 """
 
+import logging
+import os
 import subprocess
 import sys
 import time
@@ -10,6 +12,8 @@ from pathlib import Path
 
 from corporate_engineer.models import NoulDecision, SurgicalTestReport
 from corporate_engineer.rag.impact import BlastRadiusAnalyzer
+
+logger = logging.getLogger(__name__)
 
 
 class SurgicalTestRunner:
@@ -19,23 +23,26 @@ class SurgicalTestRunner:
         self.root = Path(root_path).resolve()
         self.analyzer = BlastRadiusAnalyzer(root_path=self.root)
 
-    def get_changed_files(
+    def collect_changed_files(
         self,
         base_branch: str = "main",
         include_uncommitted: bool = True,
+        timeout: float = 15.0,
     ) -> list[str]:
         """Detect files changed on the current branch or uncommitted in the working tree."""
         changed: set[str] = set()
 
         # 1. Uncommitted changes (staged, unstaged, untracked)
         if include_uncommitted:
+            cmd = ["git", "status", "--porcelain"]
             try:
                 proc = subprocess.run(
-                    ["git", "status", "--porcelain"],
+                    cmd,
                     check=False,
                     capture_output=True,
                     text=True,
                     cwd=str(self.root),
+                    timeout=timeout,
                 )
                 if proc.returncode == 0:
                     for line in proc.stdout.splitlines():
@@ -45,8 +52,17 @@ class SurgicalTestRunner:
                                 rel_file = rel_file.split(" -> ")[1].strip()
                             rel_norm = rel_file.replace("\\", "/").strip('"')
                             changed.add(rel_norm)
-            except (subprocess.SubprocessError, OSError):
-                pass
+                else:
+                    logger.warning(
+                        "Git command %s returned non-zero exit code %d: %s",
+                        cmd,
+                        proc.returncode,
+                        proc.stderr.strip(),
+                    )
+            except subprocess.TimeoutExpired as exc:
+                logger.warning("Git subprocess error in %s: %s", cmd, exc)
+            except (subprocess.SubprocessError, OSError) as exc:
+                logger.warning("Git subprocess error in %s: %s", cmd, exc)
 
         # 2. Committed changes compared to base branch
         if base_branch:
@@ -61,6 +77,7 @@ class SurgicalTestRunner:
                         capture_output=True,
                         text=True,
                         cwd=str(self.root),
+                        timeout=timeout,
                     )
                     if proc.returncode == 0:
                         for line in proc.stdout.splitlines():
@@ -68,10 +85,21 @@ class SurgicalTestRunner:
                             if clean_line:
                                 changed.add(clean_line)
                         break
-                except (subprocess.SubprocessError, OSError):
-                    pass
+                    else:
+                        logger.warning(
+                            "Git command %s returned non-zero exit code %d: %s",
+                            diff_args,
+                            proc.returncode,
+                            proc.stderr.strip(),
+                        )
+                except subprocess.TimeoutExpired as exc:
+                    logger.warning("Git subprocess error in %s: %s", diff_args, exc)
+                except (subprocess.SubprocessError, OSError) as exc:
+                    logger.warning("Git subprocess error in %s: %s", diff_args, exc)
 
         return sorted(changed)
+
+    get_changed_files = collect_changed_files
 
     def resolve_affected_tests(
         self,
@@ -113,7 +141,7 @@ class SurgicalTestRunner:
         venv_scripts_pytest = self.root / ".venv" / "Scripts" / "pytest.exe"
         venv_bin_pytest = self.root / ".venv" / "bin" / "pytest"
 
-        if venv_scripts_pytest.exists():
+        if os.name == "nt" and venv_scripts_pytest.exists():
             cmd = [str(venv_scripts_pytest), *affected_tests]
         elif venv_bin_pytest.exists():
             cmd = [str(venv_bin_pytest), *affected_tests]

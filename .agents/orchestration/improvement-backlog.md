@@ -47,10 +47,11 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0019` | Autonomous End-to-End Engineering Runner & Dogfooding Pipeline | `ORCHESTRATION` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0020` | Blindagem de Concorrência & Thread-Safety no Swarm e Tracer | `RELIABILITY` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0021` | Isolamento Atômico do Motor de Testes de Mutação | `QUALITY` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
-| `IMP-0022` | Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos | `RELIABILITY` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0022` | Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos | `RELIABILITY` | Baixa-Média (S-M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0023` | Modularização da CLI Corporativa (Decomposição do Monólito) | `MAINTAINABILITY` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 | `IMP-0024` | Gemini LoRA Modular Pipeline para Motion Graphics & Tool Calling (DarkFactory) | `CAPABILITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0025` | Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite | `ORCHESTRATION` | Média-Alta (M-L) | `IN_PROGRESS` | `2026-11-22` |
+| `IMP-0026` | Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7) | `ORCHESTRATION` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 
 ---
 
@@ -496,6 +497,42 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Componentes Afetados**: `src/corporate_engineer/models.py`, `src/corporate_engineer/orchestrator/anticipator.py`, `.agents/orchestration/hooks/`, `.agents/hooks.json`, `scripts/install_git_hooks.py`, `src/corporate_engineer/cli.py`, `tests/test_proactive_pipeline.py`.
 - **Complexidade**: Média-Alta (M-L).
 - **Critérios de Aceite**: Suíte de testes TDD verde, 0 erros Ruff/Mypy, todos os 5 hooks testados com sucesso, pre-flight 100% aprovado.
+
+---
+
+### 🔹 IMP-0026: Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7)
+- **Categoria**: `ORCHESTRATION` | `QUALITY` | `SECURITY` | `TRANSCENDENCE`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-22
+- **Problema / Limitação Atual**: O fluxo de planejamento atual (Fase 1) elabora planos e metaprompts que seguem diretamente para execução/delegação (Fase 4 e Swarm). Embora eficiente, esse design sofre com a sicoferência (*sycophancy*) dos LLMs: planos com premissas frágeis de rede, concorrência, permissões de ferramentas MCP ou edge cases patológicos são aceitos sem contestação agressiva. Quando despachados para um Swarm multi-agente, esses planos defeituosos geram desperdício de dezenas de milhares de tokens, conflitos no Fan-In e mocks ilusórios para forçar testes a passar.
+- **Solução Proposta (Loop Dialético Tri-Fásico Always-On)**:
+  1. *Fase 1.5 - Adversarial Red Team Attack (Passada 1)*:
+     - Ataque agressivo ao plano arquitetural, DTOs e metaprompt antes de qualquer linha de código.
+     - Executa modelagem de ameaças e estresse estrutural: premissas frágeis de performance, limites de concorrência/deadlocks, privilégios excessivos de ferramentas MCP, acoplamento e pontos únicos de falha (SPOF).
+     - Emite `RedTeamAttackReport` com severidades (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) e lista de vulnerabilidades conceituais.
+  2. *Fase 1.6 - Architecture Transcendence & Hardening (Transcendência)*:
+     - Em vez de aplicar remendos pontuais (*band-aids*), o motor sintetiza e **transcende** os pontos fracos apontados pelo Red Team.
+     - Eleva o nível de abstração: substitui pontos de falha por invariantes formais, estruturas imutáveis, fallbacks determinísticos, idempotência ou desacoplamento por camadas com contenção de blast radius.
+     - Emite `TranscendencePlan` com matriz de resolução formal de cada vulnerabilidade.
+  3. *Fase 1.7 - Adversarial Re-Verification (Passada 2)*:
+     - O Red Team executa uma segunda passada atacando diretamente a síntese transcendida.
+     - Valida se as vulnerabilidades críticas foram erradicadas sem introdução de complexidade acidental.
+     - Emite o veredito final (`VERIFIED` ou `HARDEN_REQUIRED` com limite de 2 voltas) e gera a **Matriz Obrigatória de Chaos Tests** (cenários de falha e caminhos negativos que o `tdd-guide` DEVE implementar antes da codificação).
+  4. *Integração Always-On com Hooks e Master Orchestrator*:
+     - Acionamento automático pelo `ProactiveAnticipator` e `AutonomousEngineeringGraph.run_pipeline` quando o nível de risco for `HIGH` ou `CRITICAL`, ou quando houver alocação de `SwarmCoordinator`.
+     - Fast-Path bypass automático via Sistema 1 para tarefas rotineiras de baixo risco (`LOW`), garantindo zero latência desnecessária.
+     - Hook de pré-execução bloqueando despacho para Swarm sem selo `VERIFIED` da Fase 1.7.
+- **Benefícios Esperados**: Eliminação do retrabalho por planos furados, economia de milhares de tokens no Swarm, geração automatizada de testes de caos para o TDD e arquiteturas à prova de bala por design dialético.
+- **Componentes Afetados**:
+  - `src/corporate_engineer/models.py` (`RedTeamVulnerability`, `RedTeamAttackReport`, `TranscendencePlan`, `ChaosTestCase`, `RedTeamVerdict`).
+  - `src/corporate_engineer/orchestrator/adversarial.py` (`AdversarialRedTeam`, `ArchitectureTranscender`, `AdversarialLoopCoordinator`).
+  - `src/corporate_engineer/orchestrator/graph.py` (injeção das fases 1.5, 1.6 e 1.7 no `run_pipeline`).
+  - `src/corporate_engineer/orchestrator/swarm.py` (gate adversarial pré-fan-out).
+  - `src/corporate_engineer/cli.py` (subcomando `corporate-engineer plan dialectic`).
+  - `tests/test_adversarial_dialectical_loop.py`.
+- **Complexidade**: Média-Alta (M-L).
+- **Critérios de Aceite**: Suíte de testes TDD cobrindo ataque, transcendência e verificação, 0 erros Ruff/Mypy, integração com `run_pipeline` e bloqueio de despacho de swarm para planos com falhas críticas.
+
 
 
 

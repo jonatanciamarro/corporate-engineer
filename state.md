@@ -273,6 +273,8 @@
    - `IMP-0021`: Isolamento Atômico do Motor de Testes de Mutação (Safe Sandbox & Atomic Reversion) - `IMPLEMENTED` (ADR-022, PR-CORP-021, 9 novos testes, 243/243 PASS).
    - `IMP-0022`: Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos no Pre-Flight - `SAVED_NOT_APPROVED`.
    - `IMP-0023`: Modularização da CLI Corporativa (Decomposição do Monólito de 1661 Linhas) - `SAVED_NOT_APPROVED`.
+9. `[ ]` **Trilha Estratégica / IMP-0026: Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7)**:
+   - Especificação do loop dialético pré-execução catalogada em `improvement-backlog.md` (`SAVED_NOT_APPROVED`) com automação Always-On via hooks do Master Orchestrator.
 
 ---
 
@@ -280,6 +282,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-22T21:00:00-03:00` | Corp-Pipeline Master Orchestrator | Catalogação formal de IMP-0026 em `.agents/orchestration/improvement-backlog.md`: Tri-Phase Adversarial Loop incorporando Fase 1.5 (Adversarial Red Team Attack), Fase 1.6 (Architecture Transcendence & Hardening) e Fase 1.7 (Red Team Adversarial Re-Verification) com acionamento automático por risco e bloqueio pré-Swarm via hooks Always-On. |
 | `2026-11-22T20:25:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0025 (Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite): implementação do motor `ProactiveAnticipator` (matriz 2 passos à frente), modelos DTO Pydantic v2 `AnticipationStep` e `AnticipationPlan`, suíte completa de 5 lifecycle hooks Antigravity em `.agents/hooks.json` (`session_start.py`, `proactive_advisor.py`, `pre_tool_security_guard.py` Zero-Secret Guard, `post_tool_auto_healer.py` AST auto-remediation & blast radius, `session_turnover_gate.py`), instalação de git hooks locais `pre-commit` e `pre-push` (`scripts/install_git_hooks.py`), novo subcomando CLI `corporate-engineer anticipate`, 12 novos testes em `tests/test_proactive_pipeline.py` (255/255 PASS em 23.95s), formalização do ADR-023 e PR-CORP-025. |
 | `2026-11-22T20:05:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0021 (Isolamento Atômico do Motor de Testes de Mutação): implementação de `AtomicFileSandbox` com traps de sinal (`SIGINT`/`SIGTERM`) e `atexit` para reversão garantida de código em disco, substituição de `ast.walk` por `_MutationScannerVisitor(ast.NodeVisitor)` garantindo alinhamento estrito 1:1 de `node_id`, captura detalhada de `error_message` no modelo Pydantic v2 `Mutant`, suporte a sandbox temporário via `use_temp_sandbox=True`, 9 novos testes em `tests/test_atomic_mutation_sandbox.py` (243/243 PASS), formalização do ADR-022 e PR-CORP-021. |
 | `2026-11-22T19:18:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0020 (Blindagem de Concorrência & Thread-Safety no Swarm e Tracer): adição de `threading.RLock()` e migração para `time.monotonic()` em `CircuitBreaker`, proteção de `_active_stack`/spans e resolução de precedência estrita no cálculo de tokens OTel (`gen_ai.usage.total_tokens` > `tokens` > soma de parciais) em `AgentTracer`, sincronização de mutação de membros com `threading.Lock()` em `SwarmCoordinator`, 15 novos testes em `tests/test_concurrency_thread_safety.py` (234/234 PASS), formalização do ADR-021 e PR-CORP-020. |

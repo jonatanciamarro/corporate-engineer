@@ -4,6 +4,7 @@ Quality Gate Runner executing Secret Audits, Testing verification and static che
 
 import os
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -32,8 +33,17 @@ class QualityGateRunner:
             dirs[:] = [
                 d
                 for d in dirs
-                if not d.startswith(".") and d not in {"venv", ".venv", "__pycache__"}
+                if not d.startswith(".")
+                and d
+                not in {".git", ".venv", "venv", "__pycache__", "node_modules", "build", "dist"}
             ]
+            rel_root = Path(root).relative_to(self.project_root)
+            if any(
+                part.startswith(".") or part in {".git", ".venv", "venv", "__pycache__"}
+                for part in rel_root.parts
+            ):
+                continue
+
             for f in files:
                 if f.endswith((".py", ".json", ".yaml", ".yml", ".env", ".ts", ".js")):
                     p = Path(root) / f
@@ -53,34 +63,55 @@ class QualityGateRunner:
                                 )
         return {"passed": len(findings) == 0, "findings": findings}
 
-    def run_tests(self, command: str = "pytest") -> dict[str, Any]:
-        actual_cmd = command
-        if command == "pytest":
+    def run_tests(
+        self,
+        command: str | list[str] = "pytest",
+        timeout: float = 120.0,
+    ) -> dict[str, Any]:
+        if isinstance(command, str):
+            cmd_list = shlex.split(command, posix=(os.name != "nt"))
+        else:
+            cmd_list = list(command)
+
+        if cmd_list and cmd_list[0] == "pytest":
             venv_pytest = self.project_root / ".venv" / "Scripts" / "pytest.exe"
-            if venv_pytest.exists():
-                actual_cmd = str(venv_pytest)
+            venv_bin_pytest = self.project_root / ".venv" / "bin" / "pytest"
+            if os.name == "nt" and venv_pytest.exists():
+                cmd_list = [str(venv_pytest), *cmd_list[1:]]
+            elif venv_bin_pytest.exists():
+                cmd_list = [str(venv_bin_pytest), *cmd_list[1:]]
             else:
-                actual_cmd = f'"{sys.executable}" -m pytest'
+                cmd_list = [sys.executable, "-m", "pytest", *cmd_list[1:]]
+
+        cmd_display = " ".join(cmd_list)
         try:
             res = subprocess.run(
-                actual_cmd,
+                cmd_list,
                 check=False,
-                shell=True,
+                shell=False,
                 cwd=str(self.project_root),
                 capture_output=True,
                 text=True,
-                timeout=120,
+                timeout=timeout,
             )
             return {
-                "command": actual_cmd,
+                "command": cmd_display,
                 "passed": res.returncode == 0,
                 "exit_code": res.returncode,
                 "stdout": res.stdout,
                 "stderr": res.stderr,
             }
+        except subprocess.TimeoutExpired:
+            return {
+                "command": cmd_display,
+                "passed": False,
+                "exit_code": -2,
+                "stdout": "",
+                "stderr": f"Command timed out after {timeout}s",
+            }
         except (subprocess.SubprocessError, OSError) as e:
             return {
-                "command": command,
+                "command": cmd_display,
                 "passed": False,
                 "exit_code": -1,
                 "stdout": "",

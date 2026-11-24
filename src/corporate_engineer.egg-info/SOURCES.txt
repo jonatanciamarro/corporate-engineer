@@ -77,6 +77,7 @@ tests/test_cached_ast_indexer.py
 tests/test_circuit_breaker.py
 tests/test_cli.py
 tests/test_cli_modular_architecture.py
+tests/test_concurrency_resilience_and_silent_errors.py
 tests/test_concurrency_thread_safety.py
 tests/test_connected_e2e_pipeline.py
 tests/test_eval.py

@@ -50,8 +50,9 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0022` | Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos | `RELIABILITY` | Baixa-Média (S-M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0023` | Modularização da CLI Corporativa (Decomposição do Monólito) | `MAINTAINABILITY` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 | `IMP-0024` | Gemini LoRA Modular Pipeline para Motion Graphics & Tool Calling (DarkFactory) | `CAPABILITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
-| `IMP-0025` | Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite | `ORCHESTRATION` | Média-Alta (M-L) | `IN_PROGRESS` | `2026-11-22` |
+| `IMP-0025` | Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite | `ORCHESTRATION` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0026` | Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7) | `ORCHESTRATION` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0027` | Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E | `ORCHESTRATION` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 
 ---
 
@@ -410,7 +411,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0022: Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos no Pre-Flight
 - **Categoria**: `RELIABILITY` | `QUALITY`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-024`, `PR-CORP-022.md`)
 - **Data de Descoberta**: 2026-11-22
 - **Problema / Limitação Atual**:
   1. Em `src/corporate_engineer/git_utils.py:107, 122, 157`, comandos como `git ls-remote` e `git push` usam timeouts agressivos de 2s-3s e capturam genericamente `(OSError, subprocess.SubprocessError): return False`. Em caso de latência de rede, VPN ou autenticação pendente, a falha é mascarada como "branch não existe" ou "push falhou sem motivo".
@@ -532,6 +533,24 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
   - `tests/test_adversarial_dialectical_loop.py`.
 - **Complexidade**: Média-Alta (M-L).
 - **Critérios de Aceite**: Suíte de testes TDD cobrindo ataque, transcendência e verificação, 0 erros Ruff/Mypy, integração com `run_pipeline` e bloqueio de despacho de swarm para planos com falhas críticas.
+
+---
+
+### 🔹 IMP-0027: Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E
+- **Categoria**: `ORCHESTRATION` | `EFFICIENCY` | `ARCHITECTURE` | `QUALITY` | `TRANSCENDENCE`
+- **Status**: `SAVED_NOT_APPROVED` (Ref: `ADR-025`)
+- **Data de Descoberta**: 2026-11-22 (via Swarm Max de Auditoria Técnica)
+- **Problema / Limitação Atual**: O framework desenvolveu 25 melhorias de alta fidelidade, mas a auditoria concorrente com 4 agentes do Swarm Max revelou desconexões críticas: `BlastRadiusAnalyzer` re-parseava o repositório sem usar o `CachedASTCodebaseIndexer` (SHA-256); `AutonomousEngineeringGraph.run_pipeline` não consumia `ProactiveAnticipator`, `ASTSelfHealingFixer`, `SurgicalTestRunner`, `SemanticCodeEvaluator` nem `generate_pr_url` com push remoto; `QualityGateRunner` possuía scanner de segredos reduzido e desconectado de `SemanticCodeEvaluator` e `SafeStorageCleaner`; e pacotes com `__init__.py` omitiam exports públicos.
+- **Solução Proposta**:
+  1. *Unificação de Cache AST*: Conectar `CachedASTCodebaseIndexer` ao `BlastRadiusAnalyzer` e ao `ContextAwarePromptRefiner.find_ast_symbols()`.
+  2. *Amarração no AutonomousEngineeringGraph.run_pipeline*: Acionar `ProactiveAnticipator` (PLANNING), `SurgicalTestRunner` (TDD), `ASTSelfHealingFixer` (IMPLEMENT), `SemanticCodeEvaluator` (AUDIT) e `generate_pr_url(ensure_pushed=True)` (DELIVER).
+  3. *Unificação de Scanners e Gates*: Canonizar `SecretScanner` em `quality/` e enriquecer `QualityGateRunner`.
+  4. *Limpeza e API Pública*: Exportar símbolos em `__init__.py` e remover código morto.
+- **Benefícios Esperados**: Operação 100% sinérgica e unificada do framework, ganho substancial de desempenho em I/O e ciclo de vida autônomo completo de ponta a ponta.
+- **Componentes Afetados**: `src/corporate_engineer/rag/impact.py`, `src/corporate_engineer/prompt/refiner.py`, `src/corporate_engineer/orchestrator/graph.py`, `src/corporate_engineer/quality/gate.py`, `src/corporate_engineer/models.py`, `src/corporate_engineer/__init__.py`.
+- **Complexidade**: Média-Alta (M-L).
+- **Critérios de Aceite**: Suíte de testes TDD verde, 0 erros Ruff/Mypy, `run_pipeline` acionando os motores unificados e pre-flight 100% aprovado.
+
 
 
 

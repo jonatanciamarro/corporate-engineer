@@ -11,12 +11,12 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0025-autonomous-proactive-e2e-pipeline` | 🟢 Suíte com 255/255 testes PASS, 0 erros Ruff e Mypy, Zero-Secret Guard ativo |
+| **Branch Ativa** | `feat/IMP-0022-robust-git-timeouts-preflight` | 🟢 Suíte com 261/261 testes PASS, 0 erros Ruff e Mypy, Zero-Secret Guard ativo |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **255/255 PASS** | Cobertura global robusta de 88% (`pytest-cov`) em 23.95s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (132 arquivos verificados e formatados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 45 arquivos-fonte e 72 arquivos totais validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **261/261 PASS** | Cobertura global robusta de 88% (`pytest-cov`) em 45.35s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (135 arquivos verificados e formatados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 79 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` (tempo de varredura otimizado para sub-1s) |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Proativo Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance (2 passos à frente) |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -26,7 +26,28 @@
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação de IMP-0025 / ADR-023: Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite):
+### Sessão Atual (Implementação de IMP-0022 / ADR-024: Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos no Pre-Flight):
+1. **Robustez de Timeouts Git com Logging Estruturado (`src/corporate_engineer/git_utils.py`)**:
+   - Inclusão de `logger = logging.getLogger(__name__)`.
+   - Adição do parâmetro `timeout: float = 15.0` em `is_branch_pushed` e `push_branch_to_remote`, com resolução dinâmica da variável de ambiente `CORP_GIT_TIMEOUT`.
+   - Tratamento explícito de `subprocess.TimeoutExpired` emitindo advertências descritivas em vez de capturas genéricas que retornavam `False` sem rastro.
+   - Diagnósticos transparentes em `get_remote_url` e `extract_github_repo_slug` quando a identificação do remote falhar.
+2. **Transparência e Resiliência no `SurgicalTestRunner` (`src/corporate_engineer/quality/surgical_runner.py`)**:
+   - Eliminação de blocos `pass` cegos em `collect_changed_files`, passando a registrar avisos com `logger.warning("Git subprocess error in %s: %s", cmd, exc)`.
+   - Suporte a timeout de 15.0s em comandos Git.
+   - Verificação de plataforma `os.name == "nt"` antes de tentar caminhos `.venv/Scripts/pytest.exe` para portabilidade limpa entre POSIX e Windows.
+3. **Execução Segura com `shell=False` no Quality Gate (`src/corporate_engineer/quality/gate.py`)**:
+   - `QualityGateRunner.run_tests` refatorado para executar comandos com `shell=False` usando listas de argumentos seguros com parsing via `shlex.split`.
+   - Suporte a timeout configurável (`timeout: float = 120.0`).
+   - Tratamento especializado de `subprocess.TimeoutExpired` retornando `exit_code=-2` e `stderr=f"Command timed out after {timeout}s"`.
+   - Otimização do scanner de segredos para ignorar diretórios internos (`.git`, `.venv`, `__pycache__`, `node_modules`).
+4. **Suíte Abrangente de Shift-Left TDD (`tests/test_git_robustness_and_silent_errors.py`)**:
+   - 6 novos testes unitários validando tratamento de `TimeoutExpired`, precedência de `CORP_GIT_TIMEOUT`, logging de warnings em comandos Git e runner cirúrgico, e execução com `shell=False` no QualityGate.
+   - Suíte global expandida para **261/261 testes PASS** em 45.35s.
+5. **Governança & Arquitetura Formal**:
+   - Formalização do [ADR-024](docs/adr/ADR-024-robust-git-timeouts-preflight.md), criação da minuta técnica [PR-CORP-022.md](docs/pull_requests/PR-CORP-022.md) e atualização do status de `IMP-0022` para `IMPLEMENTED` no backlog.
+
+### Sessão Anterior (Implementação de IMP-0025 / ADR-023: Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite):
 1. **Governança & Arquitetura Formal (Fase 1 - Gate 1)**:
    - Identificação da necessidade de unificar todas as 24 capacidades construídas sob automação total e reflexiva ("2 passos à frente").
    - Formalização do [ADR-023](docs/adr/ADR-023-autonomous-proactive-intelligence-and-full-e2e-hook-suite.md) e atualização de `.agents/orchestration/improvement-backlog.md` (`IMP-0025`).
@@ -271,10 +292,12 @@
 8. `[x]` **Triagem e Implementação das Melhorias da Auditoria**:
    - `IMP-0020`: Blindagem de Concorrência & Thread-Safety no Swarm e Tracer (RLock & ContextVars) - `IMPLEMENTED` (ADR-021, PR-CORP-020, 15 novos testes, 234/234 PASS).
    - `IMP-0021`: Isolamento Atômico do Motor de Testes de Mutação (Safe Sandbox & Atomic Reversion) - `IMPLEMENTED` (ADR-022, PR-CORP-021, 9 novos testes, 243/243 PASS).
-   - `IMP-0022`: Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos no Pre-Flight - `SAVED_NOT_APPROVED`.
+   - `IMP-0022`: Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos no Pre-Flight - `IMPLEMENTED` (ADR-024, PR-CORP-022, 6 novos testes, 261/261 PASS).
    - `IMP-0023`: Modularização da CLI Corporativa (Decomposição do Monólito de 1661 Linhas) - `SAVED_NOT_APPROVED`.
 9. `[ ]` **Trilha Estratégica / IMP-0026: Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7)**:
    - Especificação do loop dialético pré-execução catalogada em `improvement-backlog.md` (`SAVED_NOT_APPROVED`) com automação Always-On via hooks do Master Orchestrator.
+10. `[ ]` **Trilha Estratégica / IMP-0027: Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E**:
+   - Proposta de unificação sistêmica catalogada em `improvement-backlog.md` (`SAVED_NOT_APPROVED`, Ref: ADR-025) aguardando deliberação e aprovação do usuário.
 
 ---
 
@@ -282,6 +305,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-22T21:15:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0022 (Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos no Pre-Flight): adição de logger estruturado e timeout configurável de 15s com CORP_GIT_TIMEOUT em git_utils.py, eliminação de blocos pass cegos e suporte multiplataforma (os.name == "nt") em surgical_runner.py, execução segura com shell=False e shlex.split no QualityGateRunner com captura de TimeoutExpired (exit_code=-2), 6 novos testes em tests/test_git_robustness_and_silent_errors.py (261/261 PASS em 45.35s, 0 erros Ruff/Mypy), formalização do ADR-024 e PR-CORP-022. |
 | `2026-11-22T21:00:00-03:00` | Corp-Pipeline Master Orchestrator | Catalogação formal de IMP-0026 em `.agents/orchestration/improvement-backlog.md`: Tri-Phase Adversarial Loop incorporando Fase 1.5 (Adversarial Red Team Attack), Fase 1.6 (Architecture Transcendence & Hardening) e Fase 1.7 (Red Team Adversarial Re-Verification) com acionamento automático por risco e bloqueio pré-Swarm via hooks Always-On. |
 | `2026-11-22T20:25:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0025 (Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite): implementação do motor `ProactiveAnticipator` (matriz 2 passos à frente), modelos DTO Pydantic v2 `AnticipationStep` e `AnticipationPlan`, suíte completa de 5 lifecycle hooks Antigravity em `.agents/hooks.json` (`session_start.py`, `proactive_advisor.py`, `pre_tool_security_guard.py` Zero-Secret Guard, `post_tool_auto_healer.py` AST auto-remediation & blast radius, `session_turnover_gate.py`), instalação de git hooks locais `pre-commit` e `pre-push` (`scripts/install_git_hooks.py`), novo subcomando CLI `corporate-engineer anticipate`, 12 novos testes em `tests/test_proactive_pipeline.py` (255/255 PASS em 23.95s), formalização do ADR-023 e PR-CORP-025. |
 | `2026-11-22T20:05:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0021 (Isolamento Atômico do Motor de Testes de Mutação): implementação de `AtomicFileSandbox` com traps de sinal (`SIGINT`/`SIGTERM`) e `atexit` para reversão garantida de código em disco, substituição de `ast.walk` por `_MutationScannerVisitor(ast.NodeVisitor)` garantindo alinhamento estrito 1:1 de `node_id`, captura detalhada de `error_message` no modelo Pydantic v2 `Mutant`, suporte a sandbox temporário via `use_temp_sandbox=True`, 9 novos testes em `tests/test_atomic_mutation_sandbox.py` (243/243 PASS), formalização do ADR-022 e PR-CORP-021. |

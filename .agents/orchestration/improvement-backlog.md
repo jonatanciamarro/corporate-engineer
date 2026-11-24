@@ -47,10 +47,12 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0019` | Autonomous End-to-End Engineering Runner & Dogfooding Pipeline | `ORCHESTRATION` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0020` | Blindagem de Concorrência & Thread-Safety no Swarm e Tracer | `RELIABILITY` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0021` | Isolamento Atômico do Motor de Testes de Mutação | `QUALITY` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
-| `IMP-0022` | Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos | `RELIABILITY` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0022` | Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos | `RELIABILITY` | Baixa-Média (S-M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0023` | Modularização da CLI Corporativa (Decomposição do Monólito) | `MAINTAINABILITY` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 | `IMP-0024` | Gemini LoRA Modular Pipeline para Motion Graphics & Tool Calling (DarkFactory) | `CAPABILITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
-| `IMP-0025` | Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite | `ORCHESTRATION` | Média-Alta (M-L) | `IN_PROGRESS` | `2026-11-22` |
+| `IMP-0025` | Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite | `ORCHESTRATION` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
+| `IMP-0026` | Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7) | `ORCHESTRATION` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0027` | Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E | `ORCHESTRATION` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
 
 ---
 
@@ -409,7 +411,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0022: Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos no Pre-Flight
 - **Categoria**: `RELIABILITY` | `QUALITY`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-024`, `PR-CORP-022.md`)
 - **Data de Descoberta**: 2026-11-22
 - **Problema / Limitação Atual**:
   1. Em `src/corporate_engineer/git_utils.py:107, 122, 157`, comandos como `git ls-remote` e `git push` usam timeouts agressivos de 2s-3s e capturam genericamente `(OSError, subprocess.SubprocessError): return False`. Em caso de latência de rede, VPN ou autenticação pendente, a falha é mascarada como "branch não existe" ou "push falhou sem motivo".
@@ -496,6 +498,60 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Componentes Afetados**: `src/corporate_engineer/models.py`, `src/corporate_engineer/orchestrator/anticipator.py`, `.agents/orchestration/hooks/`, `.agents/hooks.json`, `scripts/install_git_hooks.py`, `src/corporate_engineer/cli.py`, `tests/test_proactive_pipeline.py`.
 - **Complexidade**: Média-Alta (M-L).
 - **Critérios de Aceite**: Suíte de testes TDD verde, 0 erros Ruff/Mypy, todos os 5 hooks testados com sucesso, pre-flight 100% aprovado.
+
+---
+
+### 🔹 IMP-0026: Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7)
+- **Categoria**: `ORCHESTRATION` | `QUALITY` | `SECURITY` | `TRANSCENDENCE`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-22
+- **Problema / Limitação Atual**: O fluxo de planejamento atual (Fase 1) elabora planos e metaprompts que seguem diretamente para execução/delegação (Fase 4 e Swarm). Embora eficiente, esse design sofre com a sicoferência (*sycophancy*) dos LLMs: planos com premissas frágeis de rede, concorrência, permissões de ferramentas MCP ou edge cases patológicos são aceitos sem contestação agressiva. Quando despachados para um Swarm multi-agente, esses planos defeituosos geram desperdício de dezenas de milhares de tokens, conflitos no Fan-In e mocks ilusórios para forçar testes a passar.
+- **Solução Proposta (Loop Dialético Tri-Fásico Always-On)**:
+  1. *Fase 1.5 - Adversarial Red Team Attack (Passada 1)*:
+     - Ataque agressivo ao plano arquitetural, DTOs e metaprompt antes de qualquer linha de código.
+     - Executa modelagem de ameaças e estresse estrutural: premissas frágeis de performance, limites de concorrência/deadlocks, privilégios excessivos de ferramentas MCP, acoplamento e pontos únicos de falha (SPOF).
+     - Emite `RedTeamAttackReport` com severidades (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) e lista de vulnerabilidades conceituais.
+  2. *Fase 1.6 - Architecture Transcendence & Hardening (Transcendência)*:
+     - Em vez de aplicar remendos pontuais (*band-aids*), o motor sintetiza e **transcende** os pontos fracos apontados pelo Red Team.
+     - Eleva o nível de abstração: substitui pontos de falha por invariantes formais, estruturas imutáveis, fallbacks determinísticos, idempotência ou desacoplamento por camadas com contenção de blast radius.
+     - Emite `TranscendencePlan` com matriz de resolução formal de cada vulnerabilidade.
+  3. *Fase 1.7 - Adversarial Re-Verification (Passada 2)*:
+     - O Red Team executa uma segunda passada atacando diretamente a síntese transcendida.
+     - Valida se as vulnerabilidades críticas foram erradicadas sem introdução de complexidade acidental.
+     - Emite o veredito final (`VERIFIED` ou `HARDEN_REQUIRED` com limite de 2 voltas) e gera a **Matriz Obrigatória de Chaos Tests** (cenários de falha e caminhos negativos que o `tdd-guide` DEVE implementar antes da codificação).
+  4. *Integração Always-On com Hooks e Master Orchestrator*:
+     - Acionamento automático pelo `ProactiveAnticipator` e `AutonomousEngineeringGraph.run_pipeline` quando o nível de risco for `HIGH` ou `CRITICAL`, ou quando houver alocação de `SwarmCoordinator`.
+     - Fast-Path bypass automático via Sistema 1 para tarefas rotineiras de baixo risco (`LOW`), garantindo zero latência desnecessária.
+     - Hook de pré-execução bloqueando despacho para Swarm sem selo `VERIFIED` da Fase 1.7.
+- **Benefícios Esperados**: Eliminação do retrabalho por planos furados, economia de milhares de tokens no Swarm, geração automatizada de testes de caos para o TDD e arquiteturas à prova de bala por design dialético.
+- **Componentes Afetados**:
+  - `src/corporate_engineer/models.py` (`RedTeamVulnerability`, `RedTeamAttackReport`, `TranscendencePlan`, `ChaosTestCase`, `RedTeamVerdict`).
+  - `src/corporate_engineer/orchestrator/adversarial.py` (`AdversarialRedTeam`, `ArchitectureTranscender`, `AdversarialLoopCoordinator`).
+  - `src/corporate_engineer/orchestrator/graph.py` (injeção das fases 1.5, 1.6 e 1.7 no `run_pipeline`).
+  - `src/corporate_engineer/orchestrator/swarm.py` (gate adversarial pré-fan-out).
+  - `src/corporate_engineer/cli.py` (subcomando `corporate-engineer plan dialectic`).
+  - `tests/test_adversarial_dialectical_loop.py`.
+- **Complexidade**: Média-Alta (M-L).
+- **Critérios de Aceite**: Suíte de testes TDD cobrindo ataque, transcendência e verificação, 0 erros Ruff/Mypy, integração com `run_pipeline` e bloqueio de despacho de swarm para planos com falhas críticas.
+
+---
+
+### 🔹 IMP-0027: Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E
+- **Categoria**: `ORCHESTRATION` | `EFFICIENCY` | `ARCHITECTURE` | `QUALITY` | `TRANSCENDENCE`
+- **Status**: `SAVED_NOT_APPROVED` (Ref: `ADR-025`)
+- **Data de Descoberta**: 2026-11-22 (via Swarm Max de Auditoria Técnica)
+- **Problema / Limitação Atual**: O framework desenvolveu 25 melhorias de alta fidelidade, mas a auditoria concorrente com 4 agentes do Swarm Max revelou desconexões críticas: `BlastRadiusAnalyzer` re-parseava o repositório sem usar o `CachedASTCodebaseIndexer` (SHA-256); `AutonomousEngineeringGraph.run_pipeline` não consumia `ProactiveAnticipator`, `ASTSelfHealingFixer`, `SurgicalTestRunner`, `SemanticCodeEvaluator` nem `generate_pr_url` com push remoto; `QualityGateRunner` possuía scanner de segredos reduzido e desconectado de `SemanticCodeEvaluator` e `SafeStorageCleaner`; e pacotes com `__init__.py` omitiam exports públicos.
+- **Solução Proposta**:
+  1. *Unificação de Cache AST*: Conectar `CachedASTCodebaseIndexer` ao `BlastRadiusAnalyzer` e ao `ContextAwarePromptRefiner.find_ast_symbols()`.
+  2. *Amarração no AutonomousEngineeringGraph.run_pipeline*: Acionar `ProactiveAnticipator` (PLANNING), `SurgicalTestRunner` (TDD), `ASTSelfHealingFixer` (IMPLEMENT), `SemanticCodeEvaluator` (AUDIT) e `generate_pr_url(ensure_pushed=True)` (DELIVER).
+  3. *Unificação de Scanners e Gates*: Canonizar `SecretScanner` em `quality/` e enriquecer `QualityGateRunner`.
+  4. *Limpeza e API Pública*: Exportar símbolos em `__init__.py` e remover código morto.
+- **Benefícios Esperados**: Operação 100% sinérgica e unificada do framework, ganho substancial de desempenho em I/O e ciclo de vida autônomo completo de ponta a ponta.
+- **Componentes Afetados**: `src/corporate_engineer/rag/impact.py`, `src/corporate_engineer/prompt/refiner.py`, `src/corporate_engineer/orchestrator/graph.py`, `src/corporate_engineer/quality/gate.py`, `src/corporate_engineer/models.py`, `src/corporate_engineer/__init__.py`.
+- **Complexidade**: Média-Alta (M-L).
+- **Critérios de Aceite**: Suíte de testes TDD verde, 0 erros Ruff/Mypy, `run_pipeline` acionando os motores unificados e pre-flight 100% aprovado.
+
+
 
 
 

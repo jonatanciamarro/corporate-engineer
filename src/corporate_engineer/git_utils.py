@@ -2,12 +2,32 @@
 Git utilities and pre-filled GitHub Pull Request URL generator for Corporate Pipelines.
 """
 
+import logging
 import os
 import re
 import subprocess
 import urllib.parse
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_GIT_TIMEOUT: float = 15.0
+
+
+def _resolve_git_timeout(timeout: float | None = None) -> float:
+    """Resolve Git timeout preferring explicit argument, then CORP_GIT_TIMEOUT env var, default 15.0."""
+    env_val = os.getenv("CORP_GIT_TIMEOUT")
+    if env_val:
+        try:
+            env_timeout = float(env_val)
+            if timeout is None or timeout == DEFAULT_GIT_TIMEOUT:
+                return env_timeout
+        except ValueError:
+            pass
+    if timeout is not None:
+        return timeout
+    return DEFAULT_GIT_TIMEOUT
 
 
 def extract_github_repo_slug(remote_url: str) -> str:
@@ -16,6 +36,10 @@ def extract_github_repo_slug(remote_url: str) -> str:
     if match:
         owner, repo = match.group(1), match.group(2)
         return f"{owner}/{repo}"
+    logger.warning(
+        "Could not extract GitHub repo slug from remote URL '%s', falling back to default",
+        remote_url,
+    )
     return "jonatanciamarro/corporate-engineer"
 
 
@@ -67,8 +91,14 @@ def get_remote_url(repo_path: Path | str = ".", remote_name: str = "origin") -> 
         )
         if proc.returncode == 0 and proc.stdout.strip():
             return proc.stdout.strip()
-    except (OSError, subprocess.SubprocessError):
-        pass
+        logger.warning(
+            "Git remote get-url for '%s' returned non-zero code %d: %s",
+            remote_name,
+            proc.returncode,
+            proc.stderr.strip(),
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.warning("Subprocess error getting remote URL for '%s': %s", remote_name, exc)
     return "https://github.com/jonatanciamarro/corporate-engineer.git"
 
 
@@ -76,8 +106,10 @@ def is_branch_pushed(
     repo_path: Path | str = ".",
     branch: str | None = None,
     remote_name: str = "origin",
+    timeout: float = 15.0,
 ) -> bool:
     """Check if the active or specified branch is pushed to remote and up-to-date."""
+    effective_timeout = _resolve_git_timeout(timeout)
     resolved_path = Path(repo_path).resolve()
     target_branch = branch or get_current_branch(resolved_path)
 
@@ -89,10 +121,20 @@ def is_branch_pushed(
             capture_output=True,
             text=True,
             cwd=str(resolved_path),
+            timeout=effective_timeout,
         )
         if remote_name not in proc_remote.stdout.split():
+            logger.warning("Remote '%s' not found in repository at %s", remote_name, resolved_path)
             return False
-    except (OSError, subprocess.SubprocessError):
+    except subprocess.TimeoutExpired as exc:
+        logger.warning(
+            "Git operation timed out in is_branch_pushed checking remotes (timeout=%ss): %s",
+            effective_timeout,
+            exc,
+        )
+        return False
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.warning("Git error in is_branch_pushed checking remotes: %s", exc)
         return False
 
     # Check ls-remote for target branch
@@ -104,7 +146,7 @@ def is_branch_pushed(
             capture_output=True,
             text=True,
             cwd=str(resolved_path),
-            timeout=2.0,
+            timeout=effective_timeout,
             env=git_env,
         )
         if proc.returncode != 0 or not proc.stdout.strip():
@@ -119,7 +161,7 @@ def is_branch_pushed(
             capture_output=True,
             text=True,
             cwd=str(resolved_path),
-            timeout=2.0,
+            timeout=effective_timeout,
             env=git_env,
         )
         if proc_head.returncode == 0:
@@ -127,7 +169,16 @@ def is_branch_pushed(
             return local_hash == remote_hash
 
         return True
-    except (OSError, subprocess.SubprocessError):
+    except subprocess.TimeoutExpired as exc:
+        logger.warning(
+            "Git operation timed out in is_branch_pushed (branch=%s, timeout=%ss): %s",
+            target_branch,
+            effective_timeout,
+            exc,
+        )
+        return False
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.warning("Git error in is_branch_pushed: %s", exc)
         return False
 
 
@@ -136,8 +187,10 @@ def push_branch_to_remote(
     branch: str | None = None,
     remote_name: str = "origin",
     set_upstream: bool = True,
+    timeout: float = 15.0,
 ) -> bool:
     """Push the branch to the specified remote repository."""
+    effective_timeout = _resolve_git_timeout(timeout)
     resolved_path = Path(repo_path).resolve()
     target_branch = branch or get_current_branch(resolved_path)
 
@@ -154,11 +207,26 @@ def push_branch_to_remote(
             capture_output=True,
             text=True,
             cwd=str(resolved_path),
-            timeout=3.0,
+            timeout=effective_timeout,
             env=git_env,
         )
+        if proc.returncode != 0:
+            logger.warning(
+                "git push failed with exit code %d: %s",
+                proc.returncode,
+                proc.stderr.strip(),
+            )
         return proc.returncode == 0
-    except (OSError, subprocess.SubprocessError):
+    except subprocess.TimeoutExpired as exc:
+        logger.warning(
+            "Git push timed out (branch=%s, timeout=%ss): %s",
+            target_branch,
+            effective_timeout,
+            exc,
+        )
+        return False
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.warning("Git push error: %s", exc)
         return False
 
 

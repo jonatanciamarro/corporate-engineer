@@ -39,6 +39,8 @@ param(
     [switch]$ConfigureDefenderExclusions,
     [switch]$OptimizePrioritySeparation,
     [switch]$DisableTelemetryAndGameDVR,
+    [switch]$OptimizeKernelMemory,
+    [switch]$Elevate,
     [switch]$All,
     [switch]$Revert,
     [string]$BackupPath = "$env:LOCALAPPDATA\CorporateEngineer\RegistryBackup.json"
@@ -119,8 +121,24 @@ if (-not $isAdmin) {
     if ($WhatIfPreference) {
         Write-Warning "AVISO: Executando em modo de simulação (-WhatIf) sem elevação de Administrador."
     }
+    elseif ($Elevate) {
+        Write-Host "Solicitando elevação UAC para executar como Administrador..." -ForegroundColor Yellow
+        $scriptPath = (Resolve-Path $PSCommandPath).Path
+        $argList = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`""
+        if ($All) { $argList += " -All" }
+        if ($DisableVisualEffects) { $argList += " -DisableVisualEffects" }
+        if ($OptimizeNtfs) { $argList += " -OptimizeNtfs" }
+        if ($ConfigureDefenderExclusions) { $argList += " -ConfigureDefenderExclusions" }
+        if ($OptimizePrioritySeparation) { $argList += " -OptimizePrioritySeparation" }
+        if ($DisableTelemetryAndGameDVR) { $argList += " -DisableTelemetryAndGameDVR" }
+        if ($OptimizeKernelMemory) { $argList += " -OptimizeKernelMemory" }
+        if ($Revert) { $argList += " -Revert" }
+        Start-Process powershell.exe -Verb RunAs -ArgumentList $argList
+        Write-Host "Janela elevada iniciada. Conclua a autorização no diálogo UAC do Windows." -ForegroundColor Green
+        return
+    }
     else {
-        Write-Error "Este script requer privilégios de Administrador para modificar registros do sistema e o Windows Defender. Execute o PowerShell como Administrador."
+        Write-Error "Este script requer privilégios de Administrador para modificar registros do sistema e o Windows Defender. Execute o PowerShell como Administrador ou passe o parâmetro -Elevate."
         return
     }
 }
@@ -134,6 +152,7 @@ if ($All) {
     $ConfigureDefenderExclusions = $true
     $OptimizePrioritySeparation = $true
     $DisableTelemetryAndGameDVR = $true
+    $OptimizeKernelMemory = $true
 }
 
 # --- 2. Matriz de Registro: Prioridade de Processador ---
@@ -243,6 +262,32 @@ if ($ConfigureDefenderExclusions) {
                 catch {
                     Write-Warning "Falha ao adicionar exclusão de extensão $($ext): $_"
                 }
+            }
+        }
+    }
+}
+
+# --- 7. Matriz de Kernel & Memória: ZRAM, Spectre/Meltdown e Pagefile (Nível NASA) ---
+if ($OptimizeKernelMemory -or $Revert) {
+    Write-Host "`n[*] Otimizando Kernel, Memória e Desativando Mitigações de CPU..." -ForegroundColor Yellow
+    
+    # Spectre/Meltdown Mitigations: 3 = desativado (recupera 15-20% de IPC no Haswell)
+    Set-SafeRegistryValue -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name "FeatureSettingsOverride" -Value 3 -DefaultValue 0
+    Set-SafeRegistryValue -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name "FeatureSettingsOverrideMask" -Value 3 -DefaultValue 0
+    
+    # Desativa preenchimento com zeros do Pagefile no desligamento (reboot instantâneo)
+    Set-SafeRegistryValue -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name "ClearPageFileAtShutdown" -Value 0 -DefaultValue 1
+    
+    # LargeSystemCache: 1 = prioriza cache de I/O em RAM
+    Set-SafeRegistryValue -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name "LargeSystemCache" -Value 1 -DefaultValue 0
+    
+    if (-not $Revert) {
+        if ($PSCmdlet.ShouldProcess("Kernel MMAgent", "Habilitar compressão de memória RAM (ZRAM) e PageCombining")) {
+            try {
+                Enable-MMAgent -MemoryCompression -PageCombining -ErrorAction SilentlyContinue
+                Write-Host "  [OK] Compressão de Memória (ZRAM nativa do Windows) e Page Combining ativados" -ForegroundColor Green
+            } catch {
+                Write-Warning "Falha ao configurar MMAgent: $_"
             }
         }
     }

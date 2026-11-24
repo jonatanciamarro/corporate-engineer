@@ -48,7 +48,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0020` | Blindagem de Concorrência & Thread-Safety no Swarm e Tracer | `RELIABILITY` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0021` | Isolamento Atômico do Motor de Testes de Mutação | `QUALITY` | Média (M) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0022` | Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos | `RELIABILITY` | Baixa-Média (S-M) | `IMPLEMENTED` | `2026-11-22` |
-| `IMP-0023` | Modularização da CLI Corporativa (Decomposição do Monólito) | `MAINTAINABILITY` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0023` | Modularização da CLI Corporativa (Decomposição do Monólito) | `MAINTAINABILITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0024` | Gemini LoRA Modular Pipeline para Motion Graphics & Tool Calling (DarkFactory) | `CAPABILITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0025` | Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite | `ORCHESTRATION` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0026` | Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7) | `ORCHESTRATION` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
@@ -432,7 +432,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0023: Modularização da CLI Corporativa (Decomposição do Monólito de 1661 Linhas)
 - **Categoria**: `MAINTAINABILITY` | `ARCHITECTURE`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-026`, `PR-CORP-023.md`)
 - **Data de Descoberta**: 2026-11-22
 - **Problema / Limitação Atual**: O arquivo `src/corporate_engineer/cli.py` atingiu 1661 linhas, concentrando o parsing de argumentos, formatação de saída e execução lógica de mais de 15 subcomandos (`audit`, `index`, `dag`, `mcp`, `eval`, `blast-radius`, `telemetry`, `test-surgical`, `decide`, `dataset`, `fix`, `clean`, `benchmark`, `swarm`, `prompt`, `run`). Isso viola as regras de design corporativo (limite suave de 800 linhas por arquivo), dificulta revisões de código e obriga o uso de imports tardios espalhados pelo arquivo.
 - **Solução Proposta**:
@@ -503,7 +503,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0026: Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7)
 - **Categoria**: `ORCHESTRATION` | `QUALITY` | `SECURITY` | `TRANSCENDENCE`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-026`, `PR-CORP-023.md`)
 - **Data de Descoberta**: 2026-11-22
 - **Problema / Limitação Atual**: O fluxo de planejamento atual (Fase 1) elabora planos e metaprompts que seguem diretamente para execução/delegação (Fase 4 e Swarm). Embora eficiente, esse design sofre com a sicoferência (*sycophancy*) dos LLMs: planos com premissas frágeis de rede, concorrência, permissões de ferramentas MCP ou edge cases patológicos são aceitos sem contestação agressiva. Quando despachados para um Swarm multi-agente, esses planos defeituosos geram desperdício de dezenas de milhares de tokens, conflitos no Fan-In e mocks ilusórios para forçar testes a passar.
 - **Solução Proposta (Loop Dialético Tri-Fásico Always-On)**:

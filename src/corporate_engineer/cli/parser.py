@@ -12,6 +12,7 @@ from corporate_engineer.cli.commands.mcp import register_mcp_parser
 from corporate_engineer.cli.commands.orchestrator import (
     register_anticipate_parser,
     register_dag_parser,
+    register_dialectic_parser,
     register_run_parser,
     register_swarm_parser,
 )
@@ -64,5 +65,6 @@ def build_parser() -> argparse.ArgumentParser:
     register_prompt_parser(subparsers)
     register_lora_parser(subparsers)
     register_anticipate_parser(subparsers)
+    register_dialectic_parser(subparsers)
 
     return parser

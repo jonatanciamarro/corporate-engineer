@@ -519,3 +519,157 @@ class AnticipationPlan(BaseModel):
         default="", description="Refined metaprompt guidance for LLM execution"
     )
     timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
+
+
+# ==============================================================================
+# IMP-0026: Tri-Phase Adversarial Loop DTO Models (ADR-028)
+# ==============================================================================
+
+
+class RedTeamVulnerabilitySeverity(str, Enum):
+    CRITICAL = "CRITICAL"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
+class RedTeamThreatCategory(str, Enum):
+    CONCURRENCY = "CONCURRENCY"
+    FAULT_TOLERANCE = "FAULT_TOLERANCE"
+    PRIVILEGE_MCP = "PRIVILEGE_MCP"
+    NETWORK_TIMEOUTS = "NETWORK_TIMEOUTS"
+    DATA_INTEGRITY = "DATA_INTEGRITY"
+
+
+class RedTeamVulnerability(BaseModel):
+    id: str = Field(description="Unique vulnerability identifier, e.g. VULN-001")
+    category: RedTeamThreatCategory = Field(description="Threat classification category")
+    severity: RedTeamVulnerabilitySeverity = Field(description="Vulnerability severity level")
+    title: str = Field(description="Concise description of the flaw")
+    description: str = Field(description="Detailed architectural or behavioral vulnerability")
+    attack_vector: str = Field(description="How an adversary or pathological state exploits this")
+    target_component: str = Field(default="", description="Affected module, class, or function")
+
+
+class RedTeamAttackReport(BaseModel):
+    plan_id: str = Field(description="Identifier of the target plan or ticket")
+    total_vulnerabilities: int = Field(default=0, description="Total detected flaws")
+    vulnerabilities: list[RedTeamVulnerability] = Field(
+        default_factory=list, description="Enumerated flaws"
+    )
+    highest_severity: RedTeamVulnerabilitySeverity = Field(
+        default=RedTeamVulnerabilitySeverity.LOW, description="Highest severity observed"
+    )
+    attack_narrative: str = Field(default="", description="Consolidated red team assessment")
+    is_blocked: bool = Field(
+        default=False, description="True if CRITICAL or HIGH severity flaws block execution"
+    )
+    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
+
+
+class TranscendenceHardening(BaseModel):
+    vulnerability_id: str = Field(description="Reference to targeted RedTeamVulnerability id")
+    original_weakness: str = Field(description="Summary of the original vulnerability")
+    transcendence_strategy: str = Field(
+        description="Architectural synthesis resolving the weakness"
+    )
+    formal_invariant: str = Field(description="Formal invariant guaranteeing system immunity")
+    resilience_mechanism: str = Field(
+        description="Concrete implementation pattern (e.g. RLock, CircuitBreaker, Sandbox)"
+    )
+
+
+class TranscendencePlan(BaseModel):
+    plan_id: str = Field(description="Plan or ticket identifier")
+    hardenings: list[TranscendenceHardening] = Field(
+        default_factory=list, description="Hardening mappings"
+    )
+    transcended_architecture: str = Field(
+        default="", description="Synthesized hardened architecture description"
+    )
+    structural_invariants: list[str] = Field(
+        default_factory=list, description="Formal invariants enforced"
+    )
+    residual_risk: str = Field(default="LOW", description="Estimated residual risk level")
+    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
+
+
+class ChaosTestCase(BaseModel):
+    case_id: str = Field(description="Identifier for chaos scenario, e.g. CHAOS-001")
+    vulnerability_id: str = Field(default="", description="Related vulnerability identifier")
+    name: str = Field(description="Descriptive name of chaos test")
+    category: str = Field(default="CHAOS", description="Category of chaos experiment")
+    injection_trigger: str = Field(description="Condition or fault injected")
+    expected_behavior: str = Field(
+        description="Required resilient response (e.g. raises typed error, falls back, retries)"
+    )
+    tdd_scenario: str = Field(description="Exact pytest function test specification")
+
+
+class RedTeamVerdictStatus(str, Enum):
+    VERIFIED = "VERIFIED"
+    HARDEN_REQUIRED = "HARDEN_REQUIRED"
+    REJECTED = "REJECTED"
+    BYPASSED = "BYPASSED"
+
+
+class AdversarialVerdict(BaseModel):
+    status: RedTeamVerdictStatus = Field(description="Final adversarial status")
+    iterations_completed: int = Field(default=1, description="Number of dialectical rounds")
+    unresolved_vulnerabilities: list[str] = Field(
+        default_factory=list, description="IDs of unresolved flaws"
+    )
+    chaos_matrix: list[ChaosTestCase] = Field(
+        default_factory=list, description="Mandatory chaos test suite for TDD"
+    )
+    confidence_score: float = Field(default=1.0, description="Confidence score from 0.0 to 1.0")
+    bypassed: bool = Field(default=False, description="Whether the loop was bypassed via fast-path")
+    bypass_reason: str = Field(default="", description="Reason for bypass")
+    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
+
+
+class DialecticalLoopResult(BaseModel):
+    plan_id: str = Field(description="Plan identifier")
+    initial_attack: RedTeamAttackReport = Field(description="Phase 1.5 attack report")
+    transcendence: TranscendencePlan | None = Field(
+        default=None, description="Phase 1.6 transcendence plan"
+    )
+    re_verification: RedTeamAttackReport | None = Field(
+        default=None, description="Phase 1.7 re-verification report"
+    )
+    verdict: AdversarialVerdict = Field(description="Consolidated adversarial verdict")
+    duration_ms: float = Field(default=0.0, description="Duration of dialectical loop in ms")
+    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
+
+
+# ==============================================================================
+# IMP-0029: Continuous Capability Auto-Wiring DTO Models (ADR-028)
+# ==============================================================================
+
+
+class ModuleWiringStatus(BaseModel):
+    module_path: str = Field(description="Relative path of the module")
+    is_exported: bool = Field(default=False, description="Whether primary symbols are exported")
+    has_test_coverage: bool = Field(default=False, description="Whether matching test exists")
+    is_cli_registered: bool = Field(default=False, description="Whether exposed in CLI")
+    is_domain_mapped: bool = Field(default=False, description="Whether mapped in prompt refiner")
+    exported_symbols: list[str] = Field(default_factory=list, description="Public exported symbols")
+
+
+class WiringAuditReport(BaseModel):
+    total_modules: int = Field(default=0, description="Total source modules audited")
+    connected_modules: list[str] = Field(default_factory=list, description="Fully wired modules")
+    unwired_modules: list[str] = Field(
+        default_factory=list, description="Unwired or orphan modules"
+    )
+    missing_test_modules: list[str] = Field(
+        default_factory=list, description="Modules without tests"
+    )
+    orphan_symbols: list[str] = Field(
+        default_factory=list, description="Unused/orphan public symbols"
+    )
+    passed: bool = Field(default=True, description="Whether wiring audit cleared quality gate")
+    remediation_actions: list[str] = Field(
+        default_factory=list, description="Actionable remediation steps"
+    )
+    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())

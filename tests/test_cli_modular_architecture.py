@@ -32,6 +32,7 @@ def test_cli_package_public_exports():
         "handle_prompt",
         "handle_lora",
         "handle_anticipate",
+        "handle_dialectic",
     ]
     for export_name in expected_exports:
         assert hasattr(corporate_engineer.cli, export_name), (
@@ -61,6 +62,8 @@ def test_cli_command_modules_importable():
     assert hasattr(orchestrator, "handle_swarm")
     assert hasattr(orchestrator, "register_anticipate_parser")
     assert hasattr(orchestrator, "handle_anticipate")
+    assert hasattr(orchestrator, "register_dialectic_parser")
+    assert hasattr(orchestrator, "handle_dialectic")
 
     assert hasattr(rag, "register_index_parser")
     assert hasattr(rag, "handle_index")

@@ -25,6 +25,11 @@ def register_audit_parser(subparsers: Any) -> argparse.ArgumentParser:
         "--strict", action="store_true", help="Run strict checks including test suite verification"
     )
     audit_parser.add_argument(
+        "--wiring",
+        action="store_true",
+        help="Run capability auto-wiring audit to detect unwired or orphan modules (IMP-0029)",
+    )
+    audit_parser.add_argument(
         "--mutation",
         action="store_true",
         help="Run AST mutation testing to evaluate test suite quality",
@@ -159,6 +164,12 @@ def handle_audit(args: argparse.Namespace) -> int:
                 target_file=target_f, max_mutants=getattr(args, "max_mutants", 10)
             )
 
+    wiring_res: dict[str, Any] | None = None
+    if getattr(args, "wiring", False) or args.strict:
+        wiring_res = runner.run_wiring_audit()
+        if not wiring_res["passed"]:
+            strict_passed = False
+
     overall_passed = bool(secret_res["passed"] and strict_passed)
 
     if args.format == "json":
@@ -168,6 +179,7 @@ def handle_audit(args: argparse.Namespace) -> int:
             "findings": secret_res.get("findings", []),
             "strict_mode": args.strict,
             "test_verification": test_res,
+            "wiring_audit": wiring_res,
             "mutation_report": mutation_report.model_dump() if mutation_report else None,
         }
         print(json.dumps(payload, indent=2))
@@ -178,6 +190,14 @@ def handle_audit(args: argparse.Namespace) -> int:
             print("❌ Segredos encontrados:")
             for f in secret_res["findings"]:
                 print(f" - {f['file']}:{f['line']} [{f['type']}]")
+
+        if wiring_res:
+            if wiring_res["passed"]:
+                print("✅ Capability Auto-Wiring PASS: Todos os módulos conectados.")
+            else:
+                print("❌ Capability Auto-Wiring FAIL: Módulos desconectados detectados:")
+                for unwired_mod in wiring_res.get("unwired_modules", []):
+                    print(f" - {unwired_mod}")
 
         if args.strict:
             if test_res and test_res["passed"]:

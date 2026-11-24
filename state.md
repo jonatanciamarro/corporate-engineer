@@ -11,12 +11,12 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0023-modular-cli-architecture` | 🟢 Suíte com 287/287 testes PASS, 0 erros Ruff e Mypy, Zero-Secret Guard ativo |
+| **Branch Ativa** | `feat/IMP-0029-continuous-capability-auto-wiring` | 🟢 Suíte com 301/301 testes PASS, 0 erros Ruff e Mypy, Zero-Secret Guard ativo |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **287/287 PASS** | Cobertura global robusta de 88%+ (`pytest-cov`) em 42.17s (3 novos testes em `test_cli_modular_architecture.py`) |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (159 arquivos verificados e formatados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 97 arquivos validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **301/301 PASS** | Cobertura global robusta de 88%+ (`pytest-cov`) em 55.17s (7 novos testes em `test_adversarial_dialectical_loop.py`) |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (166 arquivos verificados e formatados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 101 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` (tempo de varredura sub-1s) |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Always-On Ativo** | Frontmatter `trigger: always_on` ativo em `corp-pipeline-orchestrator.md` |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -25,6 +25,49 @@
 ---
 
 ## 2. O Que Foi Feito Recentemente
+
+### Sessão Atual (Implementação de IMP-0029 / ADR-029: Invariante Arquitetural de Auto-Conexão e Verificação Contínua de Potência Máxima — 100% Filosoph & Zero Código Órfão):
+1. **Invariante 9 Adicionada às Diretrizes Canônicas (`AGENTS.md`, `GEMINI.md`, `corporate-quality-gate.md`)**:
+   - Estabelece a obrigatoriedade dos 5 elos de auto-conexão para toda nova funcionalidade: DTO Pydantic v2, exportação pública em `__all__`, exposição na CLI, mapeamento no Prompt Refiner e ancoragem no pipeline autônomo.
+2. **Modelos DTO Pydantic v2 (`src/corporate_engineer/models.py`)**:
+   - `ModuleWiringStatus`: Status detalhado por módulo (caminho, se possui exports públicos, símbolos exportados, se possui testes unitários dedicados, se está exposto na CLI e flag booleana `is_wired`).
+   - `WiringAuditReport`: Relatório consolidado de auditoria de auto-conexão contendo total de módulos, módulos conectados, módulos desconectados/órfãos, taxa de conexão (`wiring_rate_pct`) e booleano `is_fully_wired`.
+3. **Auditor Estático de Auto-Conexão (`src/corporate_engineer/quality/wiring_auditor.py`)**:
+   - `CapabilityWiringAuditor`: Varredura AST dos submódulos de `src/corporate_engineer/`, inspeção do `__all__` dos pacotes pais, correlação com arquivos de teste em `tests/`, detecção de subparsers registrados na CLI (`parser.py`) e auditoria rigorosa de integridade.
+4. **Auto-Conexão Ativa dos Módulos do Framework**:
+   - Identificados e auto-conectados 9 módulos previamente desconectados (`git_utils`, `adversarial`, `hooks_runner`, `git_hooks_installer`, `storage_cleaner`, `tool_auto_healer`, `tool_security_guard`, `dataset`, `trainer`) em seus respectivos `__init__.py`.
+   - Re-exportação explícita de `CapabilityWiringAuditor`, `generate_pr_url`, `is_branch_pushed` e `push_branch_to_remote` no módulo raiz `src/corporate_engineer/__init__.py`.
+5. **Integração no Quality Gate, CLI e Pipeline Autônomo**:
+   - CLI: Adicionada a flag `--wiring` ao comando `audit` (`corporate-engineer audit --wiring`).
+   - Quality Gate: Método `run_wiring_audit()` acoplado ao `QualityGateRunner`.
+   - Pipeline FSM: Invocação automática do `run_wiring_audit()` na fase `AUDIT` do `AutonomousEngineeringGraph.run_pipeline`.
+6. **Shift-Left TDD & Qualidade (`tests/test_auto_wiring_integrity.py`)**:
+   - 7 novos testes unitários e de integração cobrindo auditoria estática, DTOs, integração CLI, bloqueio de módulos órfãos e execução no pipeline autônomo.
+   - Suíte global mantida em **301/301 testes PASS** em 54.72s.
+   - 0 erros Ruff (166 arquivos), 0 erros Mypy e Zero-Secret Scan PASS.
+7. **Governança & Arquitetura**:
+   - Formalização do [ADR-029](docs/adr/ADR-029-continuous-capability-auto-wiring.md), plano de arquitetura `plan_v2_auto_wiring_maximum_power.md` e minuta [PR-CORP-029.md](docs/pull_requests/PR-CORP-029.md).
+
+
+### Sessão Atual (Implementação de IMP-0026 / ADR-028: Tri-Phase Adversarial Dialectical Loop — Red Team 1.5 → Transcendência 1.6 → Verificação 1.7):
+1. **Modelos DTO Pydantic v2 (`src/corporate_engineer/models.py`)**:
+   - `RedTeamVulnerabilitySeverity` (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`), `RedTeamThreatCategory` (5 eixos de vulnerabilidade).
+   - `RedTeamVulnerability`, `RedTeamAttackReport` com bloqueio formal (`is_blocked=True`).
+   - `TranscendenceHardening`, `TranscendencePlan` com matriz de resolução formal e invariantes.
+   - `ChaosTestCase`, `RedTeamVerdictStatus`, `AdversarialVerdict`, `DialecticalLoopResult`.
+2. **Motores Adversariais e Dialéticos (`src/corporate_engineer/orchestrator/adversarial.py`)**:
+   - `AdversarialRedTeam`: Ataque em 5 eixos na Fase 1.5 e re-verificação na Fase 1.7 com síntese da Matriz de Chaos Tests.
+   - `ArchitectureTranscender`: Fase 1.6 elevando fraquezas conceituais para invariantes estruturais (RLock, CircuitBreaker, AtomicFileSandbox, timeouts).
+   - `AdversarialLoopCoordinator`: Orquestrador master com Fast-Path Bypass inteligente via Sistema 1 para tarefas rotineiras de baixo risco (`LOW`).
+3. **Integração no Core Orchestrator & CLI**:
+   - `AutonomousEngineeringGraph.run_pipeline`: Injeção do loop dialético na fase `PLANNING` antes de `TDD` com injeção de `adversarial_verdict` e `chaos_matrix` nos detalhes do relatório.
+   - CLI Corporativa: Subcomando oficial `corporate-engineer dialectic <prompt>` com saídas em `text`, `json` e `markdown`.
+4. **Shift-Left TDD & Qualidade (`tests/test_adversarial_dialectical_loop.py`)**:
+   - 7 novos testes unitários e de integração (100% PASS).
+   - Suíte global expandida para **301/301 testes PASS** em 55.17s.
+   - 0 erros Ruff (166 arquivos), 0 erros Mypy (101 arquivos) e Zero-Secret Scan PASS.
+5. **Governança & Minuta de PR**:
+   - Formalização do [ADR-028](docs/adr/ADR-028-tri-phase-adversarial-dialectical-loop.md), minuta [PR-CORP-026.md](docs/pull_requests/PR-CORP-026.md) e atualização de `.agents/orchestration/improvement-backlog.md` (`IMP-0026` -> `IMPLEMENTED`).
 
 ### Sessão Atual (Implementação de IMP-0023 / ADR-026: Modularização da CLI Corporativa e Decomposição do Monólito):
 1. **Decomposição do Monólito de 1.884 Linhas (`src/corporate_engineer/cli/`)**:
@@ -367,12 +410,14 @@
    - `IMP-0021`: Isolamento Atômico do Motor de Testes de Mutação (Safe Sandbox & Atomic Reversion) - `IMPLEMENTED` (ADR-022, PR-CORP-021, 9 novos testes, 243/243 PASS).
    - `IMP-0022`: Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos no Pre-Flight - `IMPLEMENTED` (ADR-024, PR-CORP-022, 6 novos testes, 261/261 PASS).
    - `IMP-0023`: Modularização da CLI Corporativa (Decomposição do Monólito de 1661 Linhas) - `IMPLEMENTED` (ADR-026, PR-CORP-023, 3 novos testes, 287/287 PASS).
-9. `[ ]` **Trilha Estratégica / IMP-0026: Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7)**:
-   - Especificação do loop dialético pré-execução catalogada em `improvement-backlog.md` (`SAVED_NOT_APPROVED`) com automação Always-On via hooks do Master Orchestrator.
+9. `[x]` **Trilha Estratégica / IMP-0026: Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7)**:
+   - Loop dialético implementado (`AdversarialRedTeam`, `ArchitectureTranscender`, `AdversarialLoopCoordinator`), integrado no `run_pipeline` da FSM e CLI `dialectic`. Concluído com 7 testes automatizados (301/301 PASS), ADR-028 e PR-CORP-026. `IMPLEMENTED`.
 10. `[x]` **Trilha Estratégica / IMP-0027: Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E**:
    - Conexão total de todos os motores em `run_pipeline`, unificação do cache AST SHA-256 em `BlastRadiusAnalyzer` e `PromptRefiner`, canonização do `CanonicalSecretScanner`, 8 exportações públicas no top-level e suíte de 8 novos testes em `test_connected_e2e_pipeline.py` (278/278 PASS). `IMPLEMENTED` (ADR-025, PR-CORP-027).
 11. `[x]` **Trilha Governança / IMP-0028: Resiliência Universal de Hooks e Frontmatter Always-On para Eliminação Definitiva de Amnésia de Regras**:
    - Ativação de `trigger: always_on` em `corp-pipeline-orchestrator.md`, criação do dispatcher universal `run_hook.py` (.venv auto-detect e agnóstico de CWD), reconfiguração do `.agents/hooks.json`, formalização do ADR-027 e artefato plan_v2, e suíte de 6 novos testes em `test_hook_resilience_and_rule_triggers.py` (100% PASS). `IMPLEMENTED` (ADR-027).
+12. `[x]` **Trilha Qualidade & Governança / IMP-0029: Continuous Capability Auto-Wiring & Invariante de Potência Máxima (Zero Código Órfão)**:
+   - Invariante 9 adicionada a `AGENTS.md` e `GEMINI.md`, modelos DTO `ModuleWiringStatus` e `WiringAuditReport` em `models.py`, auditor estático `CapabilityWiringAuditor` em `quality/wiring_auditor.py`, comando `audit --wiring`, amarração no `run_pipeline` (Fase AUDIT), conexão de 9 módulos órfãos e suíte de 7 novos testes em `test_auto_wiring_integrity.py` (301/301 PASS). `IMPLEMENTED` (ADR-029, PR-CORP-029).
 
 ---
 
@@ -380,6 +425,8 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-24T12:00:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0029 (Continuous Capability Auto-Wiring & Invariante de Potência Máxima — 100% Filosoph & Zero Código Órfão): adição da Invariante 9 em AGENTS.md e GEMINI.md, modelos DTO Pydantic v2 ModuleWiringStatus e WiringAuditReport, implementação do CapabilityWiringAuditor em src/corporate_engineer/quality/wiring_auditor.py com varredura AST e detecção de orfandade, integração da flag --wiring na CLI audit, anexação do run_wiring_audit() ao QualityGateRunner e à fase AUDIT do AutonomousEngineeringGraph.run_pipeline, auto-conexão e re-exportação de 9 módulos previamente desconectados, formalização do ADR-029, plano plan_v2_auto_wiring_maximum_power.md, minuta PR-CORP-029.md, 7 novos testes em tests/test_auto_wiring_integrity.py (301/301 testes globais PASS em 54.72s, 0 erros Ruff/Mypy e Zero-Secret Scan PASS). |
+| `2026-11-24T11:35:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0026 (Tri-Phase Adversarial Loop — Red Team 1.5 → Transcendência 1.6 → Verificação 1.7): implementação de AdversarialRedTeam, ArchitectureTranscender e AdversarialLoopCoordinator em src/corporate_engineer/orchestrator/adversarial.py, modelos DTO Pydantic v2 (RedTeamAttackReport, TranscendencePlan, ChaosTestCase, AdversarialVerdict), integração no PLANNING do graph.run_pipeline, subcomando CLI corporate-engineer dialectic, formalização do ADR-028 e PR-CORP-026.md, 7 novos testes em tests/test_adversarial_dialectical_loop.py (301/301 testes globais PASS em 55.17s, 0 erros Ruff/Mypy e Zero-Secret Scan PASS). |
 | `2026-11-24T11:00:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0023 (Modularização da CLI Corporativa e Decomposição do Monólito de 1.884 linhas): decomposição de src/corporate_engineer/cli.py em subpacote src/corporate_engineer/cli/ com 9 módulos de comandos (orchestrator, rag, quality, system_one, mcp, prompt, telemetry, pr, lora), módulos centrais parser.py, main.py, __main__.py e __init__.py preservando 100% de compatibilidade retroativa, formalização do ADR-026 e PR-CORP-023.md, 3 novos testes em tests/test_cli_modular_architecture.py (287/287 testes globais PASS em 42.17s, 0 erros Ruff/Mypy e Zero-Secret Scan PASS). |
 | `2026-11-24T10:55:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0028 (Resiliência Universal de Hooks do Ciclo de Vida e Ativação Permanente de Regras Always-On): ativação do frontmatter `trigger: always_on` em `corp-pipeline-orchestrator.md`, implementação do dispatcher universal `run_hook.py` em `.agents/orchestration/hooks/` com autodetecção de `.venv` e tolerância a CWD, reconfiguração do `.agents/hooks.json` para todos os 5 eventos do ciclo de vida, formalização do ADR-027 e emissão do artefato plan_v2, 6 novos testes em `tests/test_hook_resilience_and_rule_triggers.py` (100% PASS), 0 erros Ruff/Mypy e Zero-Secret Scan PASS. |
 | `2026-11-24T10:15:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0027 (Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E do run_pipeline): extensão do `CachedASTCodebaseIndexer` com helpers `get_file_symbols` e `get_all_symbol_names`, injeção nativa de cache e método `analyze_files(Sequence[str | Path])` no `BlastRadiusAnalyzer`, resolução O(1) de símbolos no `ContextAwarePromptRefiner`, canonização de `CanonicalSecretScanner` como Single Source of Truth para credenciais em `QualityGateRunner`, `SurgicalTestRunner` e `tool_security_guard`, amarração E2E completa das 5 fases FSM em `AutonomousEngineeringGraph.run_pipeline` (PLANNING antecipado, TDD cirúrgico, auto-remediação sintática, scorecard semântico e PR 1-clique com push remoto), exportação dos 8 símbolos públicos em `corporate_engineer.__all__`, formalização do ADR-025 e PR-CORP-027, e 8 novos testes em `tests/test_connected_e2e_pipeline.py` (278/278 testes globais PASS em 47.37s, 0 erros Ruff/Mypy). |

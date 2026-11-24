@@ -12,6 +12,7 @@ from corporate_engineer.cli.commands.mcp import handle_mcp
 from corporate_engineer.cli.commands.orchestrator import (
     handle_anticipate,
     handle_dag,
+    handle_dialectic,
     handle_run,
     handle_swarm,
 )
@@ -56,6 +57,7 @@ _DISPATCH_MAP = {
     "prompt": handle_prompt,
     "lora": handle_lora,
     "anticipate": handle_anticipate,
+    "dialectic": handle_dialectic,
 }
 
 

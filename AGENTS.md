@@ -33,4 +33,6 @@ Repository-wide operating standards and instructions for AI agents working in `c
 6. **Improvement Governance**: Never apply unsolicited architectural modifications. Present proposals via `[CORP-PIPELINE / IMPROVEMENT DETECTED]` and offer saving to `.agents/orchestration/improvement-backlog.md`.
 7. **ADR & Git Conventions**: Create an ADR in `docs/adr/` for significant architectural modifications. Commit using Conventional Commits (`feat:`, `fix:`, `refactor:`, etc.).
 8. **Mandatory Remote Push Before PR URL (Always-On)**: The agent must ALWAYS push the branch to `origin` (`git push -u origin <branch>`) BEFORE generating, presenting, or formatting the 1-click GitHub PR URL. A PR creation link must NEVER lead to a GitHub 404.
+9. **Auto-Conexão e Potência Máxima Mandatória (Always-On Auto-Wiring)**: Toda nova implementação (módulo, classe, motor ou subcomando) DEVE OBRIGATORIAMENTE ser conectada aos 5 elos da cadeia: contratos Pydantic v2, exportação em `__all__`, exposição em subparser da CLI, mapeamento no Prompt Refiner e verificação no `QualityGateRunner.run_wiring_audit()`. Zero módulos órfãos ou desconectados são tolerados no repositório.
+
 

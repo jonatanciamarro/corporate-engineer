@@ -12,6 +12,7 @@ from corporate_engineer.cli.commands.orchestrator import (
     DAG_TRANSITIONS,
     handle_anticipate,
     handle_dag,
+    handle_dialectic,
     handle_run,
     handle_swarm,
 )
@@ -49,6 +50,7 @@ __all__ = [
     "handle_dag",
     "handle_dataset",
     "handle_decide",
+    "handle_dialectic",
     "handle_eval",
     "handle_fix",
     "handle_index",

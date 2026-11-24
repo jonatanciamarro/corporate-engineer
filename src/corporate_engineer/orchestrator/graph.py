@@ -26,6 +26,9 @@ class AutonomousEngineeringGraph:
         self.task = task
         self.state = AgentState(task=task)
         self.tracer = AgentTracer(service_name="corporate-engineer")
+        from corporate_engineer.quality.gate import QualityGateRunner
+
+        self.quality_runner = QualityGateRunner(project_root=self.workspace_path)
 
     @property
     def workspace_path(self) -> Path:
@@ -129,6 +132,20 @@ class AutonomousEngineeringGraph:
                     else f"Plano de Engenharia para {self.task.ticket_id}"
                 )
             )
+
+            # Loop Dialético Tri-Fásico (Fases 1.5 -> 1.6 -> 1.7 - IMP-0026 / ADR-028)
+            from corporate_engineer.orchestrator.adversarial import AdversarialLoopCoordinator
+
+            dialectical_coord = AdversarialLoopCoordinator()
+            dialectical_res = dialectical_coord.run_dialectical_loop(
+                plan_id=self.task.ticket_id,
+                plan_text=plan_text,
+                risk_level=getattr(anticipation_plan, "risk_level", "MEDIUM"),
+            )
+            details["adversarial_verdict"] = dialectical_res.verdict.status.value
+            details["chaos_matrix"] = [c.model_dump() for c in dialectical_res.verdict.chaos_matrix]
+            details["dialectical_result"] = dialectical_res.model_dump()
+
             self.step_plan(plan_text)
             cp1 = self.save_checkpoint()
             checkpoints_created.append(cp1.name)
@@ -190,16 +207,19 @@ class AutonomousEngineeringGraph:
 
             # Fase 4: Portão de Qualidade & Auditoria Estrita
             from corporate_engineer.eval.scorecard import SemanticCodeEvaluator
-            from corporate_engineer.quality.gate import QualityGateRunner
 
-            runner = QualityGateRunner(project_root=self.workspace_path)
-            secret_scan = runner.run_secret_scan()
+            secret_scan = self.quality_runner.run_secret_scan()
             details["secret_scan"] = secret_scan
             audit_passed = bool(secret_scan.get("passed", False))
 
+            wiring_audit = self.quality_runner.run_wiring_audit()
+            details["wiring_audit"] = wiring_audit
+            if strict_audit and not wiring_audit.get("passed", False):
+                audit_passed = False
+
             test_run_details: dict[str, Any] = {}
             if strict_audit and audit_passed:
-                test_res = runner.run_tests()
+                test_res = self.quality_runner.run_tests()
                 test_run_details = test_res
                 audit_passed = bool(test_res.get("passed", False))
             details["test_run"] = test_run_details

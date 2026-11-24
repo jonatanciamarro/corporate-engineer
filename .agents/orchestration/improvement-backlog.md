@@ -51,8 +51,10 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0023` | Modularização da CLI Corporativa (Decomposição do Monólito) | `MAINTAINABILITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0024` | Gemini LoRA Modular Pipeline para Motion Graphics & Tool Calling (DarkFactory) | `CAPABILITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0025` | Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite | `ORCHESTRATION` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
-| `IMP-0026` | Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7) | `ORCHESTRATION` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0026` | Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7) | `ORCHESTRATION` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0027` | Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E | `ORCHESTRATION` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-24` |
+| `IMP-0028` | Resiliência Universal de Hooks do Ciclo de Vida e Ativação Permanente de Regras Always-On | `AUTOMATION` | Baixa-Média (S-M) | `IMPLEMENTED` | `2026-11-24` |
+| `IMP-0029` | Continuous Capability Auto-Wiring & Invariante de Potência Máxima (Zero Código Órfão) | `QUALITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-24` |
 
 ---
 
@@ -503,7 +505,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0026: Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7)
 - **Categoria**: `ORCHESTRATION` | `QUALITY` | `SECURITY` | `TRANSCENDENCE`
-- **Status**: `IMPLEMENTED` (Ref: `ADR-026`, `PR-CORP-023.md`)
+- **Status**: `IMPLEMENTED` (Ref: `ADR-028`, `PR-CORP-026.md`)
 - **Data de Descoberta**: 2026-11-22
 - **Problema / Limitação Atual**: O fluxo de planejamento atual (Fase 1) elabora planos e metaprompts que seguem diretamente para execução/delegação (Fase 4 e Swarm). Embora eficiente, esse design sofre com a sicoferência (*sycophancy*) dos LLMs: planos com premissas frágeis de rede, concorrência, permissões de ferramentas MCP ou edge cases patológicos são aceitos sem contestação agressiva. Quando despachados para um Swarm multi-agente, esses planos defeituosos geram desperdício de dezenas de milhares de tokens, conflitos no Fan-In e mocks ilusórios para forçar testes a passar.
 - **Solução Proposta (Loop Dialético Tri-Fásico Always-On)**:
@@ -550,6 +552,39 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Componentes Afetados**: `src/corporate_engineer/rag/impact.py`, `src/corporate_engineer/prompt/refiner.py`, `src/corporate_engineer/orchestrator/graph.py`, `src/corporate_engineer/quality/gate.py`, `src/corporate_engineer/models.py`, `src/corporate_engineer/__init__.py`.
 - **Complexidade**: Média-Alta (M-L).
 - **Critérios de Aceite**: Suíte de testes TDD verde, 0 erros Ruff/Mypy, `run_pipeline` acionando os motores unificados e pre-flight 100% aprovado.
+
+---
+
+### 🔹 IMP-0028: Resiliência Universal de Hooks do Ciclo de Vida e Ativação Permanente de Regras Always-On
+- **Categoria**: `AUTOMATION` | `ARCHITECTURE` | `RELIABILITY`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-027`)
+- **Data de Descoberta**: 2026-11-24
+- **Problema / Limitação Atual**: Falhas de amnésia do sistema ocorriam por dois motivos: a regra principal `corp-pipeline-orchestrator.md` não continha o frontmatter `trigger: always_on`, impedindo sua injeção automática no contexto; e os comandos de hooks configurados em `.agents/hooks.json` usavam caminhos relativos ao subdiretório `.agents/`, falhando silenciosamente com `[Errno 2] No such file or directory` quando disparados a partir da raiz do repositório pelo Antigravity.
+- **Solução Proposta**:
+  1. *Ativação Always-On*: Inserção do frontmatter `trigger: always_on` no topo de `corp-pipeline-orchestrator.md`.
+  2. *Dispatcher Universal de Hooks*: Criação de `.agents/orchestration/hooks/run_hook.py` capaz de resolver agnosticamente o workspace root, localizar o interpretador `.venv\Scripts\python.exe` e gerenciar execução in-process ou via subprocesso seguro.
+  3. *Reconfiguração de Hooks*: Atualização de todos os 5 eventos em `.agents/hooks.json` (`SessionStart`, `PreInvocation`, `PreToolUse`, `PostToolUse`, `Stop`) para apontarem para o dispatcher universal.
+- **Benefícios Esperados**: Eliminação completa de amnésia operacional, injeção de contexto garantida em 100% das sessões e resiliência total na execução de hooks.
+- **Componentes Afetados**: `.agents/rules/corp-pipeline-orchestrator.md`, `.agents/orchestration/hooks/run_hook.py`, `.agents/hooks.json`, `tests/test_hook_resilience_and_rule_triggers.py`.
+- **Complexidade**: Baixa-Média (S-M).
+- **Critérios de Aceite**: 100% dos testes em `test_hook_resilience_and_rule_triggers.py` passando, 0 erros Ruff/Mypy, hooks executando sem erro.
+
+---
+
+### 🔹 IMP-0029: Continuous Capability Auto-Wiring & Invariante de Potência Máxima (Zero Código Órfão)
+- **Categoria**: `QUALITY` | `ARCHITECTURE` | `ORCHESTRATION` | `TRANSCENDENCE`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-029`, `PR-CORP-029.md`)
+- **Data de Descoberta**: 2026-11-24
+- **Problema / Limitação Atual**: Módulos e recursos recém-criados corriam o risco de permanecer desconectados (sem re-exportação em `__init__.py`, sem flags na CLI, sem testes associados ou sem integração ao pipeline autônomo), gerando "dívida de desconexão" e operando abaixo do potencial máximo.
+- **Solução Proposta**:
+  1. *Invariante 9*: Estabelecer no `AGENTS.md` e `GEMINI.md` a regra mandatória de que toda nova implementação deve estar conectada nos 5 elos (contratos DTO, exportação pública, CLI, prompt refiner e pipeline autônomo).
+  2. *Auditor Estático de Auto-Conexão*: Implementar `CapabilityWiringAuditor` em `src/corporate_engineer/quality/wiring_auditor.py` para verificar AST, imports, exports públicos, cobertura de testes e orfandade de código.
+  3. *CLI Flag e Pipeline Integration*: Adicionar flag `--wiring` ao comando `audit` e acoplar a verificação ao `QualityGateRunner` e à fase de `AUDIT` do `AutonomousEngineeringGraph.run_pipeline`.
+  4. *Auto-Conexão Ativa*: Conectar e exportar todos os 9 módulos que estavam desconectados em `orchestrator`, `quality`, `system_one` e no módulo raiz.
+- **Benefícios Esperados**: Garantia automatizada de 100% de potência em todas as capacidades do framework, zero módulos órfãos e feedback preventivo imediato no pre-flight.
+- **Componentes Afetados**: `src/corporate_engineer/models.py`, `src/corporate_engineer/quality/wiring_auditor.py`, `src/corporate_engineer/quality/gate.py`, `src/corporate_engineer/cli/commands/quality.py`, `src/corporate_engineer/orchestrator/graph.py`, `AGENTS.md`, `GEMINI.md`, `.agents/rules/corporate-quality-gate.md`, `tests/test_auto_wiring_integrity.py`.
+- **Complexidade**: Média-Alta (M-L).
+- **Critérios de Aceite**: 100% dos testes em `test_auto_wiring_integrity.py` passando, comando `audit --wiring` validando 0 módulos desconectados, pre-flight 100% aprovado.
 
 
 

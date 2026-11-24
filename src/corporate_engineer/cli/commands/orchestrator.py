@@ -159,6 +159,41 @@ def register_anticipate_parser(subparsers: Any) -> argparse.ArgumentParser:
     return anticipate_parser
 
 
+def register_dialectic_parser(subparsers: Any) -> argparse.ArgumentParser:
+    """Register parser for `dialectic` command (IMP-0026)."""
+    dialectic_parser = subparsers.add_parser(
+        "dialectic",
+        help="Tri-Phase Adversarial Loop (Red Team 1.5 -> Transcendence 1.6 -> Re-Verification 1.7) (IMP-0026)",
+    )
+    dialectic_parser.add_argument(
+        "prompt", help="Plan, architecture, or prompt to dialectically evaluate"
+    )
+    dialectic_parser.add_argument(
+        "--format",
+        choices=["text", "json", "markdown"],
+        default="text",
+        help="Output format: text, json, or markdown (default: text)",
+    )
+    dialectic_parser.add_argument(
+        "--force-attack",
+        action="store_true",
+        help="Force full adversarial attack bypassing fast-path",
+    )
+    dialectic_parser.add_argument(
+        "--risk-level",
+        choices=["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+        default="MEDIUM",
+        help="Target risk level (default: MEDIUM)",
+    )
+    dialectic_parser.add_argument(
+        "--output",
+        "-o",
+        default=None,
+        help="Optional file path to export dialectical evaluation",
+    )
+    return dialectic_parser
+
+
 def handle_run(args: argparse.Namespace) -> int:
     task = TaskInput(
         ticket_id=args.ticket,
@@ -419,3 +454,66 @@ def handle_anticipate(args: argparse.Namespace) -> int:
         print(output_text)
 
     return 0
+
+
+def handle_dialectic(args: argparse.Namespace) -> int:
+    from corporate_engineer.models import RedTeamVerdictStatus
+    from corporate_engineer.orchestrator.adversarial import AdversarialLoopCoordinator
+
+    coord = AdversarialLoopCoordinator()
+    res = coord.run_dialectical_loop(
+        plan_id="CLI-DIALECTIC",
+        plan_text=args.prompt,
+        risk_level=getattr(args, "risk_level", "MEDIUM"),
+        force_attack=getattr(args, "force_attack", False),
+    )
+
+    fmt = getattr(args, "format", "text")
+    if fmt == "json":
+        output_text = res.model_dump_json(indent=2)
+    elif fmt == "markdown":
+        lines = [
+            "# Tri-Phase Adversarial Loop Report (IMP-0026 / ADR-028)",
+            f"- **Status**: `{res.verdict.status.value}`",
+            f"- **Duração**: `{res.duration_ms:.2f} ms`",
+            f"- **Vulnerabilidades Iniciais**: {res.initial_attack.total_vulnerabilities}",
+            f"- **Severidade Máxima**: `{res.initial_attack.highest_severity.value}`",
+            f"- **Bloqueado Inicialmente**: {'SIM' if res.initial_attack.is_blocked else 'NÃO'}",
+            "",
+            "## Matriz Obrigatória de Chaos Tests (TDD)",
+        ]
+        for c in res.verdict.chaos_matrix:
+            lines.append(f"- **[{c.case_id}]** `{c.tdd_scenario}`: {c.expected_behavior}")
+        output_text = "\n".join(lines)
+    else:
+        lines = [
+            f"\n{'=' * 70}",
+            "⚔️  TRI-PHASE ADVERSARIAL LOOP (RED TEAM 1.5 → TRANSCENDÊNCIA 1.6 → VERIFICAÇÃO 1.7)",
+            f"{'=' * 70}",
+            f"🎯 Status Final          : {res.verdict.status.value}",
+            f"⏱️  Tempo de Execução     : {res.duration_ms:.2f} ms",
+            f"🚨 Vulnerabilidades Fase 1.5: {res.initial_attack.total_vulnerabilities} (Max: {res.initial_attack.highest_severity.value})",
+            f"🛡️  Invariantes Fase 1.6  : {len(res.transcendence.structural_invariants) if res.transcendence else 0}",
+            f"✅ Re-Verificação Fase 1.7: {'APROVADO (0 bloqueios)' if not res.re_verification or not res.re_verification.is_blocked else 'BLOQUEADO'}",
+            f"{'-' * 70}",
+            f"🧪 MATRIZ DE CHAOS TESTS ({len(res.verdict.chaos_matrix)} cenários obrigatórios para TDD):",
+        ]
+        for c in res.verdict.chaos_matrix:
+            lines.append(f"   • [{c.case_id}] {c.tdd_scenario}")
+            lines.append(f"     👉 Gatilho : {c.injection_trigger}")
+            lines.append(f"     👉 Esperado: {c.expected_behavior}")
+        lines.append(f"{'=' * 70}\n")
+        output_text = "\n".join(lines)
+
+    out_file = getattr(args, "output", None)
+    if out_file:
+        Path(out_file).write_text(output_text, encoding="utf-8")
+        print(f"Relatório dialético exportado para: {out_file}")
+    else:
+        print(output_text)
+
+    return (
+        0
+        if res.verdict.status in (RedTeamVerdictStatus.VERIFIED, RedTeamVerdictStatus.BYPASSED)
+        else 1
+    )

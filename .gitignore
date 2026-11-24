@@ -64,3 +64,5 @@ models/*.onnx
 models/*.onnx_data
 models/system_one_lora/
 
+
+.agents/.agents/

@@ -36,6 +36,7 @@ src/corporate_engineer/mcp/circuit_breaker.py
 src/corporate_engineer/mcp/client.py
 src/corporate_engineer/mcp/hub.py
 src/corporate_engineer/orchestrator/__init__.py
+src/corporate_engineer/orchestrator/adversarial.py
 src/corporate_engineer/orchestrator/anticipator.py
 src/corporate_engineer/orchestrator/graph.py
 src/corporate_engineer/orchestrator/hooks_runner.py
@@ -51,6 +52,7 @@ src/corporate_engineer/quality/storage_cleaner.py
 src/corporate_engineer/quality/surgical_runner.py
 src/corporate_engineer/quality/tool_auto_healer.py
 src/corporate_engineer/quality/tool_security_guard.py
+src/corporate_engineer/quality/wiring_auditor.py
 src/corporate_engineer/rag/__init__.py
 src/corporate_engineer/rag/ast_indexer.py
 src/corporate_engineer/rag/cached_ast_indexer.py
@@ -66,8 +68,10 @@ src/corporate_engineer/system_one/router.py
 src/corporate_engineer/system_one/trainer.py
 src/corporate_engineer/telemetry/__init__.py
 src/corporate_engineer/telemetry/tracer.py
+tests/test_adversarial_dialectical_loop.py
 tests/test_ast_indexer.py
 tests/test_atomic_mutation_sandbox.py
+tests/test_auto_wiring_integrity.py
 tests/test_autonomous_runner.py
 tests/test_cached_ast_indexer.py
 tests/test_circuit_breaker.py

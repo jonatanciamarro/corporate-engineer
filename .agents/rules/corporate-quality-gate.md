@@ -11,10 +11,12 @@ This project adheres to the **Corporate Software Engineer Framework** and **ECC 
 - **Linting & Code Style**: `ruff check .`
 - **Static Type Checking**: `mypy .`
 - **Secret & Credential Scan**: `python .agents/skills/corp-pipeline/scripts/secret_scanner.py .`
+- **Capability Auto-Wiring Audit**: `python -m corporate_engineer.cli audit --wiring`
 
 ## Engineering Invariants
 1. **Shift-Left TDD**: For any bug fix or feature addition, write failing tests first (`tests/`), then implement minimal code to reach green.
 2. **Pydantic V2 & Strong Typing**: Models in `src/corporate_engineer/models.py` must use strict Pydantic v2 validation.
 3. **Architecture Decisions**: Major structural changes require an ADR in `docs/adr/ADR-<NUM>-<slug>.md`.
-4. **Pre-Flight Gate**: Never commit or submit changes before running `ruff check .`, `mypy .`, `pytest`, and `secret_scanner.py`.
+4. **Pre-Flight Gate**: Never commit or submit changes before running `ruff check .`, `mypy .`, `pytest`, `secret_scanner.py`, and `audit --wiring`.
 5. **Conventional Commits**: Commits must follow `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, or `chore:`.
+6. **Continuous Capability Auto-Wiring**: Every module in `src/` must be exported, tested, and wired into the system architecture (zero orphan code).

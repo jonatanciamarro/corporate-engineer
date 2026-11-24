@@ -35,6 +35,19 @@ class QualityGateRunner:
         findings = self.secret_scanner.scan_directory(self.project_root)
         return {"passed": len(findings) == 0, "findings": findings}
 
+    def run_wiring_audit(self) -> dict[str, Any]:
+        """Execute capability auto-wiring audit to ensure no orphaned or unwired modules."""
+        from corporate_engineer.quality.wiring_auditor import CapabilityWiringAuditor
+
+        auditor = CapabilityWiringAuditor(workspace_root=self.project_root)
+        report = auditor.audit()
+        return {
+            "passed": report.passed,
+            "report": report.model_dump(),
+            "unwired_modules": report.unwired_modules,
+            "missing_test_modules": report.missing_test_modules,
+        }
+
     def run_tests(
         self,
         command: str | list[str] = "pytest",

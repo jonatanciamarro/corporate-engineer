@@ -78,4 +78,6 @@ O ecossistema está organizado e mapeado em registros canônicos:
 6. **Governança de Melhorias**: NUNCA aplicar melhorias não solicitadas sem aprovação. Apresentar formato padrão `[CORP-PIPELINE / IMPROVEMENT DETECTED]` e oferecer salvamento no backlog.
 7. **Padrão Git & Conventional Commits**: Branches no padrão `feat/<ID>-<slug>` ou `fix/<ID>-<slug>`. Commits seguindo a especificação convencional (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`).
 8. **Push Remoto Pré-PR Mandatório (Always-On)**: O envio da branch para o remote no GitHub (`git push -u origin <branch>`) DEVE OBRIGATORIAMENTE anteceder a geração, formatação ou apresentação de qualquer link de PR. O framework e o orquestrador NUNCA devem emitir links de PR para branches locais não sincronizadas (garantindo zero erros 404 no GitHub).
+9. **Auto-Conexão e Potência Máxima Mandatória (Always-On Auto-Wiring)**: Toda nova implementação (módulo, classe, motor ou subcomando) DEVE OBRIGATORIAMENTE ser conectada aos 5 elos da cadeia: contratos Pydantic v2, exportação em `__all__`, exposição em subparser da CLI, mapeamento no Prompt Refiner e verificação no `QualityGateRunner.run_wiring_audit()`. Zero módulos órfãos ou desconectados são tolerados no repositório.
+
 

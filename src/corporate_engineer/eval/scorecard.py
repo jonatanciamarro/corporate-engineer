@@ -91,8 +91,17 @@ class FunctionMetricsVisitor(ast.NodeVisitor):
 class SemanticCodeEvaluator:
     """Evaluates Python code against 5 Corporate Software Engineering Axes."""
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, workspace_root: str | Path | None = None) -> None:
+        self.workspace_root = Path(workspace_root) if workspace_root is not None else None
+
+    def evaluate(
+        self,
+        target_path: str | Path | None = None,
+        min_passing_score: float = 80.0,
+    ) -> SemanticEvaluationReport:
+        """Scan directory and compute composite corporate scorecard."""
+        path = target_path or self.workspace_root or "."
+        return self.evaluate_directory(directory_path=path, min_passing_score=min_passing_score)
 
     def evaluate_source(
         self,

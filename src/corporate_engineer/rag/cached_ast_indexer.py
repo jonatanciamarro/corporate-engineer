@@ -5,6 +5,7 @@ Implements the content-hash-cache-pattern to avoid redundant AST parsing of unch
 
 import hashlib
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -114,6 +115,52 @@ class CachedASTCodebaseIndexer(ASTCodebaseIndexer):
                 self.cache_path.unlink()
             except OSError:
                 pass
+
+    def get_file_symbols(self, file_path: Path) -> list[dict[str, Any]]:
+        """Return indexed symbols for a given file, leveraging the SHA-256 cache."""
+        return self.index_file(file_path)
+
+    def get_all_symbol_names(self) -> set[str]:
+        """
+        Scan cache (indexing all .py files in root_path if cache is empty or has no symbols)
+        and return the set of all class and function names.
+        """
+        names: set[str] = set()
+        for entry in self._cache.values():
+            if isinstance(entry, dict) and "symbols" in entry:
+                for sym in entry["symbols"]:
+                    if isinstance(sym, dict) and "name" in sym:
+                        names.add(sym["name"])
+
+        if not names and self.root_path.exists():
+            for root, dirs, files in os.walk(self.root_path):
+                dirs[:] = [
+                    d
+                    for d in dirs
+                    if not d.startswith(".")
+                    and d
+                    not in {
+                        "venv",
+                        ".venv",
+                        "__pycache__",
+                        "build",
+                        "dist",
+                        ".git",
+                        "node_modules",
+                    }
+                ]
+                for f in sorted(files):
+                    if f.endswith(".py"):
+                        full_p = Path(root) / f
+                        self.index_file(full_p)
+
+            for entry in self._cache.values():
+                if isinstance(entry, dict) and "symbols" in entry:
+                    for sym in entry["symbols"]:
+                        if isinstance(sym, dict) and "name" in sym:
+                            names.add(sym["name"])
+
+        return names
 
     def get_cache_stats(self) -> dict[str, int]:
         """Return cache performance statistics."""

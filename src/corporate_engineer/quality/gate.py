@@ -2,65 +2,37 @@
 Quality Gate Runner executing Secret Audits, Testing verification and static checks.
 """
 
+from __future__ import annotations
+
 import os
-import re
 import shlex
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
-SECRET_PATTERNS = [
-    ("Private Key", re.compile("-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----")),
-    (
-        "AWS Access Key ID",
-        re.compile("(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}"),
-    ),
-    ("GitHub Personal Access Token", re.compile("gh[pousr]_[A-Za-z0-9_]{36,}")),
-    ("OpenAI API Key", re.compile("sk-(?:proj-|live-)?[a-zA-Z0-9]{32,}")),
-    ("Anthropic API Key", re.compile("sk-ant-[a-zA-Z0-9]{32,}")),
-    ("Google Gemini Key", re.compile("AIzaSy[A-Za-z0-9_\\-]{33}")),
-]
+from corporate_engineer.quality.secret_scanner import (
+    SECRET_PATTERNS,
+    CanonicalSecretScanner,
+)
+
+__all__ = ["SECRET_PATTERNS", "QualityGateRunner"]
 
 
 class QualityGateRunner:
-    def __init__(self, project_root: str | Path) -> None:
+    """Pre-flight quality gate runner orchestrating secret scans, tests, and static checks."""
+
+    def __init__(
+        self,
+        project_root: str | Path,
+        secret_scanner: CanonicalSecretScanner | None = None,
+    ) -> None:
         self.project_root = Path(project_root).resolve()
+        self.secret_scanner = secret_scanner or CanonicalSecretScanner()
 
     def run_secret_scan(self) -> dict[str, Any]:
-        findings = []
-        for root, dirs, files in os.walk(self.project_root):
-            dirs[:] = [
-                d
-                for d in dirs
-                if not d.startswith(".")
-                and d
-                not in {".git", ".venv", "venv", "__pycache__", "node_modules", "build", "dist"}
-            ]
-            rel_root = Path(root).relative_to(self.project_root)
-            if any(
-                part.startswith(".") or part in {".git", ".venv", "venv", "__pycache__"}
-                for part in rel_root.parts
-            ):
-                continue
-
-            for f in files:
-                if f.endswith((".py", ".json", ".yaml", ".yml", ".env", ".ts", ".js")):
-                    p = Path(root) / f
-                    try:
-                        text = p.read_text(encoding="utf-8", errors="ignore")
-                    except OSError:
-                        continue
-                    for line_idx, line in enumerate(text.splitlines(), start=1):
-                        for name, pat in SECRET_PATTERNS:
-                            if pat.search(line):
-                                findings.append(
-                                    {
-                                        "file": str(p.relative_to(self.project_root)),
-                                        "line": line_idx,
-                                        "type": name,
-                                    }
-                                )
+        """Run canonical credential detection across project root."""
+        findings = self.secret_scanner.scan_directory(self.project_root)
         return {"passed": len(findings) == 0, "findings": findings}
 
     def run_tests(
@@ -68,6 +40,7 @@ class QualityGateRunner:
         command: str | list[str] = "pytest",
         timeout: float = 120.0,
     ) -> dict[str, Any]:
+        """Run automated test suite with timeout and security boundaries."""
         if isinstance(command, str):
             cmd_list = shlex.split(command, posix=(os.name != "nt"))
         else:

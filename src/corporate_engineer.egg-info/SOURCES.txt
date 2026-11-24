@@ -2,7 +2,6 @@ LICENSE
 README.md
 pyproject.toml
 src/corporate_engineer/__init__.py
-src/corporate_engineer/cli.py
 src/corporate_engineer/git_utils.py
 src/corporate_engineer/models.py
 src/corporate_engineer.egg-info/PKG-INFO
@@ -11,6 +10,20 @@ src/corporate_engineer.egg-info/dependency_links.txt
 src/corporate_engineer.egg-info/entry_points.txt
 src/corporate_engineer.egg-info/requires.txt
 src/corporate_engineer.egg-info/top_level.txt
+src/corporate_engineer/cli/__init__.py
+src/corporate_engineer/cli/__main__.py
+src/corporate_engineer/cli/main.py
+src/corporate_engineer/cli/parser.py
+src/corporate_engineer/cli/commands/__init__.py
+src/corporate_engineer/cli/commands/lora.py
+src/corporate_engineer/cli/commands/mcp.py
+src/corporate_engineer/cli/commands/orchestrator.py
+src/corporate_engineer/cli/commands/pr.py
+src/corporate_engineer/cli/commands/prompt.py
+src/corporate_engineer/cli/commands/quality.py
+src/corporate_engineer/cli/commands/rag.py
+src/corporate_engineer/cli/commands/system_one.py
+src/corporate_engineer/cli/commands/telemetry.py
 src/corporate_engineer/eval/__init__.py
 src/corporate_engineer/eval/fixer.py
 src/corporate_engineer/eval/scorecard.py
@@ -33,6 +46,7 @@ src/corporate_engineer/quality/__init__.py
 src/corporate_engineer/quality/gate.py
 src/corporate_engineer/quality/git_hooks_installer.py
 src/corporate_engineer/quality/mutation.py
+src/corporate_engineer/quality/secret_scanner.py
 src/corporate_engineer/quality/storage_cleaner.py
 src/corporate_engineer/quality/surgical_runner.py
 src/corporate_engineer/quality/tool_auto_healer.py
@@ -58,10 +72,14 @@ tests/test_autonomous_runner.py
 tests/test_cached_ast_indexer.py
 tests/test_circuit_breaker.py
 tests/test_cli.py
+tests/test_cli_modular_architecture.py
 tests/test_concurrency_thread_safety.py
+tests/test_connected_e2e_pipeline.py
 tests/test_eval.py
 tests/test_fixer.py
 tests/test_gemini_lora_pipeline.py
+tests/test_git_robustness_and_silent_errors.py
+tests/test_hook_resilience_and_rule_triggers.py
 tests/test_impact.py
 tests/test_mcp_client.py
 tests/test_mcp_hub.py
@@ -82,3 +100,4 @@ tests/test_system_one_benchmark.py
 tests/test_system_one_colab_onnx.py
 tests/test_system_one_pipeline.py
 tests/test_telemetry.py
+tests/test_windows_optimization_scripts.py

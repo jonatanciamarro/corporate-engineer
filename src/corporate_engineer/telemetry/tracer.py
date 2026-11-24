@@ -3,6 +3,7 @@ OpenTelemetry-compatible Agent Tracer for AI Software Engineering (IMP-0009).
 Tracks spans, parent-child hierarchies, latencies, tokens, and errors across agent DAGs.
 """
 
+import contextvars
 import secrets
 import threading
 import time
@@ -32,8 +33,13 @@ def generate_span_id() -> str:
     return secrets.token_hex(8)
 
 
+_ACTIVE_SPAN_STACK: contextvars.ContextVar[tuple[AgentSpan, ...]] = contextvars.ContextVar(
+    "active_span_stack", default=()
+)
+
+
 class AgentTracer:
-    """Thread-safe and context-manager friendly OpenTelemetry span tracker."""
+    """Thread-safe, async-safe and context-manager friendly OpenTelemetry span tracker."""
 
     def __init__(
         self, trace_id: str | None = None, service_name: str = "corporate-engineer"
@@ -42,17 +48,14 @@ class AgentTracer:
         self.service_name = service_name
         self.spans: list[AgentSpan] = []
         self._lock: threading.RLock = threading.RLock()
-        self._local: threading.local = threading.local()
 
     @property
     def _active_stack(self) -> list[AgentSpan]:
-        if not hasattr(self._local, "active_stack"):
-            self._local.active_stack = []
-        return self._local.active_stack  # type: ignore[no-any-return]
+        return list(_ACTIVE_SPAN_STACK.get())
 
     @_active_stack.setter
     def _active_stack(self, val: list[AgentSpan]) -> None:
-        self._local.active_stack = val
+        _ACTIVE_SPAN_STACK.set(tuple(val))
 
     def start_span(
         self,
@@ -66,8 +69,9 @@ class AgentTracer:
 
         with self._lock:
             parent_id = parent_span_id
-            if parent_id is None and self._active_stack:
-                parent_id = self._active_stack[-1].span_id
+            active = _ACTIVE_SPAN_STACK.get()
+            if parent_id is None and active:
+                parent_id = active[-1].span_id
 
             attrs: dict[str, Any] = {"service.name": self.service_name}
             if attributes:
@@ -112,8 +116,7 @@ class AgentTracer:
     ) -> Generator[AgentSpan, None, None]:
         """Context manager to scope a span with automatic duration and exception handling."""
         span_obj = self.start_span(name, parent_span_id=parent_span_id, attributes=attributes)
-        with self._lock:
-            self._active_stack.append(span_obj)
+        token = _ACTIVE_SPAN_STACK.set(_ACTIVE_SPAN_STACK.get() + (span_obj,))
         start_mono = time.monotonic()
         try:
             yield span_obj
@@ -129,12 +132,7 @@ class AgentTracer:
             self.end_span(span_obj, status="ERROR", error_message=str(e))
             raise
         finally:
-            with self._lock:
-                if self._active_stack:
-                    if self._active_stack[-1].span_id == span_obj.span_id:
-                        self._active_stack.pop()
-                    elif span_obj in self._active_stack:
-                        self._active_stack.remove(span_obj)
+            _ACTIVE_SPAN_STACK.reset(token)
 
     def export_trace(self) -> TraceReport:
         """Export all recorded spans into an aggregated TraceReport."""

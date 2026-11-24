@@ -9,7 +9,7 @@ from __future__ import annotations
 import concurrent.futures
 import threading
 import time
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from corporate_engineer.mcp.hub import MCPEnterpriseHub
 from corporate_engineer.models import (
@@ -41,7 +41,7 @@ class SwarmCoordinator:
     ) -> None:
         self.hub: MCPEnterpriseHub = hub or MCPEnterpriseHub()
         self.router: SystemOneRouter = router or SystemOneRouter()
-        self._lock: threading.Lock = threading.Lock()
+        self._lock: threading.RLock = threading.RLock()
 
     def create_swarm(
         self,
@@ -107,10 +107,12 @@ class SwarmCoordinator:
                     tools_called.append(tool_name)
                     if hasattr(res, "is_error") and res.is_error:
                         error_msg = res.content
+                        success = False
                 except Exception as exc:  # noqa: BLE001
                     # O Circuit Breaker do hub isola a falha impedindo travamento do processo
                     error_msg = f"Falha isolada na ferramenta '{tool_name}': {exc}"
                     tools_called.append(f"{tool_name} (circuit-isolated)")
+                    success = False
 
             # Geração do parecer estruturado do subagente especialista
             output = self.ROLE_SPECIALIZATIONS.get(
@@ -139,7 +141,7 @@ class SwarmCoordinator:
     def run_fan_out(
         self,
         goal: str,
-        subtasks: list[dict[str, str]],
+        subtasks: list[dict[str, Any]],
         max_workers: int = 4,
     ) -> SwarmGoalReport:
         """
@@ -152,13 +154,20 @@ class SwarmCoordinator:
         # Preparação dos membros
         task_pairs: list[tuple[SwarmMember, str]] = []
         for idx, item in enumerate(subtasks):
-            role = item.get("role", "code-reviewer")
-            prompt = item.get("task", goal)
+            role = str(item.get("role", "code-reviewer"))
+            prompt = str(item.get("task", goal))
+            raw_tools = item.get("tools")
+            if isinstance(raw_tools, list):
+                tools: list[str] = [str(t) for t in raw_tools]
+            else:
+                tools = [
+                    t.namespaced_name for t in self.hub.prune_tools_for_prompt(prompt, max_tools=3)
+                ]
             member = SwarmMember(
                 agent_id=f"{role[:4]}-{idx + 1:02d}",
                 role=role,
                 task_prompt=prompt,
-                allowed_tools=[],
+                allowed_tools=tools,
                 status="IDLE",
             )
             task_pairs.append((member, prompt))
@@ -186,7 +195,7 @@ class SwarmCoordinator:
                     )
 
         total_elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 3)
-        successful_tasks = sum(1 for r in results if r.success)
+        successful_tasks = sum(1 for r in results if r.success and not r.error)
         failed_tasks = len(results) - successful_tasks
 
         consensus = (

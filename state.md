@@ -11,12 +11,12 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0029-continuous-capability-auto-wiring` | 🟢 Suíte com 301/301 testes PASS, 0 erros Ruff e Mypy, Zero-Secret Guard ativo |
+| **Branch Ativa** | `feat/IMP-0030-concurrency-resilience-and-silent-errors` | 🟢 Suíte com 309/309 testes PASS, 0 erros Ruff e Mypy, Zero-Secret Guard ativo |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **301/301 PASS** | Cobertura global robusta de 88%+ (`pytest-cov`) em 55.17s (7 novos testes em `test_adversarial_dialectical_loop.py`) |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (166 arquivos verificados e formatados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 101 arquivos validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **309/309 PASS** | Cobertura global robusta de 88%+ (`pytest-cov`) em 46.50s (8 novos testes em `test_concurrency_resilience_and_silent_errors.py`) |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (170 arquivos verificados e formatados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 102 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` (tempo de varredura sub-1s) |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Always-On Ativo** | Frontmatter `trigger: always_on` ativo em `corp-pipeline-orchestrator.md` |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -25,6 +25,30 @@
 ---
 
 ## 2. O Que Foi Feito Recentemente
+
+### Sessão Atual (Implementação de IMP-0030 / ADR-030: Resiliência de Concorrência, Sincronização & Eliminação de Erros Silenciosos — Pacote 1):
+1. **Catalogação Formal de Melhorias no Backlog (`improvement-backlog.md`)**:
+   - Cadastro formal das 4 trilhas incrementais da auditoria sênior: `IMP-0030` (Pacote 1 - Concorrência e Erros Silenciosos, aprovado e implementado), `IMP-0031` (Pacote 2 - Blindagem de Qualidade e Sandboxing), `IMP-0032` (Pacote 3 - Integridade da CLI e Dynamic Hooks), e `IMP-0033` (Pacote 4 - RAG e Dívidas Técnicas).
+2. **Blindagem e Eliminação de Falsos Positivos em `git_utils.py`**:
+   - `is_branch_pushed()`: Tratamento rigoroso de falha no `git rev-parse` local (`proc_head.returncode != 0`), retornando `False` com warning explicativo ao invés de cair no fallback permissivo.
+   - Correspondência exata da referência `refs/heads/{target_branch}` no `git ls-remote`, prevenindo casamento incorreto com branches de mesmo prefixo.
+   - Aplicação de timeout configurável `_resolve_git_timeout` em `get_current_branch()` e `get_remote_url()`.
+3. **Detecção Precisa de Erros JSON-RPC 2.0 no Cliente MCP (`mcp/client.py`)**:
+   - `RemoteMCPSSEClient.call_tool()` inspeciona o envelope raiz `error` das respostas JSON-RPC 2.0, marcando `is_error=True` e registrando falha no `CircuitBreaker`.
+4. **Resiliência e Governança no Swarm Coordinator (`orchestrator/swarm.py`)**:
+   - `dispatch_task()`: `success = False` agora atribuído imediatamente em qualquer falha de ferramenta MCP (`is_error == True`) ou exceção isolada por circuit breaker.
+   - `run_fan_out()`: cômputo preciso de tarefas bem-sucedidas validando `r.success and not r.error` e reprovando o consenso (`REJECTED`) caso ocorram falhas.
+   - Migração da trava interna para `threading.RLock()` re-entrante e preservação de ferramentas alocadas nas subtasks do pool concorrente.
+5. **Isolamento Assíncrono via `contextvars.ContextVar` no `AgentTracer` (`telemetry/tracer.py`)**:
+   - Migração de `threading.local` para `contextvars.ContextVar` no rastreamento de spans ativos, eliminando contaminação cruzada de pilhas entre coroutines concorrentes em loops asyncio.
+6. **Sincronização Thread-Safe com RLock no `MCPEnterpriseHub` (`mcp/hub.py`)**:
+   - Adição de `self._lock = threading.RLock()` cobrindo todas as operações concorrentes de registro, listagem, poda e execução de ferramentas.
+7. **Shift-Left TDD & Qualidade (`tests/test_concurrency_resilience_and_silent_errors.py`)**:
+   - 8 novos testes unitários e de integração validando cada falha comprovada no estado RED e a remediação estrita no estado GREEN.
+   - Expansão da suíte global para **309/309 testes PASS** em 46.50s.
+   - 0 erros no Ruff (170 arquivos), 0 erros no Mypy (102 arquivos), Zero-Secret Scan PASS e Capability Auto-Wiring PASS.
+8. **Governança & Minuta de PR**:
+   - Formalização do [ADR-030](docs/adr/ADR-030-concurrency-resilience-and-silent-errors.md) e elaboração da minuta técnica [PR-CORP-030.md](docs/pull_requests/PR-CORP-030.md).
 
 ### Sessão Atual (Auditoria Técnica Sênior via Swarm — Dívidas Técnicas, Bugs e Erros Silenciosos):
 1. **Despacho e Coordenação do Swarm Sênior Multi-Agente (5 Especialistas Staff/Principal)**:
@@ -443,6 +467,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-24T13:05:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0030 (Resiliência de Concorrência, Sincronização & Eliminação de Erros Silenciosos — Pacote 1): eliminação de falso positivo em is_branch_pushed() no git_utils com verificação de exit code e correspondência exata de ref, detecção de erros JSON-RPC 2.0 no RemoteMCPSSEClient com marcação is_error=True e registro em CircuitBreaker, correção de falso sucesso em SwarmCoordinator.dispatch_task() e run_fan_out() com migração para RLock, migração de threading.local para contextvars.ContextVar no AgentTracer para isolamento assíncrono estrito de spans, e sincronização com RLock no MCPEnterpriseHub. Formalização do ADR-030 e minuta PR-CORP-030.md, 8 novos testes em tests/test_concurrency_resilience_and_silent_errors.py (309/309 testes globais PASS em 46.50s, 0 erros Ruff/Mypy e Zero-Secret Scan PASS). |
 | `2026-11-24T12:25:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão da Auditoria Técnica Sênior de Dívidas Técnicas, Bugs e Erros Silenciosos via Swarm Multi-Agente (gemini-3.8-flash-high): coordenação de 5 especialistas staff/principal (audit-core-orch, audit-mcp-telemetry, audit-quality-eval, audit-ai-rag, audit-cli-governance) cobrindo 100% dos módulos de src/corporate_engineer/. Descobertos e catalogados 97 apontamentos (16 Críticos, 33 Altos, 29 Médios, 19 Baixos). Destaques críticos: risco de deleção em storage cleaner, omissão de src/ no sandbox de mutação, bypass de chaves OpenAI no scanner, inversão de erros JSON-RPC no MCP client, falsificação de branch pushed no git_utils e vazamento de contexto em tracer assíncrono. Emissão do artefato formal senior_codebase_audit_report.md com roadmap de remediação em 4 pacotes incrementais (301/301 testes globais PASS, 0 erros Ruff/Mypy e Zero-Secret Scan PASS). |
 | `2026-11-24T12:00:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0029 (Continuous Capability Auto-Wiring & Invariante de Potência Máxima — 100% Filosoph & Zero Código Órfão): adição da Invariante 9 em AGENTS.md e GEMINI.md, modelos DTO Pydantic v2 ModuleWiringStatus e WiringAuditReport, implementação do CapabilityWiringAuditor em src/corporate_engineer/quality/wiring_auditor.py com varredura AST e detecção de orfandade, integração da flag --wiring na CLI audit, anexação do run_wiring_audit() ao QualityGateRunner e à fase AUDIT do AutonomousEngineeringGraph.run_pipeline, auto-conexão e re-exportação de 9 módulos previamente desconectados, formalização do ADR-029, plano plan_v2_auto_wiring_maximum_power.md, minuta PR-CORP-029.md, 7 novos testes em tests/test_auto_wiring_integrity.py (301/301 testes globais PASS em 54.72s, 0 erros Ruff/Mypy e Zero-Secret Scan PASS). |
 | `2026-11-24T11:35:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0026 (Tri-Phase Adversarial Loop — Red Team 1.5 → Transcendência 1.6 → Verificação 1.7): implementação de AdversarialRedTeam, ArchitectureTranscender e AdversarialLoopCoordinator em src/corporate_engineer/orchestrator/adversarial.py, modelos DTO Pydantic v2 (RedTeamAttackReport, TranscendencePlan, ChaosTestCase, AdversarialVerdict), integração no PLANNING do graph.run_pipeline, subcomando CLI corporate-engineer dialectic, formalização do ADR-028 e PR-CORP-026.md, 7 novos testes em tests/test_adversarial_dialectical_loop.py (301/301 testes globais PASS em 55.17s, 0 erros Ruff/Mypy e Zero-Secret Scan PASS). |

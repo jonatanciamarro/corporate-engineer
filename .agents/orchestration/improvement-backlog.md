@@ -55,6 +55,10 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0027` | Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E | `ORCHESTRATION` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-24` |
 | `IMP-0028` | Resiliência Universal de Hooks do Ciclo de Vida e Ativação Permanente de Regras Always-On | `AUTOMATION` | Baixa-Média (S-M) | `IMPLEMENTED` | `2026-11-24` |
 | `IMP-0029` | Continuous Capability Auto-Wiring & Invariante de Potência Máxima (Zero Código Órfão) | `QUALITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-24` |
+| `IMP-0030` | Resiliência de Concorrência, Sincronização & Eliminação de Erros Silenciosos (Pacote 1) | `RELIABILITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-24` |
+| `IMP-0031` | Blindagem de Qualidade, Segurança & Sandboxing de Mutação (Pacote 2) | `QUALITY` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-24` |
+| `IMP-0032` | Integridade da CLI, Output Contratos & Dynamic Hook Dispatching (Pacote 3) | `ARCHITECTURE` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-24` |
+| `IMP-0033` | AI Systems, RAG Cache Starvation & Unificação de Dívidas Técnicas (Pacote 4) | `EFFICIENCY` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-24` |
 
 ---
 
@@ -585,6 +589,69 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Componentes Afetados**: `src/corporate_engineer/models.py`, `src/corporate_engineer/quality/wiring_auditor.py`, `src/corporate_engineer/quality/gate.py`, `src/corporate_engineer/cli/commands/quality.py`, `src/corporate_engineer/orchestrator/graph.py`, `AGENTS.md`, `GEMINI.md`, `.agents/rules/corporate-quality-gate.md`, `tests/test_auto_wiring_integrity.py`.
 - **Complexidade**: Média-Alta (M-L).
 - **Critérios de Aceite**: 100% dos testes em `test_auto_wiring_integrity.py` passando, comando `audit --wiring` validando 0 módulos desconectados, pre-flight 100% aprovado.
+
+---
+
+### 🔹 IMP-0030: Resiliência de Concorrência, Sincronização & Eliminação de Erros Silenciosos (Pacote 1)
+- **Categoria**: `RELIABILITY` | `ARCHITECTURE` | `ORCHESTRATION`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-030`, `PR-CORP-030.md`)
+- **Data de Descoberta**: 2026-11-24
+- **Problema / Limitação Atual**: A auditoria sênior identificou vulnerabilidades críticas em protocolos e concorrência:
+  1. `git_utils.py:158-171`: `is_branch_pushed()` retorna `True` quando `git rev-parse` falha com erro não-zero, falsificando sincronização com origin.
+  2. `mcp/client.py:255-273`: `call_tool()` no cliente SSE extrai `res.get("result", {}).get("isError")`, mas erros JSON-RPC 2.0 vêm na chave raiz `error`, fazendo com que erros do servidor MCP sejam reportados como sucesso (`is_error=False`).
+  3. `orchestrator/swarm.py:95-133, 189-196`: `dispatch_task()` inicializa `success = True` e nunca atualiza para `False` quando a chamada falha, fazendo `run_fan_out()` aprovar deliberações mesmo com falhas de ferramentas.
+  4. `telemetry/tracer.py:44-56`: `AgentTracer` usa `threading.local` para `_active_stack`, causando vazamento de contexto e corrupção de hierarquia entre coroutines assíncronas concorrentes na mesma thread.
+  5. `mcp/hub.py:22-147`: Falta de travas de concorrência (`_lock`) causando race conditions e `RuntimeError` durante iteração/modificação simultânea de servidores e ferramentas por múltiplos agentes.
+  6. `orchestrator/swarm.py:44`: Uso de `threading.Lock` não-reentrante ao invés de `threading.RLock`.
+- **Solução Proposta**:
+  1. Validar `proc_head.returncode != 0` em `is_branch_pushed()` retornando `False` com warning explicativo.
+  2. Inspecionar envelope de erro `if "error" in res:` no cliente MCP, marcando `is_error=True`.
+  3. Setar `success = False` em `dispatch_task()` do Swarm quando a ferramenta falhar e checar `r.success and not r.error` em `run_fan_out()`.
+  4. Migrar `_active_stack` no `AgentTracer` de `threading.local` para `contextvars.ContextVar`.
+  5. Implementar `self._lock = threading.RLock()` em `MCPEnterpriseHub` e migrar `SwarmCoordinator` para `RLock`.
+- **Benefícios Esperados**: Concorrência 100% thread-safe e async-safe, eliminação de falsos sucessos operacionais e garantia estrita do protocolo de push remoto.
+- **Componentes Afetados**: `src/corporate_engineer/git_utils.py`, `src/corporate_engineer/mcp/client.py`, `src/corporate_engineer/mcp/hub.py`, `src/corporate_engineer/orchestrator/swarm.py`, `src/corporate_engineer/telemetry/tracer.py`.
+- **Complexidade**: Média-Alta (M-L).
+- **Critérios de Aceite**: Suíte TDD cobrindo todos os cenários com 100% PASS, 0 erros de linter e tipagem estrita.
+
+---
+
+### 🔹 IMP-0031: Blindagem de Qualidade, Segurança & Sandboxing de Mutação (Pacote 2)
+- **Categoria**: `QUALITY` | `SECURITY`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-24
+- **Problema / Limitação Atual**: O sandbox temporário de mutação omite `src/` do PYTHONPATH, testando código não-mutado; o scanner de segredos possui bypass para chaves de projeto da OpenAI (`sk-proj-...` com `_`) e Anthropic (`sk-ant-api03-...`); o Storage Cleaner julga raízes de disco (`C:\`, `/`) e diretório home como seguros para deleção; a re-verificação da Fase 1.7 Adversarial é mockada sem ataque real.
+- **Solução Proposta**: Injetar `src/` no PYTHONPATH do sandbox de mutação; corrigir regexes no scanner de segredos; bloquear estritamente raízes de sistema no Storage Cleaner; implementar re-verificação real de endurecimentos no Adversarial Red Team.
+- **Benefícios Esperados**: Blindagem contra acidentes catastróficos no SO, eficácia real dos testes de mutação e erradicação de falsos negativos em vazamentos de credenciais.
+- **Componentes Afetados**: `src/corporate_engineer/quality/mutation.py`, `src/corporate_engineer/quality/secret_scanner.py`, `src/corporate_engineer/quality/storage_cleaner.py`, `src/corporate_engineer/orchestrator/adversarial.py`.
+- **Complexidade**: Média-Alta (M-L).
+- **Critérios de Aceite**: Testes unitários validando cada guardrail de segurança com 100% PASS.
+
+---
+
+### 🔹 IMP-0032: Integridade da CLI, Output Contratos & Dynamic Hook Dispatching (Pacote 3)
+- **Categoria**: `ARCHITECTURE` | `AUTOMATION`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-24
+- **Problema / Limitação Atual**: O `run_hook.py` possui whitelist estática rejeitando hooks dinâmicos em `.venv`; comandos CLI vazam texto informativo no `stdout` quando `--format json` é solicitado com `--output`; o comando `eval` aprova diretórios inexistentes com nota 100%; o comando `mcp` sem ação retorna 0 silenciosamente.
+- **Solução Proposta**: Implementar descoberta dinâmica de hooks via `runpy.run_path`; redirecionar logs informativos para `sys.stderr` em saídas JSON; validar existência de alvos em `eval`; tornar subcomando `mcp` obrigatório.
+- **Benefícios Esperados**: Conformidade estrita com padrões POSIX CLI, usabilidade e suporte universal a qualquer hook de ciclo de vida.
+- **Componentes Afetados**: `.agents/orchestration/hooks/run_hook.py`, `src/corporate_engineer/cli/commands/rag.py`, `src/corporate_engineer/cli/commands/mcp.py`, `src/corporate_engineer/cli/commands/prompt.py`.
+- **Complexidade**: Média (M).
+- **Critérios de Aceite**: Testes CLI cobrindo saídas JSON válidas, exit codes corretos e disparo dinâmico de hooks.
+
+---
+
+### 🔹 IMP-0033: AI Systems, RAG Cache Starvation & Unificação de Dívidas Técnicas (Pacote 4)
+- **Categoria**: `EFFICIENCY` | `MAINTAINABILITY`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-24
+- **Problema / Limitação Atual**: Em `CachedASTCodebaseIndexer.get_all_symbol_names()`, se um arquivo está em cache, o rastreamento da base inteira é pulado; a acurácia no Benchmark divide por `successful_runs` ao invés de `total_runs`; o validador LoRA de Remotion confunde generics TS com JSX unclosed tags; `prompt/refiner.py` mantém referência ao monólito deletado `cli.py`.
+- **Solução Proposta**: Corrigir starvation de cache AST; corrigir fórmula de acurácia estatística no Benchmark; aprimorar regex de tags JSX em Remotion; limpar referências a arquivos mortos e unificar helpers de formatação CLI.
+- **Benefícios Esperados**: Precisão do índice AST, métricas confiáveis de benchmark e eliminação de dívidas técnicas acumuladas.
+- **Componentes Afetados**: `src/corporate_engineer/rag/cached_ast_indexer.py`, `src/corporate_engineer/system_one/benchmark.py`, `src/corporate_engineer/lora/validator.py`, `src/corporate_engineer/prompt/refiner.py`.
+- **Complexidade**: Média-Alta (M-L).
+- **Critérios de Aceite**: Testes de RAG e benchmark aprovados, zero referências obsoletas.
 
 
 

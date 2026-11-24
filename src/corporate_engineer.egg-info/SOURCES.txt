@@ -62,6 +62,7 @@ tests/test_concurrency_thread_safety.py
 tests/test_eval.py
 tests/test_fixer.py
 tests/test_gemini_lora_pipeline.py
+tests/test_git_robustness_and_silent_errors.py
 tests/test_impact.py
 tests/test_mcp_client.py
 tests/test_mcp_hub.py

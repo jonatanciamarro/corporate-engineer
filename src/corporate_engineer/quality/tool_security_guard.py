@@ -9,35 +9,93 @@ from __future__ import annotations
 import re
 from typing import Any
 
-# 10 High-Confidence Secret Signatures
-SECRET_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
-    ("AWS Access Key ID", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
-    ("GitHub Personal Access Token", re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,}\b")),
-    ("OpenAI API Key", re.compile(r"sk-(?:proj-|live-)?[a-zA-Z0-9]{32,}")),
-    ("Anthropic API Key", re.compile(r"sk-ant-[a-zA-Z0-9]{32,}")),
-    ("Google Gemini/Cloud API Key", re.compile(r"AIzaSy[A-Za-z0-9_\-]{33}")),
-    ("Slack Token", re.compile(r"xox[baprs]-[0-9]{10,13}-[a-zA-Z0-9]{24,}")),
-    ("Stripe API Key", re.compile(r"(?:sk|rk)_(?:live|test)_[0-9a-zA-Z]{24,}")),
-    ("RSA/OpenSSH Private Key", re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----")),
-    (
-        "Generic Hardcoded Secret",
-        re.compile(
-            r"""(?i)(?:api_key|secret_key|client_secret|db_password|access_token)\s*[:=]\s*["']([A-Za-z0-9_\-\.\$]{20,})["']"""
+try:
+    from corporate_engineer.quality.secret_scanner import (
+        SAFE_PLACEHOLDERS,
+        SECRET_PATTERNS,
+        CanonicalSecretScanner,
+    )
+except ImportError:
+    SECRET_PATTERNS = [
+        ("Private Key", re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----")),
+        (
+            "AWS Access Key ID",
+            re.compile(r"\b(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}\b"),
         ),
-    ),
-]
+        (
+            "GitHub Personal Access Token",
+            re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,}\b"),
+        ),
+        ("GitLab Personal Access Token", re.compile(r"\bglpat-[0-9a-zA-Z_\-]{20,}\b")),
+        ("OpenAI API Key", re.compile(r"\bsk-(?:proj-|live-)?[a-zA-Z0-9]{32,}\b")),
+        ("Anthropic API Key", re.compile(r"\bsk-ant-[a-zA-Z0-9]{32,}\b")),
+        ("Google Gemini/Cloud API Key", re.compile(r"\bAIzaSy[A-Za-z0-9_\-]{33}\b")),
+        ("Slack Token", re.compile(r"\bxox[baprs]-[0-9]{10,13}-[a-zA-Z0-9]{24,}\b")),
+        ("Stripe API Key", re.compile(r"\b(?:sk|rk)_(?:live|test)_[0-9a-zA-Z]{24,}\b")),
+        (
+            "Generic Hardcoded Secret",
+            re.compile(
+                r"""(?i)(?:api_key|secret_key|client_secret|db_password|access_token)\s*[:=]\s*["']([A-Za-z0-9_\-\.\$]{16,})["']"""
+            ),
+        ),
+    ]
 
-SAFE_PLACEHOLDERS = [
-    "your_api_key",
-    "<api_key>",
-    "placeholder",
-    "fake_",
-    "dummy",
-    "test_key",
-    "test_api_key",
-    "mock",
-    "[REDACTED_SECRET]",
-]
+    SAFE_PLACEHOLDERS = [
+        "your_api_key",
+        "example_key",
+        "your_example",
+        "<api_key>",
+        "placeholder",
+        "fake_",
+        "xxx",
+        "dummy",
+        "test_key",
+        "test_api_key",
+        "mock",
+        "[REDACTED_SECRET]",
+    ]
+
+    class CanonicalSecretScanner:  # type: ignore[no-redef]
+        def __init__(
+            self,
+            patterns: list[tuple[str, re.Pattern[str]]] | None = None,
+            safe_placeholders: list[str] | None = None,
+        ) -> None:
+            self.patterns = patterns or SECRET_PATTERNS
+            self.safe_placeholders = safe_placeholders or SAFE_PLACEHOLDERS
+
+        def is_safe_line(self, line: str) -> bool:
+            lowered = line.lower()
+            return any(p in lowered for p in self.safe_placeholders)
+
+        def mask_secret(self, raw_secret: str) -> str:
+            if len(raw_secret) > 8:
+                return raw_secret[:4] + "*" * (len(raw_secret) - 8) + raw_secret[-4:]
+            return "***"
+
+        def scan_text(self, text: str, source_identifier: str = "") -> list[dict[str, Any]]:
+            findings: list[dict[str, Any]] = []
+            for line_num, line in enumerate(text.splitlines(), start=1):
+                if self.is_safe_line(line):
+                    continue
+                for rule_name, pattern in self.patterns:
+                    match = pattern.search(line)
+                    if match:
+                        matched_str = match.group(0)
+                        findings.append(
+                            {
+                                "file": source_identifier,
+                                "line": line_num,
+                                "rule_name": rule_name,
+                                "type": rule_name,
+                                "masked_secret": self.mask_secret(matched_str),
+                            }
+                        )
+                        break
+            return findings
+
+
+_scanner = CanonicalSecretScanner(patterns=SECRET_PATTERNS, safe_placeholders=SAFE_PLACEHOLDERS)
 
 
 def evaluate_tool_security(payload: dict[str, Any]) -> dict[str, Any]:
@@ -63,27 +121,18 @@ def evaluate_tool_security(payload: dict[str, Any]) -> dict[str, Any]:
     if not full_text:
         return {"decision": "allow"}
 
-    for line in full_text.splitlines():
-        line_lower = line.lower()
-        if any(dummy in line_lower for dummy in SAFE_PLACEHOLDERS):
-            continue
-
-        for rule_name, pattern in SECRET_PATTERNS:
-            match = pattern.search(line)
-            if match:
-                matched_str = match.group(0)
-                masked = (
-                    matched_str[:4] + "*" * (len(matched_str) - 8) + matched_str[-4:]
-                    if len(matched_str) > 8
-                    else "***"
-                )
-                return {
-                    "decision": "deny",
-                    "reason": (
-                        f"Zero-Secret Guard: Bloqueada tentativa de escrita de credencial exposta "
-                        f"({rule_name}: {masked}) na ferramenta `{tool_name}`. "
-                        "Nunca persista credenciais ou tokens em código fonte!"
-                    ),
-                }
+    findings = _scanner.scan_text(full_text)
+    if findings:
+        first = findings[0]
+        rule_name = first.get("rule_name", "Secret")
+        masked = first.get("masked_secret", "***")
+        return {
+            "decision": "deny",
+            "reason": (
+                f"Zero-Secret Guard: Bloqueada tentativa de escrita de credencial exposta "
+                f"({rule_name}: {masked}) na ferramenta `{tool_name}`. "
+                "Nunca persista credenciais ou tokens em código fonte!"
+            ),
+        }
 
     return {"decision": "allow"}

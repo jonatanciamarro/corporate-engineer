@@ -27,6 +27,10 @@ class AutonomousEngineeringGraph:
         self.state = AgentState(task=task)
         self.tracer = AgentTracer(service_name="corporate-engineer")
 
+    @property
+    def workspace_path(self) -> Path:
+        return Path(self.task.workspace_path)
+
     def record_iteration(self) -> int:
         self.state.iteration_count += 1
         return self.state.iteration_count
@@ -98,36 +102,64 @@ class AutonomousEngineeringGraph:
         """
         t0 = time.perf_counter()
         checkpoints_created: list[str] = []
+        details: dict[str, Any] = {}
 
         with self.tracer.span(
             "dag.lifecycle.pipeline",
             attributes={"ticket_id": self.task.ticket_id, "dry_run": dry_run},
         ):
-            # Fase 1: Planejamento & Refinamento Contextual de Metaprompt
-            from corporate_engineer.prompt.refiner import ContextAwarePromptRefiner
+            # Fase 1: Planejamento & Antecipação Proativa
+            from corporate_engineer.orchestrator.anticipator import ProactiveAnticipator
 
-            refiner = ContextAwarePromptRefiner(workspace_path=self.task.workspace_path)
-            spec = refiner.refine(self.task.description, bypass_gate=False)
+            anticipator = ProactiveAnticipator(workspace_path=self.workspace_path)
+            anticipation_plan = anticipator.anticipate(self.task.description)
+            spec = anticipator.refiner.refine(self.task.description, bypass_gate=False)
+
+            plan_dict = anticipation_plan.model_dump()
+            plan_dict["step_1"] = plan_dict.get("step_immediate_1")
+            plan_dict["step_2"] = plan_dict.get("step_subsequent_2")
+            details["anticipation_plan"] = plan_dict
+
             plan_text = (
-                spec.metaprompt
-                if spec.metaprompt
-                else f"Plano de Engenharia para {self.task.ticket_id}"
+                anticipation_plan.structured_metaprompt
+                if anticipation_plan.structured_metaprompt
+                else (
+                    spec.metaprompt
+                    if spec.metaprompt
+                    else f"Plano de Engenharia para {self.task.ticket_id}"
+                )
             )
             self.step_plan(plan_text)
             cp1 = self.save_checkpoint()
             checkpoints_created.append(cp1.name)
 
-            # Fase 2: Shift-Left TDD
-            test_target = (
-                spec.tdd_test_scenarios[0]
-                if spec.tdd_test_scenarios
-                else f"tests/test_{self.task.ticket_id.lower().replace('-', '_')}.py"
-            )
+            # Fase 2: Shift-Left TDD com Surgical Test Runner
+            from corporate_engineer.quality.surgical_runner import SurgicalTestRunner
+
+            surgical_runner = SurgicalTestRunner(root_path=self.workspace_path)
+            changed_files = surgical_runner.collect_changed_files()
+            affected_tests = surgical_runner.resolve_affected_tests(changed_files)
+            details["surgical_test"] = {
+                "changed_files": changed_files,
+                "affected_tests": affected_tests,
+            }
+
+            if affected_tests:
+                test_target = affected_tests[0]
+            elif spec.tdd_test_scenarios:
+                test_target = spec.tdd_test_scenarios[0]
+            else:
+                test_target = f"tests/test_{self.task.ticket_id.lower().replace('-', '_')}.py"
+
             self.step_tdd(test_target)
+            if affected_tests:
+                for t in affected_tests:
+                    if t not in self.state.test_files:
+                        self.state.test_files.append(t)
             cp2 = self.save_checkpoint()
             checkpoints_created.append(cp2.name)
 
-            # Fase 3: Implementação Cirúrgica
+            # Fase 3: Implementação Cirúrgica & Auto-Remediação de AST
             code_target = (
                 spec.affected_modules[0]
                 if spec.affected_modules
@@ -139,14 +171,30 @@ class AutonomousEngineeringGraph:
                 code_desc,
                 explanation=f"Implementação referente ao ticket {self.task.ticket_id}",
             )
+
+            from corporate_engineer.eval.fixer import ASTSelfHealingFixer
+
+            fixer = ASTSelfHealingFixer()
+            src_dir = self.workspace_path / "src"
+            if src_dir.exists():
+                fix_report = fixer.fix_workspace(src_dir, dry_run=dry_run)
+                details["ast_fix_report"] = fix_report.model_dump()
+            else:
+                target_file = self.workspace_path / code_target
+                if target_file.exists():
+                    fix_report = fixer.fix_file(target_file, dry_run=dry_run)
+                    details["ast_fix_report"] = fix_report.model_dump()
+
             cp3 = self.save_checkpoint()
             checkpoints_created.append(cp3.name)
 
             # Fase 4: Portão de Qualidade & Auditoria Estrita
+            from corporate_engineer.eval.scorecard import SemanticCodeEvaluator
             from corporate_engineer.quality.gate import QualityGateRunner
 
-            runner = QualityGateRunner(project_root=Path(self.task.workspace_path))
+            runner = QualityGateRunner(project_root=self.workspace_path)
             secret_scan = runner.run_secret_scan()
+            details["secret_scan"] = secret_scan
             audit_passed = bool(secret_scan.get("passed", False))
 
             test_run_details: dict[str, Any] = {}
@@ -154,6 +202,13 @@ class AutonomousEngineeringGraph:
                 test_res = runner.run_tests()
                 test_run_details = test_res
                 audit_passed = bool(test_res.get("passed", False))
+            details["test_run"] = test_run_details
+
+            evaluator = SemanticCodeEvaluator(workspace_root=self.workspace_path)
+            eval_report = evaluator.evaluate()
+            details["semantic_evaluation"] = eval_report.model_dump()
+            if strict_audit and not eval_report.passed_gate:
+                audit_passed = False
 
             self.step_audit(audit_passed)
             cp4 = self.save_checkpoint()
@@ -176,12 +231,33 @@ class AutonomousEngineeringGraph:
                     audit_passed=False,
                     duration_seconds=duration,
                     dry_run=dry_run,
-                    details={"secret_scan": secret_scan, "test_run": test_run_details},
+                    details=details,
                 )
 
             # Fase 5: Entrega (DELIVER)
             if auto_deliver:
                 self.state.needs_human_approval = False
+
+            import corporate_engineer.git_utils
+
+            try:
+                pr_result = corporate_engineer.git_utils.generate_pr_url(
+                    repo_path=self.workspace_path,
+                    ensure_pushed=False,
+                )
+                if isinstance(pr_result, dict):
+                    pr_url = (
+                        pr_result.get("url")
+                        or f"https://github.com/org/repo/compare/main...{self.task.ticket_id}?quick_pull=1"
+                    )
+                else:
+                    pr_url = str(pr_result)
+            except Exception:  # noqa: BLE001
+                pr_url = (
+                    f"https://github.com/org/repo/compare/main...{self.task.ticket_id}?quick_pull=1"
+                )
+
+            details["pr_url"] = pr_url
 
             return RunExecutionReport(
                 ticket_id=self.task.ticket_id,
@@ -196,7 +272,7 @@ class AutonomousEngineeringGraph:
                 audit_passed=True,
                 duration_seconds=duration,
                 dry_run=dry_run,
-                details={"secret_scan": secret_scan, "test_run": test_run_details},
+                details=details,
             )
 
     def get_trace_report(self) -> TraceReport:

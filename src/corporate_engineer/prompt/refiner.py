@@ -4,11 +4,15 @@ Pre-processes incoming user prompts into structured engineering specifications
 anchored in codebase AST and corporate invariants before pipeline submission.
 """
 
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, ClassVar
 
 from corporate_engineer.models import RevisedPromptSpec
+from corporate_engineer.rag.cached_ast_indexer import CachedASTCodebaseIndexer
+
+logger = logging.getLogger(__name__)
 
 try:
     from datetime import UTC
@@ -174,12 +178,25 @@ class ContextAwarePromptRefiner:
         if not self.workspace_path.exists():
             return candidate_words
 
+        # Fast-path: query CachedASTCodebaseIndexer in O(1) memory lookup
+        try:
+            indexer = CachedASTCodebaseIndexer(root_path=self.workspace_path)
+            all_symbols = indexer.get_all_symbol_names()
+            if all_symbols:
+                for cand in candidate_words:
+                    if cand in all_symbols and cand not in found_symbols:
+                        found_symbols.append(cand)
+                if found_symbols:
+                    return found_symbols
+        except (OSError, SyntaxError, ValueError, KeyError) as exc:
+            logger.debug("Failed to resolve AST symbols from cache: %s", exc)
+
         src_dir = self.workspace_path / "src"
         if not src_dir.exists():
             src_dir = self.workspace_path
 
         for cand in candidate_words:
-            # Search for class or def in workspace files
+            # Search for class or def in workspace files (disk fallback)
             for py_file in src_dir.glob("**/*.py"):
                 try:
                     text = py_file.read_text(encoding="utf-8", errors="ignore")

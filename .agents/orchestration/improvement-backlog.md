@@ -52,7 +52,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0024` | Gemini LoRA Modular Pipeline para Motion Graphics & Tool Calling (DarkFactory) | `CAPABILITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0025` | Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite | `ORCHESTRATION` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-22` |
 | `IMP-0026` | Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7) | `ORCHESTRATION` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
-| `IMP-0027` | Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E | `ORCHESTRATION` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-22` |
+| `IMP-0027` | Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E | `ORCHESTRATION` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-24` |
 
 ---
 
@@ -538,7 +538,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0027: Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E
 - **Categoria**: `ORCHESTRATION` | `EFFICIENCY` | `ARCHITECTURE` | `QUALITY` | `TRANSCENDENCE`
-- **Status**: `SAVED_NOT_APPROVED` (Ref: `ADR-025`)
+- **Status**: `IMPLEMENTED` (Ref: `ADR-025`, `PR-CORP-027.md`)
 - **Data de Descoberta**: 2026-11-22 (via Swarm Max de Auditoria Técnica)
 - **Problema / Limitação Atual**: O framework desenvolveu 25 melhorias de alta fidelidade, mas a auditoria concorrente com 4 agentes do Swarm Max revelou desconexões críticas: `BlastRadiusAnalyzer` re-parseava o repositório sem usar o `CachedASTCodebaseIndexer` (SHA-256); `AutonomousEngineeringGraph.run_pipeline` não consumia `ProactiveAnticipator`, `ASTSelfHealingFixer`, `SurgicalTestRunner`, `SemanticCodeEvaluator` nem `generate_pr_url` com push remoto; `QualityGateRunner` possuía scanner de segredos reduzido e desconectado de `SemanticCodeEvaluator` e `SafeStorageCleaner`; e pacotes com `__init__.py` omitiam exports públicos.
 - **Solução Proposta**:

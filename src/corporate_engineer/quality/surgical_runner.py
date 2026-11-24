@@ -101,13 +101,14 @@ class SurgicalTestRunner:
 
     get_changed_files = collect_changed_files
 
-    def resolve_affected_tests(
+    def collect_affected_tests(
         self,
         changed_files: list[str],
         max_depth: int = 3,
     ) -> list[str]:
         """Compute all pytest test files directly modified or affected via blast radius."""
         affected_tests: set[str] = set()
+        src_files_to_analyze: list[str] = []
 
         for file_str in changed_files:
             norm_str = file_str.replace("\\", "/")
@@ -122,15 +123,28 @@ class SurgicalTestRunner:
                 affected_tests.add(norm_str)
                 continue
 
-            # Python source file modification: analyze blast radius
+            # Python source file modification: collect for batch analysis
             if norm_str.endswith(".py"):
                 full_path = self.root / norm_str
                 if full_path.exists():
+                    src_files_to_analyze.append(norm_str)
+
+        if src_files_to_analyze:
+            if hasattr(self.analyzer, "analyze_files"):
+                batch_report = self.analyzer.analyze_files(
+                    src_files_to_analyze, max_depth=max_depth
+                )
+                for test_path in batch_report.affected_tests:
+                    affected_tests.add(test_path.replace("\\", "/"))
+            else:
+                for norm_str in src_files_to_analyze:
                     report = self.analyzer.analyze_file(norm_str, max_depth=max_depth)
                     for test_path in report.affected_tests:
                         affected_tests.add(test_path.replace("\\", "/"))
 
         return sorted(affected_tests)
+
+    resolve_affected_tests = collect_affected_tests
 
     def build_command(
         self,
@@ -167,7 +181,7 @@ class SurgicalTestRunner:
             if changed_files is None
             else list(changed_files)
         )
-        tests = self.resolve_affected_tests(files, max_depth=max_depth)
+        tests = self.collect_affected_tests(files, max_depth=max_depth)
 
         if not tests and files and fallback_all:
             tests_dir = self.root / "tests"

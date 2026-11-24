@@ -11,12 +11,12 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0022-robust-git-timeouts-preflight` | 🟢 Suíte com 261/261 testes PASS, 0 erros Ruff e Mypy, Zero-Secret Guard ativo |
+| **Branch Ativa** | `feat/IMP-0027-connect-all-modules-and-e2e-pipeline` | 🟢 Suíte com 278/278 testes PASS, 0 erros Ruff e Mypy, Zero-Secret Guard ativo |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **261/261 PASS** | Cobertura global robusta de 88% (`pytest-cov`) em 45.35s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (135 arquivos verificados e formatados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 79 arquivos validados estritamente no root |
+| **Testes (Pytest + Hypothesis)** | 🟢 **278/278 PASS** | Cobertura global robusta de 88%+ (`pytest-cov`) em 47.37s |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (141 arquivos verificados e formatados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 82 arquivos validados estritamente no root |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` (tempo de varredura otimizado para sub-1s) |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Proativo Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance (2 passos à frente) |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
@@ -25,6 +25,37 @@
 ---
 
 ## 2. O Que Foi Feito Recentemente
+
+### Sessão Atual (Implementação de IMP-0027 / ADR-025: Unificação de Cache AST SHA-256 e Análise em Lote de Blast Radius):
+1. **Extensão do `CachedASTCodebaseIndexer` (`src/corporate_engineer/rag/cached_ast_indexer.py`)**:
+   - Adicionado `get_file_symbols(self, file_path: Path) -> list[dict[str, Any]]`: expõe os símbolos indexados com cache SHA-256 persistente.
+   - Adicionado `get_all_symbol_names(self) -> set[str]`: varre o cache em memória e, se vazio, indexa a base ignorando diretórios de ambiente/build, retornando o conjunto de classes e funções.
+2. **Integração de Cache AST e Análise em Lote no `BlastRadiusAnalyzer` (`src/corporate_engineer/rag/impact.py`)**:
+   - Inicialização nativa de `self.indexer = CachedASTCodebaseIndexer(root_path=self.root)`.
+   - Implementado `analyze_files(self, file_paths: Sequence[str | Path], max_depth: int = 3) -> BlastRadiusReport`: calcula o blast radius combinado e suíte de testes afetada em uma única varredura BFS sem rescanning repetitivo do filesystem.
+   - Refatoração de `analyze_impact` para reutilizar o grafo de dependências construído a partir do cache AST.
+3. **Resolução O(1) de Símbolos no `ContextAwarePromptRefiner` (`src/corporate_engineer/prompt/refiner.py`)**:
+   - Em `find_ast_symbols`: consulta `CachedASTCodebaseIndexer.get_all_symbol_names()` em memória antes de recorrer ao fallback de busca textual em disco.
+4. **Verificação de Qualidade & Pre-Flight**:
+   - 278/278 testes PASS (incluindo todos os cenários de `tests/test_connected_e2e_pipeline.py`).
+   - 0 erros no Ruff (`ruff check .` e `ruff format --check .`).
+   - 0 erros no Mypy (`mypy src/corporate_engineer/rag/ src/corporate_engineer/prompt/` e `mypy .`).
+   - 0 segredos detectados no Pre-Flight Secret Scanner.
+
+### Sessão Atual (Implementação da Suíte de Otimização Windows 10 para IA & Modo Entrevista via Swarm Max):
+1. **Coordenação Multi-Agente via Swarm Max (`gemini-3.8-flash-high`)**:
+   - Refinamento do metaprompt estruturado com o motor corporativo `corporate-engineer prompt refine`.
+   - Inicialização e despacho de 2 agentes especialistas: `perf-architect` (matriz de registro e serviços) e `qa-tester` (testes automatizados e guardrails).
+2. **Arquitetura de Otimização & Diagnóstico de Hardware (`docs/architecture/windows_optimization_architecture.md`)**:
+   - Mapeamento detalhado das restrições: Intel Core i7-4600U Dual-Core, 8GB RAM DDR3, Intel HD Graphics compartilhada e particionamento multi-disco.
+   - Diagnóstico das causas de congelamento em chamadas de vídeo com screen sharing (WebRTC) e suíte de testes concorrente.
+3. **Scripts PowerShell de Alta Confiabilidade (`scripts/`)**:
+   - `scripts/optimize_windows_for_ai_dev.ps1`: Tweak cirúrgico permanente (`Win32PrioritySeparation=38`, `SystemResponsiveness=10`, desativação de telemetria, GameDVR, indexação em pastas de dev e exclusões no Windows Defender para processos Python/Git/VS Code).
+   - `scripts/start_interview_mode.ps1`: Modo de entrevista dinâmico com suspensão de serviços não-essenciais (`WSearch`, `SysMain`, `wuauserv`, `Spooler`), blacklist crítica inegociável (áudio, vídeo e rede intocados), Working Set Trim (purga de RAM) e elevação de prioridade para `AboveNormal` em processos interativos.
+   - `scripts/stop_interview_mode.ps1`: Restauração atômica a partir do snapshot `$env:LOCALAPPDATA\InterviewMode\service_state.json`.
+4. **Suíte Abrangente de Shift-Left TDD (`tests/test_windows_optimization_scripts.py`)**:
+   - 9 novos testes unitários validando sintaxe AST nativa do PowerShell (`[System.Management.Automation.Language.Parser]::ParseFile`), verificação de elevação de privilégios (`Test-IsAdmin`), suporte a `-WhatIf` (`SupportsShouldProcess`), métricas de memória física e restauração limpa.
+   - Expansão da suíte global para **270/270 testes PASS**. 0 erros Ruff/Mypy e Zero-Secret Scan PASS.
 
 ### Sessão Atual (Implementação de IMP-0022 / ADR-024: Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos no Pre-Flight):
 1. **Robustez de Timeouts Git com Logging Estruturado (`src/corporate_engineer/git_utils.py`)**:
@@ -296,8 +327,8 @@
    - `IMP-0023`: Modularização da CLI Corporativa (Decomposição do Monólito de 1661 Linhas) - `SAVED_NOT_APPROVED`.
 9. `[ ]` **Trilha Estratégica / IMP-0026: Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7)**:
    - Especificação do loop dialético pré-execução catalogada em `improvement-backlog.md` (`SAVED_NOT_APPROVED`) com automação Always-On via hooks do Master Orchestrator.
-10. `[ ]` **Trilha Estratégica / IMP-0027: Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E**:
-   - Proposta de unificação sistêmica catalogada em `improvement-backlog.md` (`SAVED_NOT_APPROVED`, Ref: ADR-025) aguardando deliberação e aprovação do usuário.
+10. `[x]` **Trilha Estratégica / IMP-0027: Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E**:
+   - Conexão total de todos os motores em `run_pipeline`, unificação do cache AST SHA-256 em `BlastRadiusAnalyzer` e `PromptRefiner`, canonização do `CanonicalSecretScanner`, 8 exportações públicas no top-level e suíte de 8 novos testes em `test_connected_e2e_pipeline.py` (278/278 PASS). `IMPLEMENTED` (ADR-025, PR-CORP-027).
 
 ---
 
@@ -305,6 +336,9 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-24T10:15:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0027 (Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E do run_pipeline): extensão do `CachedASTCodebaseIndexer` com helpers `get_file_symbols` e `get_all_symbol_names`, injeção nativa de cache e método `analyze_files(Sequence[str | Path])` no `BlastRadiusAnalyzer`, resolução O(1) de símbolos no `ContextAwarePromptRefiner`, canonização de `CanonicalSecretScanner` como Single Source of Truth para credenciais em `QualityGateRunner`, `SurgicalTestRunner` e `tool_security_guard`, amarração E2E completa das 5 fases FSM em `AutonomousEngineeringGraph.run_pipeline` (PLANNING antecipado, TDD cirúrgico, auto-remediação sintática, scorecard semântico e PR 1-clique com push remoto), exportação dos 8 símbolos públicos em `corporate_engineer.__all__`, formalização do ADR-025 e PR-CORP-027, e 8 novos testes em `tests/test_connected_e2e_pipeline.py` (278/278 testes globais PASS em 47.37s, 0 erros Ruff/Mypy). |
+| `2026-11-24T10:10:00-03:00` | rag-cache-engineer (IMP-0027) | Unificação do Cache AST SHA-256 e Análise em Lote de Blast Radius (ADR-025): implementação de `get_file_symbols` e `get_all_symbol_names` em `CachedASTCodebaseIndexer`, inicialização com `CachedASTCodebaseIndexer` e adição de `analyze_files(Sequence[str | Path])` em `BlastRadiusAnalyzer`, resolução O(1) de símbolos via cache AST em `ContextAwarePromptRefiner.find_ast_symbols`. Suíte global expandida para 278/278 testes PASS, 0 erros Ruff/Mypy e Zero-Secret Scan PASS. |
+| `2026-11-24T10:00:00-03:00` | Corp-Pipeline Master Orchestrator | Implementação da Suíte de Otimização Windows 10 para IA & Modo Entrevista via Swarm Max (gemini-3.8-flash-high): coordenação dos subagentes perf-architect e qa-tester com metaprompt estruturado, scripts scripts/optimize_windows_for_ai_dev.ps1, scripts/start_interview_mode.ps1, scripts/stop_interview_mode.ps1, documento docs/architecture/windows_optimization_architecture.md, 9 novos testes em tests/test_windows_optimization_scripts.py (270/270 PASS), 0 erros Ruff/Mypy e Zero-Secret Scan PASS. |
 | `2026-11-22T21:15:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0022 (Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos no Pre-Flight): adição de logger estruturado e timeout configurável de 15s com CORP_GIT_TIMEOUT em git_utils.py, eliminação de blocos pass cegos e suporte multiplataforma (os.name == "nt") em surgical_runner.py, execução segura com shell=False e shlex.split no QualityGateRunner com captura de TimeoutExpired (exit_code=-2), 6 novos testes em tests/test_git_robustness_and_silent_errors.py (261/261 PASS em 45.35s, 0 erros Ruff/Mypy), formalização do ADR-024 e PR-CORP-022. |
 | `2026-11-22T21:00:00-03:00` | Corp-Pipeline Master Orchestrator | Catalogação formal de IMP-0026 em `.agents/orchestration/improvement-backlog.md`: Tri-Phase Adversarial Loop incorporando Fase 1.5 (Adversarial Red Team Attack), Fase 1.6 (Architecture Transcendence & Hardening) e Fase 1.7 (Red Team Adversarial Re-Verification) com acionamento automático por risco e bloqueio pré-Swarm via hooks Always-On. |
 | `2026-11-22T20:25:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0025 (Autonomous Proactive Intelligence & Full E2E Lifecycle Hook Suite): implementação do motor `ProactiveAnticipator` (matriz 2 passos à frente), modelos DTO Pydantic v2 `AnticipationStep` e `AnticipationPlan`, suíte completa de 5 lifecycle hooks Antigravity em `.agents/hooks.json` (`session_start.py`, `proactive_advisor.py`, `pre_tool_security_guard.py` Zero-Secret Guard, `post_tool_auto_healer.py` AST auto-remediation & blast radius, `session_turnover_gate.py`), instalação de git hooks locais `pre-commit` e `pre-push` (`scripts/install_git_hooks.py`), novo subcomando CLI `corporate-engineer anticipate`, 12 novos testes em `tests/test_proactive_pipeline.py` (255/255 PASS em 23.95s), formalização do ADR-023 e PR-CORP-025. |

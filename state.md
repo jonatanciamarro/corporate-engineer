@@ -11,20 +11,62 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0027-connect-all-modules-and-e2e-pipeline` | 🟢 Suíte com 278/278 testes PASS, 0 erros Ruff e Mypy, Zero-Secret Guard ativo |
+| **Branch Ativa** | `feat/IMP-0023-modular-cli-architecture` | 🟢 Suíte com 287/287 testes PASS, 0 erros Ruff e Mypy, Zero-Secret Guard ativo |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **278/278 PASS** | Cobertura global robusta de 88%+ (`pytest-cov`) em 47.37s |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (141 arquivos verificados e formatados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 82 arquivos validados estritamente no root |
-| **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` (tempo de varredura otimizado para sub-1s) |
-| **Orquestrador Central** | 🟢 **Corp-Pipeline Proativo Ativo** | Arquitetura em 3 Camadas: Core, Intelligence & Governance (2 passos à frente) |
+| **Testes (Pytest + Hypothesis)** | 🟢 **287/287 PASS** | Cobertura global robusta de 88%+ (`pytest-cov`) em 42.17s (3 novos testes em `test_cli_modular_architecture.py`) |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (159 arquivos verificados e formatados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 97 arquivos validados estritamente no root |
+| **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` (tempo de varredura sub-1s) |
+| **Orquestrador Central** | 🟢 **Corp-Pipeline Always-On Ativo** | Frontmatter `trigger: always_on` ativo em `corp-pipeline-orchestrator.md` |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
-| **Lifecycle Hooks E2E** | 🟢 **5 Hooks Antigravity & Git Hooks Ativos** | `SessionStart`, `PreInvocation`, `PreToolUse`, `PostToolUse`, `Stop` + `pre-commit`/`pre-push` |
+| **Lifecycle Hooks E2E** | 🟢 **5 Hooks Ativos com run_hook.py** | Dispatcher universal resiliente com detecção automática de `.venv` e tolerância a CWD |
 
 ---
 
 ## 2. O Que Foi Feito Recentemente
+
+### Sessão Atual (Implementação de IMP-0023 / ADR-026: Modularização da CLI Corporativa e Decomposição do Monólito):
+1. **Decomposição do Monólito de 1.884 Linhas (`src/corporate_engineer/cli/`)**:
+   - Criação do subpacote `src/corporate_engineer/cli/commands/` contendo 9 módulos de comandos de domínio:
+     - `orchestrator.py`: `run`, `dag`, `swarm`, `anticipate`, mais `DAG_PHASES` e `DAG_TRANSITIONS`.
+     - `rag.py`: `index`, `blast-radius`, `eval`, e `_run_blast_radius_analysis`.
+     - `quality.py`: `audit`, `test-surgical`, `fix`, `clean`.
+     - `system_one.py`: `decide`, `dataset`, `benchmark`.
+     - `mcp.py`: `mcp` (`ping`, `list-tools`, `call`, `hub`).
+     - `prompt.py`: `prompt` (`refine`).
+     - `telemetry.py`: `telemetry` e `_print_trace_report`.
+     - `pr.py`: `pr-link` (`handle_pr_link`).
+     - `lora.py`: `lora` (`generate`, `validate`, `export`).
+   - Módulos centrais: `parser.py` (`build_parser`), `main.py` (`main`), `__main__.py` (`python -m corporate_engineer.cli`) e `__init__.py` (re-exportando a API pública original).
+2. **Eliminação do Monólito e Conformidade Arquitetural**:
+   - Remoção de `src/corporate_engineer/cli.py` com backup preservado em scratch.
+   - 100% dos arquivos abaixo de 800 linhas (o maior com 421 linhas e a maioria < 250 linhas).
+3. **Shift-Left TDD & Qualidade (`tests/test_cli_modular_architecture.py`)**:
+   - 3 novos testes unitários validando exportações públicas, importabilidade e limites de tamanho.
+   - Suíte de 23 testes legados da CLI (`tests/test_cli.py`) passando com 100% de sucesso.
+   - Suíte global expandida para **287/287 testes PASS** em 42.17s.
+   - 0 erros Ruff (159 arquivos), 0 erros Mypy (97 arquivos) e Pre-Flight Secret Scanner 100% limpo.
+4. **Governança & Minuta de PR**:
+   - Formalização do [ADR-026](docs/adr/ADR-026-modular-cli-architecture.md), minuta [PR-CORP-023.md](docs/pull_requests/PR-CORP-023.md) e atualização de `.agents/orchestration/improvement-backlog.md` (`IMP-0023` -> `IMPLEMENTED`).
+
+### Sessão Atual (Implementação de IMP-0028 / ADR-027: Resiliência Universal de Hooks do Ciclo de Vida e Ativação Permanente de Regras Always-On):
+1. **Ativação Always-On da Regra Mestra (`.agents/rules/corp-pipeline-orchestrator.md`)**:
+   - Inserção do frontmatter oficial `trigger: always_on` e descrição formal no topo de `corp-pipeline-orchestrator.md`.
+   - Elimina a causa-raiz da "amnésia" do sistema, garantindo que o protocolo do Chief Orchestrator e as 6 Fases do Corp-Pipeline sejam injetados em 100% das sessões e turnos.
+2. **Criação do Dispatcher Universal de Hooks (`.agents/orchestration/hooks/run_hook.py`)**:
+   - Resolução agnóstica de workspace root (4 níveis acima ou busca por `state.md`/`.git`).
+   - Detecção automática prioritária do interpretador Python de `.venv` (`.venv/Scripts/python.exe` no Windows e `.venv/bin/python` no POSIX).
+   - Execução in-process de ultra-baixa latência quando o ambiente já é compatível, ou encaminhamento transparente via subprocesso seguro com `check=False`.
+   - Injeção obrigatória de `src/`, `.agents/` e hooks no `sys.path`.
+3. **Reconfiguração Completa de `.agents/hooks.json`**:
+   - Correção dos 5 eventos de ciclo de vida (`SessionStart`, `PreInvocation`, `PreToolUse`, `PostToolUse`, `Stop`) para utilizarem `python .agents/orchestration/hooks/run_hook.py <hook_name>`.
+   - Eliminação de erros silenciosos `[Errno 2] No such file or directory` causados pela execução a partir do root.
+4. **Suíte Abrangente de Shift-Left TDD (`tests/test_hook_resilience_and_rule_triggers.py`)**:
+   - 6 novos testes automatizados unitários e de integração cobrindo presença de triggers em todas as regras, trigger `always_on` em `corp-pipeline-orchestrator.md`, existência do despachante universal, execução do Advisor Proativo com injeção de `injectSteps`, execução do Zero-Secret Guard e integridade do `hooks.json`.
+   - Suíte global expandida com 6 novos testes 100% verdes (PASS).
+5. **Governança & Arquitetura Formal**:
+   - Formalização do [ADR-027](docs/adr/ADR-027-always-on-orchestration-and-resilient-hooks.md) e do Plano de Engenharia (`plan_v2_systemic_pipeline_and_hooks_enforcement.md`) no diretório de artefatos com `RequestFeedback: true`.
 
 ### Sessão Atual (Implementação de IMP-0027 / ADR-025: Unificação de Cache AST SHA-256 e Análise em Lote de Blast Radius):
 1. **Extensão do `CachedASTCodebaseIndexer` (`src/corporate_engineer/rag/cached_ast_indexer.py`)**:
@@ -50,7 +92,7 @@
    - Mapeamento detalhado das restrições: Intel Core i7-4600U Dual-Core, 8GB RAM DDR3, Intel HD Graphics compartilhada e particionamento multi-disco.
    - Diagnóstico das causas de congelamento em chamadas de vídeo com screen sharing (WebRTC) e suíte de testes concorrente.
 3. **Scripts PowerShell de Alta Confiabilidade (`scripts/`)**:
-   - `scripts/optimize_windows_for_ai_dev.ps1`: Tweak cirúrgico permanente (`Win32PrioritySeparation=38`, `SystemResponsiveness=10`, desativação de telemetria, GameDVR, indexação em pastas de dev e exclusões no Windows Defender para processos Python/Git/VS Code).
+   - `scripts/optimize_windows_for_ai_dev.ps1`: Tweak cirúrgico permanente (`Win32PrioritySeparation=38`, `SystemResponsiveness=10`, `FeatureSettingsOverride=3` e `FeatureSettingsOverrideMask=3` para recuperação de IPC no Haswell, `ClearPageFileAtShutdown=0` para reboot instantâneo, `LargeSystemCache=1`, `Enable-MMAgent -MemoryCompression -PageCombining` para ZRAM nativa no Windows, desativação de telemetria, GameDVR, indexação em pastas de dev, suporte a auto-elevação com `-Elevate` e exclusões no Windows Defender para processos Python/Git/VS Code).
    - `scripts/start_interview_mode.ps1`: Modo de entrevista dinâmico com suspensão de serviços não-essenciais (`WSearch`, `SysMain`, `wuauserv`, `Spooler`), blacklist crítica inegociável (áudio, vídeo e rede intocados), Working Set Trim (purga de RAM) e elevação de prioridade para `AboveNormal` em processos interativos.
    - `scripts/stop_interview_mode.ps1`: Restauração atômica a partir do snapshot `$env:LOCALAPPDATA\InterviewMode\service_state.json`.
 4. **Suíte Abrangente de Shift-Left TDD (`tests/test_windows_optimization_scripts.py`)**:
@@ -324,11 +366,13 @@
    - `IMP-0020`: Blindagem de Concorrência & Thread-Safety no Swarm e Tracer (RLock & ContextVars) - `IMPLEMENTED` (ADR-021, PR-CORP-020, 15 novos testes, 234/234 PASS).
    - `IMP-0021`: Isolamento Atômico do Motor de Testes de Mutação (Safe Sandbox & Atomic Reversion) - `IMPLEMENTED` (ADR-022, PR-CORP-021, 9 novos testes, 243/243 PASS).
    - `IMP-0022`: Tratamento Robusto de Timeouts Git e Eliminação de Erros Silenciosos no Pre-Flight - `IMPLEMENTED` (ADR-024, PR-CORP-022, 6 novos testes, 261/261 PASS).
-   - `IMP-0023`: Modularização da CLI Corporativa (Decomposição do Monólito de 1661 Linhas) - `SAVED_NOT_APPROVED`.
+   - `IMP-0023`: Modularização da CLI Corporativa (Decomposição do Monólito de 1661 Linhas) - `IMPLEMENTED` (ADR-026, PR-CORP-023, 3 novos testes, 287/287 PASS).
 9. `[ ]` **Trilha Estratégica / IMP-0026: Tri-Phase Adversarial Loop (Red Team 1.5 → Transcendência 1.6 → Verificação 1.7)**:
    - Especificação do loop dialético pré-execução catalogada em `improvement-backlog.md` (`SAVED_NOT_APPROVED`) com automação Always-On via hooks do Master Orchestrator.
 10. `[x]` **Trilha Estratégica / IMP-0027: Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E**:
    - Conexão total de todos os motores em `run_pipeline`, unificação do cache AST SHA-256 em `BlastRadiusAnalyzer` e `PromptRefiner`, canonização do `CanonicalSecretScanner`, 8 exportações públicas no top-level e suíte de 8 novos testes em `test_connected_e2e_pipeline.py` (278/278 PASS). `IMPLEMENTED` (ADR-025, PR-CORP-027).
+11. `[x]` **Trilha Governança / IMP-0028: Resiliência Universal de Hooks e Frontmatter Always-On para Eliminação Definitiva de Amnésia de Regras**:
+   - Ativação de `trigger: always_on` em `corp-pipeline-orchestrator.md`, criação do dispatcher universal `run_hook.py` (.venv auto-detect e agnóstico de CWD), reconfiguração do `.agents/hooks.json`, formalização do ADR-027 e artefato plan_v2, e suíte de 6 novos testes em `test_hook_resilience_and_rule_triggers.py` (100% PASS). `IMPLEMENTED` (ADR-027).
 
 ---
 
@@ -336,6 +380,8 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-24T11:00:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0023 (Modularização da CLI Corporativa e Decomposição do Monólito de 1.884 linhas): decomposição de src/corporate_engineer/cli.py em subpacote src/corporate_engineer/cli/ com 9 módulos de comandos (orchestrator, rag, quality, system_one, mcp, prompt, telemetry, pr, lora), módulos centrais parser.py, main.py, __main__.py e __init__.py preservando 100% de compatibilidade retroativa, formalização do ADR-026 e PR-CORP-023.md, 3 novos testes em tests/test_cli_modular_architecture.py (287/287 testes globais PASS em 42.17s, 0 erros Ruff/Mypy e Zero-Secret Scan PASS). |
+| `2026-11-24T10:55:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0028 (Resiliência Universal de Hooks do Ciclo de Vida e Ativação Permanente de Regras Always-On): ativação do frontmatter `trigger: always_on` em `corp-pipeline-orchestrator.md`, implementação do dispatcher universal `run_hook.py` em `.agents/orchestration/hooks/` com autodetecção de `.venv` e tolerância a CWD, reconfiguração do `.agents/hooks.json` para todos os 5 eventos do ciclo de vida, formalização do ADR-027 e emissão do artefato plan_v2, 6 novos testes em `tests/test_hook_resilience_and_rule_triggers.py` (100% PASS), 0 erros Ruff/Mypy e Zero-Secret Scan PASS. |
 | `2026-11-24T10:15:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0027 (Conexão Total de Módulos Desconectados, Unificação de Cache AST SHA-256 e Enriquecimento E2E do run_pipeline): extensão do `CachedASTCodebaseIndexer` com helpers `get_file_symbols` e `get_all_symbol_names`, injeção nativa de cache e método `analyze_files(Sequence[str | Path])` no `BlastRadiusAnalyzer`, resolução O(1) de símbolos no `ContextAwarePromptRefiner`, canonização de `CanonicalSecretScanner` como Single Source of Truth para credenciais em `QualityGateRunner`, `SurgicalTestRunner` e `tool_security_guard`, amarração E2E completa das 5 fases FSM em `AutonomousEngineeringGraph.run_pipeline` (PLANNING antecipado, TDD cirúrgico, auto-remediação sintática, scorecard semântico e PR 1-clique com push remoto), exportação dos 8 símbolos públicos em `corporate_engineer.__all__`, formalização do ADR-025 e PR-CORP-027, e 8 novos testes em `tests/test_connected_e2e_pipeline.py` (278/278 testes globais PASS em 47.37s, 0 erros Ruff/Mypy). |
 | `2026-11-24T10:10:00-03:00` | rag-cache-engineer (IMP-0027) | Unificação do Cache AST SHA-256 e Análise em Lote de Blast Radius (ADR-025): implementação de `get_file_symbols` e `get_all_symbol_names` em `CachedASTCodebaseIndexer`, inicialização com `CachedASTCodebaseIndexer` e adição de `analyze_files(Sequence[str | Path])` em `BlastRadiusAnalyzer`, resolução O(1) de símbolos via cache AST em `ContextAwarePromptRefiner.find_ast_symbols`. Suíte global expandida para 278/278 testes PASS, 0 erros Ruff/Mypy e Zero-Secret Scan PASS. |
 | `2026-11-24T10:00:00-03:00` | Corp-Pipeline Master Orchestrator | Implementação da Suíte de Otimização Windows 10 para IA & Modo Entrevista via Swarm Max (gemini-3.8-flash-high): coordenação dos subagentes perf-architect e qa-tester com metaprompt estruturado, scripts scripts/optimize_windows_for_ai_dev.ps1, scripts/start_interview_mode.ps1, scripts/stop_interview_mode.ps1, documento docs/architecture/windows_optimization_architecture.md, 9 novos testes em tests/test_windows_optimization_scripts.py (270/270 PASS), 0 erros Ruff/Mypy e Zero-Secret Scan PASS. |

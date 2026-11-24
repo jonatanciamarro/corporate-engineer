@@ -1,3 +1,7 @@
+---
+trigger: always_on
+description: Master Protocol for Corp-Pipeline Chief Orchestrator and 6-Phase Engineering Lifecycle.
+---
 # Corp-Pipeline Master Orchestrator Protocol
 
 > **Operating Standard**: Corp-Pipeline  

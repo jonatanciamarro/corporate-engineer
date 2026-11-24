@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,7 @@ class MCPEnterpriseHub:
     """Hub corporativo unificado para orquestação de múltiplos servidores MCP."""
 
     def __init__(self, config_path: str | Path | None = None) -> None:
+        self._lock: threading.RLock = threading.RLock()
         self.servers: dict[str, MCPServerDefinition] = {}
         self.circuit_breakers: dict[str, CircuitBreaker] = {}
         self.handlers: dict[str, Callable[[str, dict[str, Any]], Any]] = {}
@@ -54,29 +56,32 @@ class MCPEnterpriseHub:
         handler: Callable[[str, dict[str, Any]], Any] | None = None,
     ) -> None:
         """Registra um servidor no pool com seu respectivo Circuit Breaker isolado."""
-        self.servers[name] = config
-        self.circuit_breakers[name] = CircuitBreaker(
-            failure_threshold=config.max_failures,
-            recovery_timeout=config.reset_timeout_seconds,
-        )
-        if handler:
-            self.handlers[name] = handler
-        else:
-            # Handler padrão simulado / stub
-            def _default_handler(tool: str, args: dict[str, Any]) -> dict[str, Any]:
-                return {"status": "ok", "server": name, "tool": tool, "args": args}
+        with self._lock:
+            self.servers[name] = config
+            self.circuit_breakers[name] = CircuitBreaker(
+                failure_threshold=config.max_failures,
+                recovery_timeout=config.reset_timeout_seconds,
+            )
+            if handler:
+                self.handlers[name] = handler
+            else:
+                # Handler padrão simulado / stub
+                def _default_handler(tool: str, args: dict[str, Any]) -> dict[str, Any]:
+                    return {"status": "ok", "server": name, "tool": tool, "args": args}
 
-            self.handlers[name] = _default_handler
+                self.handlers[name] = _default_handler
 
     def register_tool(self, tool: MCPNamespacedTool) -> None:
         """Registra uma ferramenta sob o namespace <server>.<tool>."""
-        self.tools[tool.namespaced_name] = tool
+        with self._lock:
+            self.tools[tool.namespaced_name] = tool
 
     def list_tools(self, server_filter: str | None = None) -> list[MCPNamespacedTool]:
         """Lista ferramentas registradas com filtro opcional por servidor."""
-        if server_filter:
-            return [t for t in self.tools.values() if t.server_name == server_filter]
-        return list(self.tools.values())
+        with self._lock:
+            if server_filter:
+                return [t for t in self.tools.values() if t.server_name == server_filter]
+            return list(self.tools.values())
 
     def call_tool(
         self,
@@ -90,14 +95,16 @@ class MCPEnterpriseHub:
             )
 
         server_name, tool_name = namespaced_tool.split(".", 1)
-        if namespaced_tool not in self.tools:
-            raise KeyError(f"Ferramenta '{namespaced_tool}' não registrada no hub MCP")
+        with self._lock:
+            if namespaced_tool not in self.tools:
+                raise KeyError(f"Ferramenta '{namespaced_tool}' não registrada no hub MCP")
 
-        if server_name not in self.servers or server_name not in self.handlers:
-            raise KeyError(f"Servidor '{server_name}' não registrado ou indisponível")
+            if server_name not in self.servers or server_name not in self.handlers:
+                raise KeyError(f"Servidor '{server_name}' não registrado ou indisponível")
 
-        breaker = self.circuit_breakers[server_name]
-        handler = self.handlers[server_name]
+            breaker = self.circuit_breakers[server_name]
+            handler = self.handlers[server_name]
+
         args = arguments or {}
 
         # Execução protegida por Circuit Breaker individual
@@ -109,13 +116,16 @@ class MCPEnterpriseHub:
         max_tools: int = 5,
     ) -> list[MCPNamespacedTool]:
         """Utiliza o Sistema 1 para selecionar as ferramentas mais prováveis, poupando context window."""
-        if not self.tools:
+        with self._lock:
+            tools_snapshot = list(self.tools.values())
+
+        if not tools_snapshot:
             return []
 
         prompt_tokens = set(re.findall(r"\b\w+\b", prompt.lower()))
 
         scored_tools: list[tuple[float, MCPNamespacedTool]] = []
-        for tool in self.tools.values():
+        for tool in tools_snapshot:
             tool_text = f"{tool.server_name} {tool.tool_name} {tool.description}".lower()
             tool_tokens = set(re.findall(r"\b\w+\b", tool_text))
             matches = prompt_tokens.intersection(tool_tokens)
@@ -132,16 +142,19 @@ class MCPEnterpriseHub:
 
     def get_status(self) -> MCPHubStatus:
         """Retorna o status consolidado de saúde e governança de todo o pool de servidores."""
-        active = list(self.servers.keys())
-        states = {s: self.circuit_breakers[s].state.value for s in active}
-        tools_count: dict[str, int] = {}
-        for t in self.tools.values():
-            tools_count[t.server_name] = tools_count.get(t.server_name, 0) + 1
+        with self._lock:
+            active = list(self.servers.keys())
+            states = {s: self.circuit_breakers[s].state.value for s in active}
+            tools_count: dict[str, int] = {}
+            for t in self.tools.values():
+                tools_count[t.server_name] = tools_count.get(t.server_name, 0) + 1
+
+            total_tools_count = len(self.tools)
 
         return MCPHubStatus(
             total_servers=len(active),
             active_servers=active,
             circuit_states=states,
-            total_tools=len(self.tools),
+            total_tools=total_tools_count,
             tools_by_server=tools_count,
         )

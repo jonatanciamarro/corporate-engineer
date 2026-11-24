@@ -255,9 +255,26 @@ class RemoteMCPSSEClient:
     def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> MCPToolResult:
         try:
             res = self._send_request("tools/call", {"name": tool_name, "arguments": arguments})
+            if "error" in res:
+                error_obj = res.get("error", {})
+                error_msg = (
+                    error_obj.get("message", str(error_obj))
+                    if isinstance(error_obj, dict)
+                    else str(error_obj)
+                )
+                if self.circuit_breaker:
+                    self.circuit_breaker.record_failure()
+                return MCPToolResult(
+                    tool_name=tool_name,
+                    is_error=True,
+                    content=f"JSON-RPC Error: {error_msg}",
+                )
+
             result_data = res.get("result", {})
             content_list = result_data.get("content", [])
             is_error = bool(result_data.get("isError", False))
+            if is_error and self.circuit_breaker:
+                self.circuit_breaker.record_failure()
             text_parts = [
                 item.get("text", "")
                 for item in content_list

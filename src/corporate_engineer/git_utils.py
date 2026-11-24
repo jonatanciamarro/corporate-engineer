@@ -51,8 +51,9 @@ def classify_commit_type(git_diff_or_message: str) -> Any:
     return router.classify_commit(git_diff_or_message)
 
 
-def get_current_branch(repo_path: Path | str = ".") -> str:
+def get_current_branch(repo_path: Path | str = ".", timeout: float | None = None) -> str:
     """Retrieve the current active Git branch name."""
+    effective_timeout = _resolve_git_timeout(timeout)
     try:
         proc = subprocess.run(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
@@ -60,9 +61,12 @@ def get_current_branch(repo_path: Path | str = ".") -> str:
             capture_output=True,
             text=True,
             cwd=str(Path(repo_path).resolve()),
+            timeout=effective_timeout,
         )
         if proc.returncode == 0 and proc.stdout.strip():
             return proc.stdout.strip()
+    except subprocess.TimeoutExpired as exc:
+        logger.warning("Git rev-parse timed out in get_current_branch: %s", exc)
     except (OSError, subprocess.SubprocessError):
         pass
 
@@ -79,8 +83,11 @@ def get_current_branch(repo_path: Path | str = ".") -> str:
     return "main"
 
 
-def get_remote_url(repo_path: Path | str = ".", remote_name: str = "origin") -> str:
+def get_remote_url(
+    repo_path: Path | str = ".", remote_name: str = "origin", timeout: float | None = None
+) -> str:
     """Get the fetch URL for the specified Git remote."""
+    effective_timeout = _resolve_git_timeout(timeout)
     try:
         proc = subprocess.run(
             ["git", "remote", "get-url", remote_name],
@@ -88,6 +95,7 @@ def get_remote_url(repo_path: Path | str = ".", remote_name: str = "origin") -> 
             capture_output=True,
             text=True,
             cwd=str(Path(repo_path).resolve()),
+            timeout=effective_timeout,
         )
         if proc.returncode == 0 and proc.stdout.strip():
             return proc.stdout.strip()
@@ -97,6 +105,8 @@ def get_remote_url(repo_path: Path | str = ".", remote_name: str = "origin") -> 
             proc.returncode,
             proc.stderr.strip(),
         )
+    except subprocess.TimeoutExpired as exc:
+        logger.warning("Git remote get-url timed out in get_remote_url: %s", exc)
     except (OSError, subprocess.SubprocessError) as exc:
         logger.warning("Subprocess error getting remote URL for '%s': %s", remote_name, exc)
     return "https://github.com/jonatanciamarro/corporate-engineer.git"
@@ -152,7 +162,17 @@ def is_branch_pushed(
         if proc.returncode != 0 or not proc.stdout.strip():
             return False
 
-        remote_hash = proc.stdout.split()[0].strip()
+        # Match exact ref "refs/heads/{target_branch}"
+        exact_ref = f"refs/heads/{target_branch}"
+        remote_hash: str | None = None
+        for line in proc.stdout.splitlines():
+            parts = line.strip().split()
+            if len(parts) >= 2 and parts[1] == exact_ref:
+                remote_hash = parts[0]
+                break
+
+        if not remote_hash:
+            return False
 
         # Compare with local HEAD hash
         proc_head = subprocess.run(
@@ -164,11 +184,17 @@ def is_branch_pushed(
             timeout=effective_timeout,
             env=git_env,
         )
-        if proc_head.returncode == 0:
-            local_hash = proc_head.stdout.strip()
-            return local_hash == remote_hash
+        if proc_head.returncode != 0:
+            logger.warning(
+                "Local git rev-parse failed for branch %s (exit=%d): %s",
+                target_branch,
+                proc_head.returncode,
+                proc_head.stderr.strip(),
+            )
+            return False
 
-        return True
+        local_hash = proc_head.stdout.strip()
+        return local_hash == remote_hash
     except subprocess.TimeoutExpired as exc:
         logger.warning(
             "Git operation timed out in is_branch_pushed (branch=%s, timeout=%ss): %s",

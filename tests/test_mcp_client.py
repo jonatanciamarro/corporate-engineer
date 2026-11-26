@@ -67,6 +67,51 @@ def test_mcp_command_allowlist(tmp_path: Path):
     assert "Command blocked by security allowlist" in res_blocked.content
 
 
+def test_mcp_shell_blocks_injection_and_inline_execution(tmp_path: Path):
+    adapter = LocalMCPToolAdapter(workspace_root=tmp_path)
+    malicious_commands = [
+        "pytest && whoami",
+        "pytest || whoami",
+        "pytest; whoami",
+        "git status | cat",
+        "python --version > leaked.txt",
+        "python `whoami`",
+        "python $(whoami)",
+        'python -c "import os; print(os.getcwd())"',
+        'python3 --command "print(1)"',
+        'python -e "print(1)"',
+        "python -",
+    ]
+    with patch("corporate_engineer.mcp.client.subprocess.run") as mock_run:
+        for cmd in malicious_commands:
+            call = MCPToolCall(
+                server_name="shell",
+                tool_name="run_command",
+                arguments={"command": cmd},
+            )
+            res = adapter.execute(call)
+            assert res.is_error is True, f"Expected block for: {cmd}"
+            assert "Command blocked" in res.content
+        mock_run.assert_not_called()
+
+
+def test_mcp_shell_executes_with_shell_false(tmp_path: Path):
+    adapter = LocalMCPToolAdapter(workspace_root=tmp_path)
+    safe_call = MCPToolCall(
+        server_name="shell",
+        tool_name="run_command",
+        arguments={"command": "python --version"},
+    )
+    mock_proc = MagicMock(returncode=0, stdout="Python 3.11.9\n", stderr="")
+    with patch("corporate_engineer.mcp.client.subprocess.run", return_value=mock_proc) as mock_run:
+        res = adapter.execute(safe_call)
+    assert res.is_error is False
+    assert mock_run.called
+    call_args, call_kwargs = mock_run.call_args
+    assert isinstance(call_args[0], list)
+    assert call_kwargs.get("shell") is False
+
+
 def test_local_mcp_list_tools(tmp_path: Path):
     adapter = LocalMCPToolAdapter(workspace_root=tmp_path)
     tools = adapter.list_tools()

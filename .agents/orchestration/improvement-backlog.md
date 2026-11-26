@@ -59,6 +59,14 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0031` | Blindagem de Qualidade, Segurança & Sandboxing de Mutação (Pacote 2) | `QUALITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-24` |
 | `IMP-0032` | Integridade da CLI, Output Contratos & Dynamic Hook Dispatching (Pacote 3) | `ARCHITECTURE` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-24` |
 | `IMP-0033` | AI Systems, RAG Cache Starvation & Unificação de Dívidas Técnicas (Pacote 4) | `EFFICIENCY` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-24` |
+| `IMP-0034` | Sincronização de Regexes Modernos de Segredos no `LoraVertexExporter` | `SECURITY` | Baixa (S) | `IMPLEMENTED` | `2026-11-25` |
+| `IMP-0035` | Hardening `shell=False` no `LocalMCPToolAdapter`, Higiene Git & `README.md` (Pacote P0) | `SECURITY` | Média (M) | `IMPLEMENTED` | `2026-11-26` |
+| `IMP-0036` | Integridade e Inferência Real nos Motores `System-One` (`ONNX`, `Outlines`, `Trainer`) | `ARCHITECTURE` | Alta (L) | `SAVED_NOT_APPROVED` | `2026-11-26` |
+| `IMP-0037` | Suporte Real a `text/event-stream` (SSE) no `RemoteMCPSSEClient` | `INTEGRATION` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-26` |
+| `IMP-0038` | Executores Plugáveis Reais no `SwarmCoordinator` & `AutonomousEngineeringGraph` | `ORCHESTRATION` | Alta (L) | `SAVED_NOT_APPROVED` | `2026-11-26` |
+| `IMP-0039` | Auditoria por Imports AST Reais no `CapabilityWiringAuditor` | `QUALITY` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-26` |
+| `IMP-0040` | Imutabilidade Estrita (`ConfigDict(frozen=True)`) nos Modelos Pydantic v2 | `MAINTAINABILITY` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-26` |
+| `IMP-0041` | Curadoria e Enxugamento de `.agents/skills/` (DAILY vs LIBRARY) | `MAINTAINABILITY` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-26` |
 
 ---
 
@@ -652,6 +660,100 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 - **Componentes Afetados**: `src/corporate_engineer/rag/cached_ast_indexer.py`, `src/corporate_engineer/system_one/benchmark.py`, `src/corporate_engineer/lora/validator.py`, `src/corporate_engineer/prompt/refiner.py`.
 - **Complexidade**: Média-Alta (M-L).
 - **Critérios de Aceite**: Testes de RAG e benchmark aprovados, zero referências obsoletas.
+
+---
+
+### 🔹 IMP-0034: Sincronização de Regexes Modernos de Segredos no `LoraVertexExporter`
+- **Categoria**: `SECURITY`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-032`, `PR-CORP-035.md`)
+- **Data de Descoberta**: 2026-11-25
+- **Problema / Limitação Atual**: `src/corporate_engineer/lora/exporter.py` (linha 17) utiliza o padrão legado `re.compile(r"sk-[0-9A-Za-z]{20,}")` em `SECRET_PATTERNS`, o que não captura chaves modernas com hífen ou underscore (`sk-proj-...`, `sk-svcacct-...`, `sk-live-...`, `sk-ant-api03-...`) durante a redação automática de arquivos `.jsonl` exportados para fine-tuning LoRA.
+- **Solução Proposta**: Sincronizar `LoraVertexExporter` com os padrões canônicos de OpenAI e Anthropic definidos em `CanonicalSecretScanner` (`src/corporate_engineer/quality/secret_scanner.py`) e adicionar teste de regressão dedicado em `tests/test_gemini_lora_pipeline.py`.
+- **Benefícios Esperados**: Eliminação de risco de vazamento de credenciais modernas em datasets `.jsonl` exportados para fine-tuning.
+- **Componentes Afetados**: `src/corporate_engineer/lora/exporter.py`, `tests/test_gemini_lora_pipeline.py`.
+- **Complexidade**: Baixa (S).
+- **Riscos**: Mínimos; manter proteção contra falsos positivos em tokens textuais curtos iniciados por `sk-`.
+- **Critérios de Aceite**: Testes unitários de regressão comprovando redação de chaves `sk-proj-`, `sk-svcacct-`, `sk-live-` e `sk-ant-api03-` no exportador LoRA, além de Pre-Flight 100% aprovado.
+
+---
+
+### 🔹 IMP-0035: Hardening `shell=False` no `LocalMCPToolAdapter`, Higiene Git & `README.md` (Pacote P0)
+- **Categoria**: `SECURITY` | `MAINTAINABILITY`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-032`, `PR-CORP-035.md`)
+- **Data de Descoberta**: 2026-11-26
+- **Problema / Limitação Atual**: `LocalMCPToolAdapter._handle_shell()` (`src/corporate_engineer/mcp/client.py`) valida apenas `tokens[0]` e executa com `shell=True`, permitindo bypass via encadeamento (`&&`, `||`, `;`, `|`), redirecionamento ou execução inline (`python -c`). Além disso, `src/corporate_engineer.egg-info/` está rastreado no Git, registros `.agents/orchestration/` contêm paths `file:///e:/...`, scripts pessoais de tuning Windows estão misturados ao framework e o `README.md` não documenta o pacote Python nem a CLI.
+- **Solução Proposta**: Refatorar `_handle_shell()` para `shlex.split` + `shell=False` com bloqueio de metacaracteres de shell e flags inline (`-c`, `-e`, `--eval`), remover `.egg-info` do Git, substituir links locais por caminhos relativos, remover os scripts/docs pessoais de Windows e reescrever o `README.md` com arquitetura, instalação, CLI e status honesto.
+- **Benefícios Esperados**: Eliminação de vetor crítico de command injection, repositório limpo e apresentação profissional para avaliação técnica.
+- **Componentes Afetados**: `src/corporate_engineer/mcp/client.py`, `tests/test_mcp_client.py`, `README.md`, `.agents/orchestration/*-registry.md`, `src/corporate_engineer.egg-info/`, remoção de `scripts/*windows*`, `scripts/*interview*`, `docs/architecture/windows_optimization_architecture.md`, `tests/test_windows_optimization_scripts.py`.
+- **Complexidade**: Média (M).
+- **Critérios de Aceite**: Testes TDD comprovando bloqueio de `&&`, `;`, `|`, `python -c` e funcionamento normal de `python --version` com `shell=False`; zero links `file:///e:/` nos registros; `egg-info` fora do índice Git; Pre-Flight 100% verde.
+
+---
+
+### 🔹 IMP-0036: Integridade e Inferência Real nos Motores `System-One` (`ONNX`, `Outlines`, `Trainer`)
+- **Categoria**: `ARCHITECTURE` | `EFFICIENCY`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-26
+- **Problema / Limitação Atual**: `ONNXNLIDecisionEngine` delega 100% ao `HeuristicDecisionEngine` mesmo quando `has_model()` é `True` (rotulando `engine_name="onnx-nli"`); `OutlinesDecisionEngine` reinstancia `Qwen/Qwen2.5-0.5B-Instruct` dentro de `decide_choice()` a cada chamada; `SystemOneTrainer.generate_colab_recipe()` apenas imprime mensagem de exportação ONNX sem converter o modelo.
+- **Solução Proposta**: Implementar carregamento lazy + inferência real via `onnxruntime` (ou explicitar `engine_name="heuristic-fallback"` sempre que heurística rodar), cachear o modelo no `OutlinesDecisionEngine` e implementar exportação ONNX real (`optimum` / `torch.onnx`) na receita Colab.
+- **Benefícios Esperados**: Eliminação de métricas/labels enganosos e execução real de SLM local quando habilitado.
+- **Componentes Afetados**: `src/corporate_engineer/system_one/nli_engine.py`, `src/corporate_engineer/system_one/outlines_engine.py`, `src/corporate_engineer/system_one/trainer.py`, `tests/test_system_one*.py`.
+- **Complexidade**: Alta (L).
+
+---
+
+### 🔹 IMP-0037: Suporte Real a `text/event-stream` (SSE) no `RemoteMCPSSEClient`
+- **Categoria**: `INTEGRATION` | `RELIABILITY`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-26
+- **Problema / Limitação Atual**: `RemoteMCPSSEClient._send_request()` envia `POST` síncrono esperando JSON puro (`json.loads`), falhando caso o servidor responda `Content-Type: text/event-stream` com frames `event:` / `data:`.
+- **Solução Proposta**: Implementar parser de frames SSE (`text/event-stream`) sobre o stream HTTP mantendo compatibilidade com respostas `application/json`.
+- **Componentes Afetados**: `src/corporate_engineer/mcp/client.py`, `tests/test_mcp_client.py`.
+- **Complexidade**: Média (M).
+
+---
+
+### 🔹 IMP-0038: Executores Plugáveis Reais no `SwarmCoordinator` & `AutonomousEngineeringGraph`
+- **Categoria**: `ORCHESTRATION` | `ARCHITECTURE`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-26
+- **Problema / Limitação Atual**: `SwarmCoordinator.dispatch_task()` retorna strings fixas de `ROLE_SPECIALIZATIONS` e invoca ferramentas MCP com `{}`; `AutonomousEngineeringGraph.run_pipeline()` grava stub em memória na fase `IMPLEMENT` sem executar um agente/executor real.
+- **Solução Proposta**: Introduzir protocolo `AgentExecutor` / `RoleAnalyzer` plugável (com analisadores locais baseados em AST/Ruff/Mypy/SecretScanner por padrão e hook opcional para LLM), sinalizando explicitamente modo determinístico vs LLM nos relatórios.
+- **Componentes Afetados**: `src/corporate_engineer/orchestrator/swarm.py`, `src/corporate_engineer/orchestrator/graph.py`, `src/corporate_engineer/models.py`.
+- **Complexidade**: Alta (L).
+
+---
+
+### 🔹 IMP-0039: Auditoria por Imports AST Reais no `CapabilityWiringAuditor`
+- **Categoria**: `QUALITY`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-26
+- **Problema / Limitação Atual**: `CapabilityWiringAuditor.audit()` verifica cobertura de testes por busca de substring (`mod_stem in t_content`), sujeita a falsos positivos quando um nome aparece em comentário ou string.
+- **Solução Proposta**: Inspecionar nós `ast.Import` e `ast.ImportFrom` nos arquivos `tests/test_*.py` para validar vinculação semântica real.
+- **Componentes Afetados**: `src/corporate_engineer/quality/wiring_auditor.py`, `tests/test_auto_wiring_integrity.py`.
+- **Complexidade**: Baixa-Média (S-M).
+
+---
+
+### 🔹 IMP-0040: Imutabilidade Estrita (`ConfigDict(frozen=True)`) nos Modelos Pydantic v2
+- **Categoria**: `MAINTAINABILITY` | `QUALITY`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-26
+- **Problema / Limitação Atual**: Os DTOs em `src/corporate_engineer/models.py` são mutáveis por padrão, permitindo mutação in-place em relatórios e estados, contrariando a regra de imutabilidade do projeto.
+- **Solução Proposta**: Adotar `model_config = ConfigDict(frozen=True)` nos DTOs de contrato/relatório e atualizar pontos de construção para usar `model_copy(update=...)`.
+- **Componentes Afetados**: `src/corporate_engineer/models.py`, consumidores em `src/corporate_engineer/` e `tests/`.
+- **Complexidade**: Média (M).
+
+---
+
+### 🔹 IMP-0041: Curadoria e Enxugamento de `.agents/skills/` (DAILY vs LIBRARY)
+- **Categoria**: `MAINTAINABILITY`
+- **Status**: `SAVED_NOT_APPROVED`
+- **Data de Descoberta**: 2026-11-26
+- **Problema / Limitação Atual**: O diretório `.agents/skills/` contém 331 pastas (em sua maioria skills genéricas de outras stacks como Perl, Yoruba, Cisco IOS, Laravel, Swift), gerando ruído visual e impressão de bloat gerado por IA na avaliação do repositório.
+- **Solução Proposta**: Manter apenas as skills core usadas pelo `corporate-engineer` (Python, TDD, Security, MCP, Corp-Pipeline, Architecture) e mover ou referenciar o catálogo externo via documentação/índice sob demanda.
+- **Componentes Afetados**: `.agents/skills/`, `.agents/orchestration/skills-registry.md`.
+- **Complexidade**: Baixa-Média (S-M).
 
 
 

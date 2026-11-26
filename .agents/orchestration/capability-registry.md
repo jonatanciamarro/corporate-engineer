@@ -74,12 +74,12 @@ Cada capacidade catalogada possui um status operacional rigorosamente verificado
 
 Para detalhamento técnico completo de cada categoria de recursos, consulte os sub-registros:
 
-1. [Subagentes Especializados](file:///e:/projcts/corporate%20engineer/.agents/orchestration/agent-registry.md) (`agent-registry.md`)
-2. [Skills e Conhecimento Reutilizável](file:///e:/projcts/corporate%20engineer/.agents/orchestration/skills-registry.md) (`skills-registry.md`)
-3. [Workflows e Pipelines](file:///e:/projcts/corporate%20engineer/.agents/orchestration/workflow-registry.md) (`workflow-registry.md`)
-4. [Ferramentas Nativas e CLI](file:///e:/projcts/corporate%20engineer/.agents/orchestration/tool-registry.md) (`tool-registry.md`)
-5. [Integrações, MCPs e Plugins](file:///e:/projcts/corporate%20engineer/.agents/orchestration/integration-registry.md) (`integration-registry.md`)
-6. [Backlog Contínuo de Melhorias](file:///e:/projcts/corporate%20engineer/.agents/orchestration/improvement-backlog.md) (`improvement-backlog.md`)
+1. [Subagentes Especializados](./agent-registry.md) (`agent-registry.md`)
+2. [Skills e Conhecimento Reutilizável](./skills-registry.md) (`skills-registry.md`)
+3. [Workflows e Pipelines](./workflow-registry.md) (`workflow-registry.md`)
+4. [Ferramentas Nativas e CLI](./tool-registry.md) (`tool-registry.md`)
+5. [Integrações, MCPs e Plugins](./integration-registry.md) (`integration-registry.md`)
+6. [Backlog Contínuo de Melhorias](./improvement-backlog.md) (`improvement-backlog.md`)
 
 ---
 

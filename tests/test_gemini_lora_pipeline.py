@@ -453,6 +453,26 @@ def test_exporter_secret_sanitization() -> None:
     assert count == 1
 
 
+def test_exporter_redacts_modern_openai_and_anthropic_secrets() -> None:
+    """IMP-0034: Ensures modern OpenAI (sk-proj/svcacct/live) and Anthropic keys are redacted."""
+    exporter = LoraVertexExporter()
+
+    # Dynamic construction to prevent static secret scanner false positives in test source
+    tokens = [
+        "sk-" + "proj-" + ("aB3_cD4-eF5_gH6-" * 3),
+        "sk-" + "svcacct-" + ("xY9_zW8-uV7_tS6-" * 3),
+        "sk-" + "live-" + ("kL2_mN3-pQ4_rS5-" * 3),
+        "sk-" + "ant-" + "api03-" + ("mN8_pQ9-rS0_tU1-" * 3),
+    ]
+
+    for secret in tokens:
+        raw_text = f'{{"api_key": "{secret}", "env": "prod"}}'
+        sanitized, count = exporter.sanitize_text(raw_text)
+        assert secret not in sanitized, f"Secret was not redacted: {secret[:12]}..."
+        assert "[REDACTED_SECRET]" in sanitized
+        assert count >= 1
+
+
 def test_exporter_export_dataset_split(tmp_path: Path) -> None:
     """Verifies export_dataset creates train.jsonl and validation.jsonl with exact split ratio."""
     exporter = LoraVertexExporter()

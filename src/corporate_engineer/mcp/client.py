@@ -4,6 +4,8 @@ Local and Remote MCP Tool Adapters for sandboxed execution and remote SSE connec
 
 import json
 import os
+import shlex
+import shutil
 import subprocess
 import sys
 import urllib.error
@@ -43,6 +45,19 @@ DISALLOWED_PATTERNS = [
     "shutdown",
     "reboot",
 ]
+SHELL_METACHARACTERS: tuple[str, ...] = (
+    "&&",
+    "||",
+    ";",
+    "|",
+    ">",
+    "<",
+    "`",
+    "$(",
+    "\n",
+    "\r",
+)
+INTERPRETER_INLINE_FLAGS: frozenset[str] = frozenset({"-c", "--command", "-e", "--eval", "-"})
 
 
 class LocalMCPToolAdapter:
@@ -140,7 +155,20 @@ class LocalMCPToolAdapter:
                 is_error=True,
                 content=f"Command blocked by security allowlist: dangerous pattern detected in '{cmd}'",
             )
-        tokens = cmd.split()
+        if any(meta in cmd for meta in SHELL_METACHARACTERS):
+            return MCPToolResult(
+                tool_name="run_command",
+                is_error=True,
+                content=f"Command blocked by security allowlist: shell metacharacter detected in '{cmd}'",
+            )
+        try:
+            tokens = shlex.split(cmd, posix=(os.name != "nt"))
+        except ValueError as exc:
+            return MCPToolResult(
+                tool_name="run_command",
+                is_error=True,
+                content=f"Command blocked by security allowlist: invalid command syntax ({exc})",
+            )
         if not tokens:
             return MCPToolResult(tool_name="run_command", is_error=True, content="Empty command")
         raw_bin = tokens[0].strip("\"'")
@@ -151,6 +179,20 @@ class LocalMCPToolAdapter:
                 is_error=True,
                 content=f"Command blocked by security allowlist: '{base_bin}' is not authorized.",
             )
+        if base_bin.startswith("python"):
+            for arg in tokens[1:]:
+                arg_lower = arg.strip("\"'").lower()
+                if arg_lower in INTERPRETER_INLINE_FLAGS or arg_lower.startswith(
+                    ("-c", "-e", "--command=", "--eval=")
+                ):
+                    return MCPToolResult(
+                        tool_name="run_command",
+                        is_error=True,
+                        content=(
+                            "Command blocked by security allowlist: "
+                            "inline interpreter execution is prohibited."
+                        ),
+                    )
         env = os.environ.copy()
         python_dir = str(Path(sys.executable).parent)
         git_dir = "C:\\Program Files\\Git\\cmd"
@@ -160,11 +202,20 @@ class LocalMCPToolAdapter:
         if Path(git_dir).exists() and git_dir not in current_path:
             current_path = f"{git_dir};{current_path}"
         env["PATH"] = current_path
+
+        resolved_cmd = list(tokens)
+        if base_bin in ("python", "python3") and not Path(raw_bin).is_absolute():
+            resolved_cmd[0] = sys.executable
+        else:
+            located = shutil.which(raw_bin, path=env["PATH"])
+            if located:
+                resolved_cmd[0] = located
+
         try:
             res = subprocess.run(
-                cmd,
+                resolved_cmd,
                 check=False,
-                shell=True,
+                shell=False,
                 cwd=str(self.workspace_root),
                 capture_output=True,
                 text=True,

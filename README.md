@@ -1,54 +1,91 @@
-# Enterprise AI Software Engineering Framework
+# Corporate Engineer
 
-Repositório padronizado com governança corporativa para ciclo de vida de desenvolvimento de software impulsionado por IA (Agentic Software Engineering).
-
----
-
-## 🧭 Skills Corporativas Integradas
-
-Este repositório possui as seguintes skills ativas em `.agents/skills/`:
-
-### 1. `corp-pipeline` (`/corp-pipeline`)
-Pipeline determinístico de 5 fases para entrega corporativa:
-- **Fase 1: Governança, Contratos & Escopo (Gate 1)**
-  - **1.1 (`/grill-me_v2`)**: Entrevista adaptativa, extração de SLAs/NFRs e síntese de ADR em `docs/adr/ADR-<NUM>-<slug>.md`.
-  - **1.2 (`/plan_v2`)**: Matriz de Trade-offs, Threat Modeling (STRIDE/OWASP), Rollback & Blast Radius e Contratos DTOs.
-  - **1.3 (🔴 Gate 1)**: Validação humana explícita obrigatória antes do código.
-- **Fase 2**: Shift-Left TDD com `stack_detector.py` (Certificação **RED**).
-- **Fase 3**: Implementação Cirúrgica & Auto-recuperação (Certificação **GREEN**, máx 3 retentativas).
-- **Fase 4**: Pre-Flight Gate & Auditoria Local (Linter, Typecheck, `secret_scanner.py`, Regressão Global).
-- **Fase 5**: Entrega Corporativa (🔴 **Gate 2: Aprovação Final** → Branch `feat/<ID>-<slug>` & PR padronizado).
-
-### 2. `plan_v2` (`/plan_v2`)
-Protocolo de planejamento avançado com:
-- Matriz de Trade-offs de Arquitetura (Mínimo 2 alternativas)
-- Modelagem de Ameaças (STRIDE / OWASP)
-- Estratégia de Rollback & Análise de Blast Radius
-- Especificação formal de Contratos DTOs
-
-### 3. `grill-me_v2` (`/grill-me_v2`)
-Protocolo de entrevista investigativa baseado em:
-- Árvore de Decisão Hierárquica
-- Extração de Requisitos Não-Funcionais (SLAs, Throughput, Resiliência)
-- Síntese Automática de **ADR (Architecture Decision Record)** formal em `docs/adr/`
+Framework Python (3.10+) para **engenharia de software assistida por agentes**, análise estática baseada em AST, testes cirúrgicos por *blast radius*, *mutation testing* em sandbox, auditoria de segurança e governança de entrega.
 
 ---
 
-## 🛠️ Scripts Utilitários
+## Arquitetura do Pacote (`src/corporate_engineer/`)
 
-- **Detector de Stack**:
-  ```powershell
-  python .agents/skills/corp-pipeline/scripts/stack_detector.py [caminho]
-  ```
-  Identifica a stack técnica (Python, TS/Node, Go, Java/Kotlin, C#/.NET, Rust, PHP) e sugere os comandos adequados de teste, lint e typecheck.
+| Subsistema | Responsabilidade | Módulos Principais |
+|---|---|---|
+| **Code Intelligence (`rag/`)** | Indexação AST de classes/herança/chamadas, cache persistente por SHA-256 e análise de *blast radius* via BFS | `ast_indexer.py`, `cached_ast_indexer.py`, `impact.py` |
+| **Qualidade & Segurança (`quality/`)** | Sandbox de *mutation testing* com isolamento de `PYTHONPATH`, seleção cirúrgica de testes via `git diff`, scanner canônico de segredos, auditoria de *auto-wiring* e limpeza segura de caches | `mutation.py`, `surgical_runner.py`, `secret_scanner.py`, `wiring_auditor.py`, `storage_cleaner.py`, `gate.py` |
+| **Eval & Auto-Remediação (`eval/`)** | Scorecard semântico em 5 eixos e refatorações AST determinísticas (`-> None` em `__init__`, remoção de defaults mutáveis e `pass` redundante) | `scorecard.py`, `fixer.py` |
+| **MCP & Resiliência (`mcp/`)** | Adaptador local sandboxed (`shell=False`, allowlist e bloqueio de path traversal), cliente HTTP/JSON-RPC remoto com Bearer auth, `CircuitBreaker` e hub multi-servidor | `client.py`, `hub.py`, `circuit_breaker.py` |
+| **Orquestração & Telemetria (`orchestrator/`, `telemetry/`)** | Máquina de estados FSM com checkpoints (`PLANNING → TDD → IMPLEMENT → AUDIT → DELIVER`), antecipador de escopo, loop adversarial e tracing compatível com OpenTelemetry via `ContextVar` | `graph.py`, `anticipator.py`, `swarm.py`, `adversarial.py`, `tracer.py` |
+| **System One & LoRA (`system_one/`, `lora/`, `prompt/`)** | Roteamento determinístico por heurísticas, harness de benchmark, refinador contextual de prompts e gerador/validador/exportador JSONL para Vertex AI SFT | `router.py`, `heuristic_engine.py`, `benchmark.py`, `refiner.py`, `lora/` |
+| **Contratos & CLI (`models.py`, `cli/`)** | Modelos Pydantic v2 e CLI modular dividida por domínio | `models.py`, `cli/parser.py`, `cli/commands/` |
 
-- **Scanner de Segredos (Pre-Flight)**:
-  ```powershell
-  python .agents/skills/corp-pipeline/scripts/secret_scanner.py [caminho]
-  ```
-  Audita arquivos contra vazamento de credenciais, chaves de API e tokens sensíveis antes de qualquer commit.
 ---
 
-## 📚 Documentação Adicional
-- [Relatório Deep Research 2026](./deep-research-ai-software-engineering-2026.md): Estado da arte em agentes autônomos, MCP, A2A, segurança AI e testes mutation/PBT.
-- [Decisões de Arquitetura (ADRs)](./docs/adr/): Histórico imutável de decisões de engenharia do projeto.
+## Instalação & Quickstart
+
+```bash
+python -m venv .venv
+# Windows (PowerShell): .venv\Scripts\Activate.ps1
+# Linux/macOS: source .venv/bin/activate
+
+pip install -e ".[dev,test]"
+```
+
+### Comandos Principais da CLI
+
+```bash
+# Auditoria de auto-wiring (verifica exportação, testes e orfandade em src/)
+corporate-engineer audit --wiring
+
+# Scorecard semântico AST (complexidade, tipagem, contratos)
+corporate-engineer eval src/corporate_engineer/
+
+# Indexação AST e cálculo de blast radius
+corporate-engineer index --path src/
+corporate-engineer blast-radius --target src/corporate_engineer/mcp/client.py
+
+# Seleção e execução cirúrgica de testes afetados pelo git diff
+corporate-engineer test-surgical
+
+# Auto-remediação AST determinística (dry-run ou aplicando alterações)
+corporate-engineer fix --auto --path src/
+
+# Simulação completa do pipeline com checkpoints em disco
+corporate-engineer run --ticket DEMO-101 --task "Auditar módulo MCP" --dry-run
+```
+
+---
+
+## Status de Maturidade dos Módulos
+
+Transparência sobre o estado atual de implementação (detalhes e roadmap em [improvement-backlog.md](./.agents/orchestration/improvement-backlog.md)):
+
+- **Determinísticos / Prontos para Uso**:
+  - `rag/` (`ASTCodebaseIndexer`, `CachedASTCodebaseIndexer`, `BlastRadiusAnalyzer`)
+  - `quality/` (`ASTMutationEngine`, `SurgicalTestRunner`, `CanonicalSecretScanner`, `SafeStorageCleaner`, `CapabilityWiringAuditor`, `QualityGateRunner`)
+  - `eval/` (`SemanticCodeEvaluator`, `ASTSelfHealingFixer`)
+  - `mcp/` (`LocalMCPToolAdapter` com `shell=False` e proteção de traversal, `CircuitBreaker`, `MCPEnterpriseHub`)
+  - `telemetry/` (`AgentTracer` com `contextvars.ContextVar`)
+- **Protótipos / Heurísticos (Roadmap P1–P2)**:
+  - `system_one/`: `HeuristicDecisionEngine` está funcional e offline; `ONNXNLIDecisionEngine` e `OutlinesDecisionEngine` atualmente operam com fallback heurístico (`IMP-0036`).
+  - `orchestrator/swarm.py` & `graph.py`: operam em modo determinístico/simulado com templates e análise local até a integração de executores plugáveis (`IMP-0038`).
+  - `mcp/client.py` (`RemoteMCPSSEClient`): atualmente consome respostas JSON-RPC HTTP síncronas; suporte nativo a streaming `text/event-stream` está mapeado em `IMP-0037`.
+
+---
+
+## Qualidade, Testes & CI
+
+O projeto mantém gate estrito local e no GitHub Actions ([ci.yml](./.github/workflows/ci.yml) e [self-heal.yml](./.github/workflows/self-heal.yml)):
+
+```bash
+ruff check .
+ruff format --check .
+mypy .
+python .agents/skills/corp-pipeline/scripts/secret_scanner.py .
+pytest -q
+```
+
+---
+
+## Governança & Documentação
+
+- **Decisões de Arquitetura (ADRs)**: [docs/adr/](./docs/adr/)
+- **Backlog Contínuo de Melhorias**: [.agents/orchestration/improvement-backlog.md](./.agents/orchestration/improvement-backlog.md)
+- **Pipeline Corporativo & Skills**: [.agents/skills/corp-pipeline/SKILL.md](./.agents/skills/corp-pipeline/SKILL.md)

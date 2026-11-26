@@ -62,6 +62,7 @@ models/*.bin
 models/*.safetensors
 models/*.onnx
 models/*.onnx_data
+models/*.zip
 models/system_one_lora/
 
 

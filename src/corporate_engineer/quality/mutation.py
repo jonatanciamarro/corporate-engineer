@@ -344,11 +344,14 @@ class ASTMutationEngine:
             ".tox",
             ".mypy_cache",
             ".pytest_cache",
+            ".ruff_cache",
+            ".cache",
             "*.pyc",
             "*.bak",
         )
         if sandbox_dir is not None:
             effective_ws = sandbox_dir
+            copytree_succeeded = False
             if target_path.is_relative_to(self.workspace_root):
                 try:
                     shutil.copytree(
@@ -358,6 +361,7 @@ class ASTMutationEngine:
                         ignore=ignore_fn,
                     )
                     effective_target = sandbox_dir / target_path.relative_to(self.workspace_root)
+                    copytree_succeeded = True
                 except (OSError, shutil.Error):
                     effective_target = sandbox_dir / target_path.name
                     shutil.copy2(target_path, effective_target)
@@ -367,7 +371,7 @@ class ASTMutationEngine:
 
             if test_file:
                 test_path = Path(test_file).resolve()
-                if test_path.is_relative_to(self.workspace_root):
+                if copytree_succeeded and test_path.is_relative_to(self.workspace_root):
                     effective_test_arg = str(
                         sandbox_dir / test_path.relative_to(self.workspace_root)
                     )
@@ -376,7 +380,7 @@ class ASTMutationEngine:
                     shutil.copy2(test_path, target_in_sandbox)
                     effective_test_arg = str(target_in_sandbox)
             else:
-                if (sandbox_dir / "tests").exists():
+                if copytree_succeeded and (sandbox_dir / "tests").exists():
                     effective_test_arg = str(sandbox_dir / "tests")
                 else:
                     effective_test_arg = str(self.workspace_root / "tests")
@@ -394,12 +398,24 @@ class ASTMutationEngine:
         error_count = 0
 
         env = os.environ.copy()
-        target_dir = str(effective_target.parent)
-        ws_dir = str(effective_ws)
-        current_pythonpath = env.get("PYTHONPATH", "")
-        env["PYTHONPATH"] = (
-            f"{target_dir}{os.pathsep}{ws_dir}{os.pathsep}{current_pythonpath}".strip(os.pathsep)
-        )
+        candidate_paths: list[str] = []
+        src_dir = effective_ws / "src"
+        if src_dir.is_dir():
+            candidate_paths.append(str(src_dir))
+        candidate_paths.append(str(effective_ws))
+        in_src_layout = src_dir.is_dir() and effective_target.is_relative_to(src_dir)
+        if not in_src_layout and not (effective_target.parent / "__init__.py").exists():
+            candidate_paths.append(str(effective_target.parent))
+        candidate_paths.extend(env.get("PYTHONPATH", "").split(os.pathsep))
+
+        pythonpath_parts: list[str] = []
+        seen_paths: set[str] = set()
+        for entry in candidate_paths:
+            if entry and entry not in seen_paths:
+                seen_paths.add(entry)
+                pythonpath_parts.append(entry)
+
+        env["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
 
         for idx, pt in enumerate(points):
             mutant_id = f"MUT-{idx + 1}"

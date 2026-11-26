@@ -11,22 +11,43 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0030-concurrency-resilience-and-silent-errors` | 🟢 Suíte com 309/309 testes PASS, 0 erros Ruff e Mypy, Zero-Secret Guard ativo |
-| **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo, compatibilidade Python 3.10/3.11+ assegurada (`-e .[dev,test]`) |
+| **Branch Ativa** | `feat/IMP-0031-quality-security-sandboxing` | 🟢 Repositório Git inicializado/sincronizado com `origin/main` (`5c1e331`); suíte 361/361 PASS, 0 erros Ruff/Mypy |
+| **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo (`--system-site-packages` + `.pth` apontando para `src/`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **309/309 PASS** | Cobertura global robusta de 88%+ (`pytest-cov`) em 46.50s (8 novos testes em `test_concurrency_resilience_and_silent_errors.py`) |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (170 arquivos verificados e formatados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 102 arquivos validados estritamente no root |
-| **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` (tempo de varredura sub-1s) |
+| **Testes (Pytest + Hypothesis)** | 🟢 **361/361 PASS** | Execução completa em 68.50s (inclui 52 novos casos IMP-0031 em `tests/test_imp0031_*.py`) |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (175 arquivos verificados e formatados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 105 arquivos fonte validados estritamente |
+| **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` (padrões OpenAI/Anthropic/AWS sincronizados) |
+| **Wiring & Scorecard EDD** | 🟢 **48/48 Wired \| 93.1/100 (Grade A)** | `audit --wiring` 100% conectado (`passed: true`); `eval` 93.1/100 em 61 arquivos / 332 funções |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Always-On Ativo** | Frontmatter `trigger: always_on` ativo em `corp-pipeline-orchestrator.md` |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
-| **Lifecycle Hooks E2E** | 🟢 **5 Hooks Ativos com run_hook.py** | Dispatcher universal resiliente com detecção automática de `.venv` e tolerância a CWD |
+| **Lifecycle Hooks E2E** | 🟢 **5 Hooks Ativos com run_hook.py** | `.agents/hooks.json` ajustado para `py orchestration/hooks/run_hook.py <hook>` (CWD `.agents/`) |
 
 ---
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação de IMP-0030 / ADR-030: Resiliência de Concorrência, Sincronização & Eliminação de Erros Silenciosos — Pacote 1):
+### Sessão Atual (Implementação de IMP-0031 / ADR-031: Blindagem de Qualidade, Segurança & Sandboxing de Mutação — Pacote 2):
+1. **Sandboxing de Mutação Fiel ao Código Mutado (`quality/mutation.py`)**:
+   - `_run_in_environment()` agora insere `effective_ws / "src"` prioritariamente no `PYTHONPATH`, seguido por `effective_ws` e pelo parent flat-layout apenas quando aplicável.
+   - Adição de `.ruff_cache` e `.cache` aos ignores do `shutil.copytree`, fallback de cópia do arquivo de teste quando necessário e guarda contra shadowing da stdlib por namespace packages PEP 420.
+   - 7 novos testes em `tests/test_imp0031_mutation_sandbox.py`.
+2. **Blindagem de Regexes de Segredos (`quality/secret_scanner.py`, `quality/tool_security_guard.py`, `.agents/skills/corp-pipeline/scripts/secret_scanner.py`)**:
+   - Atualização sincronizada dos regexes de **OpenAI** (`\bsk-(?!ant-)(?:proj-|svcacct-|live-)?[A-Za-z0-9_\-]{32,}\b`), **Anthropic** (`\bsk-ant-(?:api\d{2}-)?[A-Za-z0-9_\-]{32,}\b`) e fallback **AWS Key** (`{16,}`), eliminando falsos negativos em chaves modernas e sincronizando as 3 cópias.
+3. **Proteção em 13 Camadas no SafeStorageCleaner (`quality/storage_cleaner.py`)**:
+   - `is_path_safe()` e `clean_target()` bloqueiam raízes de disco/UNC, `Path.home()` e ancestrais, ancestrais do workspace, diretórios críticos Windows/POSIX, `FORBIDDEN_DIR_NAMES` (`.gnupg`, `.kube`, `.git`), containers de usuários em profundidade ≤ 3, `var`/`private` fora de temp, raiz de `tempfile.gettempdir()`, prefixo `"onedrive - "` e symlinks.
+   - 20 novos casos de teste em `tests/test_imp0031_security_and_storage.py`.
+4. **Re-Verificação Adversarial Genuína na Fase 1.7 (`orchestrator/adversarial.py`)**:
+   - Implementação real de `AdversarialRedTeam.re_verify()` em 5 etapas (risco residual, cobertura de achados do ataque, substância contra placeholders/negações, sinais obrigatórios por categoria e varredura de ameaças arquiteturais com filtro benigno).
+   - Atualização de `ArchitectureTranscender.transcend()` e `AdversarialLoopCoordinator._run_hardening_rounds()` (2 rodadas com refinamento progressivo de `current_attack`), fechando todos os apontamentos (HIGH #1, MEDIUM #2/#3, LOW #7) da Revisão Sênior.
+   - 25 novos casos de teste em `tests/test_imp0031_adversarial_reverification.py`.
+5. **Pre-Flight Global, Infraestrutura Local & Governança**:
+   - `.venv` (Python 3.11.9) configurada com `.pth` local para `src/`, e `.agents/hooks.json` atualizado para `py orchestration/hooks/run_hook.py`.
+   - **361/361 testes PASS** (68.50s), **0 erros Ruff** (175 arquivos), **0 erros Mypy** (105 arquivos fonte), **Secret Scan PASS**, **48/48 módulos auto-wired**, **Scorecard Eval 93.1/100 (Grade A)**.
+   - Formalização do [ADR-031](docs/adr/ADR-031-imp0031-quality-security-mutation-sandboxing.md), minuta [PR-CORP-031.md](docs/pull_requests/PR-CORP-031.md) e atualização de `.agents/orchestration/improvement-backlog.md` (`IMP-0031` -> `IMPLEMENTED`).
+   - **Git & Push Remoto**: Repositório `.git` inicializado e sincronizado com `origin/main` (`5c1e331`), com commit local criado na branch `feat/IMP-0031-quality-security-sandboxing`. O `git push -u origin feat/IMP-0031-quality-security-sandboxing` e a geração do link de PR permanecem bloqueados por ausência de credenciais GitHub/SSH no Windows Sandbox (`exit 128`).
+
+### Sessão Anterior (Implementação de IMP-0030 / ADR-030: Resiliência de Concorrência, Sincronização & Eliminação de Erros Silenciosos — Pacote 1):
 1. **Catalogação Formal de Melhorias no Backlog (`improvement-backlog.md`)**:
    - Cadastro formal das 4 trilhas incrementais da auditoria sênior: `IMP-0030` (Pacote 1 - Concorrência e Erros Silenciosos, aprovado e implementado), `IMP-0031` (Pacote 2 - Blindagem de Qualidade e Sandboxing), `IMP-0032` (Pacote 3 - Integridade da CLI e Dynamic Hooks), e `IMP-0033` (Pacote 4 - RAG e Dívidas Técnicas).
 2. **Blindagem e Eliminação de Falsos Positivos em `git_utils.py`**:
@@ -467,6 +488,8 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-25T22:50:00-03:00` | Corp-Pipeline Master Orchestrator | Inicialização e sincronização Git local do workspace sandbox com `origin/main` (`5c1e331`), criação da branch `feat/IMP-0031-quality-security-sandboxing`, commit local das entregas do IMP-0031 e diagnóstico de bloqueio de `git push` por ausência de credenciais GitHub/SSH no Windows Sandbox (`exit 128`). |
+| `2026-11-25T22:36:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD e entregas de governança para IMP-0031 (Blindagem de Qualidade, Segurança & Sandboxing de Mutação — Pacote 2): injeção prioritária de `src/` no `PYTHONPATH` e guarda PEP 420 em `quality/mutation.py` (7 testes), sincronização das regexes modernas de OpenAI/Anthropic/AWS nas 3 cópias (`quality/secret_scanner.py`, `quality/tool_security_guard.py`, `.agents/skills/corp-pipeline/scripts/secret_scanner.py`) e blindagem em 13 camadas de `is_path_safe()`/`clean_target()` em `quality/storage_cleaner.py` (20 casos), e implementação da re-verificação adversarial genuína em 5 etapas na Fase 1.7 (`orchestrator/adversarial.py`) cobrindo todos os apontamentos de revisão sênior (25 casos). Formalização do ADR-031, criação de PR-CORP-031.md, atualização de `improvement-backlog.md` (`IMP-0031` -> `IMPLEMENTED`). Pre-Flight global 100% aprovado: 361/361 testes PASS (68.50s), 0 erros Ruff (175 arquivos), 0 erros Mypy (105 arquivos), Zero-Secret Scan PASS, 48/48 módulos auto-wired e Eval 93.1/100 (Grade A). Registrado ausência de `.git`/remote `origin` no ambiente sandbox (commit/push/PR link bloqueados até sincronização com repositório Git). |
 | `2026-11-24T13:05:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0030 (Resiliência de Concorrência, Sincronização & Eliminação de Erros Silenciosos — Pacote 1): eliminação de falso positivo em is_branch_pushed() no git_utils com verificação de exit code e correspondência exata de ref, detecção de erros JSON-RPC 2.0 no RemoteMCPSSEClient com marcação is_error=True e registro em CircuitBreaker, correção de falso sucesso em SwarmCoordinator.dispatch_task() e run_fan_out() com migração para RLock, migração de threading.local para contextvars.ContextVar no AgentTracer para isolamento assíncrono estrito de spans, e sincronização com RLock no MCPEnterpriseHub. Formalização do ADR-030 e minuta PR-CORP-030.md, 8 novos testes em tests/test_concurrency_resilience_and_silent_errors.py (309/309 testes globais PASS em 46.50s, 0 erros Ruff/Mypy e Zero-Secret Scan PASS). |
 | `2026-11-24T12:25:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão da Auditoria Técnica Sênior de Dívidas Técnicas, Bugs e Erros Silenciosos via Swarm Multi-Agente (gemini-3.8-flash-high): coordenação de 5 especialistas staff/principal (audit-core-orch, audit-mcp-telemetry, audit-quality-eval, audit-ai-rag, audit-cli-governance) cobrindo 100% dos módulos de src/corporate_engineer/. Descobertos e catalogados 97 apontamentos (16 Críticos, 33 Altos, 29 Médios, 19 Baixos). Destaques críticos: risco de deleção em storage cleaner, omissão de src/ no sandbox de mutação, bypass de chaves OpenAI no scanner, inversão de erros JSON-RPC no MCP client, falsificação de branch pushed no git_utils e vazamento de contexto em tracer assíncrono. Emissão do artefato formal senior_codebase_audit_report.md com roadmap de remediação em 4 pacotes incrementais (301/301 testes globais PASS, 0 erros Ruff/Mypy e Zero-Secret Scan PASS). |
 | `2026-11-24T12:00:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0029 (Continuous Capability Auto-Wiring & Invariante de Potência Máxima — 100% Filosoph & Zero Código Órfão): adição da Invariante 9 em AGENTS.md e GEMINI.md, modelos DTO Pydantic v2 ModuleWiringStatus e WiringAuditReport, implementação do CapabilityWiringAuditor em src/corporate_engineer/quality/wiring_auditor.py com varredura AST e detecção de orfandade, integração da flag --wiring na CLI audit, anexação do run_wiring_audit() ao QualityGateRunner e à fase AUDIT do AutonomousEngineeringGraph.run_pipeline, auto-conexão e re-exportação de 9 módulos previamente desconectados, formalização do ADR-029, plano plan_v2_auto_wiring_maximum_power.md, minuta PR-CORP-029.md, 7 novos testes em tests/test_auto_wiring_integrity.py (301/301 testes globais PASS em 54.72s, 0 erros Ruff/Mypy e Zero-Secret Scan PASS). |

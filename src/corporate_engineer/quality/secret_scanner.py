@@ -22,8 +22,14 @@ SECRET_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
         re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,}\b"),
     ),
     ("GitLab Personal Access Token", re.compile(r"\bglpat-[0-9a-zA-Z_\-]{20,}\b")),
-    ("OpenAI API Key", re.compile(r"\bsk-(?:proj-|live-)?[a-zA-Z0-9]{32,}\b")),
-    ("Anthropic API Key", re.compile(r"\bsk-ant-[a-zA-Z0-9]{32,}\b")),
+    (
+        "OpenAI API Key",
+        re.compile(r"\bsk-(?!ant-)(?:proj-|svcacct-|live-)?[A-Za-z0-9_\-]{32,}\b"),
+    ),
+    (
+        "Anthropic API Key",
+        re.compile(r"\bsk-ant-(?:api\d{2}-)?[A-Za-z0-9_\-]{32,}\b"),
+    ),
     ("Google Gemini/Cloud API Key", re.compile(r"\bAIzaSy[A-Za-z0-9_\-]{33}\b")),
     ("Slack Token", re.compile(r"\bxox[baprs]-[0-9]{10,13}-[a-zA-Z0-9]{24,}\b")),
     ("Stripe API Key", re.compile(r"\b(?:sk|rk)_(?:live|test)_[0-9a-zA-Z]{24,}\b")),

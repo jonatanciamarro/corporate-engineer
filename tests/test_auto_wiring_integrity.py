@@ -14,6 +14,8 @@ import argparse
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -145,3 +147,126 @@ def test_autonomous_pipeline_executes_wiring_audit():
     assert report.status == "SUCCESS"
     assert "wiring_audit" in report.details
     assert report.details["wiring_audit"]["passed"] is True
+
+
+def test_capability_wiring_auditor_rejects_comment_or_string_only_reference(tmp_path: Path) -> None:
+    """Reject indirect test matches when module or symbol appears only in comments or strings."""
+    from corporate_engineer.quality.wiring_auditor import CapabilityWiringAuditor
+
+    src_dir = tmp_path / "src" / "corporate_engineer"
+    src_dir.mkdir(parents=True)
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir(parents=True)
+
+    (src_dir / "ghost_mod.py").write_text("class GhostEngine:\n    pass\n", encoding="utf-8")
+    (src_dir / "__init__.py").write_text('__all__ = ["GhostEngine"]\n', encoding="utf-8")
+    (tests_dir / "test_other.py").write_text(
+        '# GhostEngine ghost_mod\nx = "GhostEngine"\ny = "ghost_mod"\n\ndef test_unrelated():\n    assert True\n',
+        encoding="utf-8",
+    )
+
+    auditor = CapabilityWiringAuditor(workspace_root=tmp_path)
+    report = auditor.audit()
+
+    assert report.passed is False
+    assert any("ghost_mod" in m for m in report.unwired_modules)
+    assert any("ghost_mod" in m for m in report.missing_test_modules)
+
+
+def test_capability_wiring_auditor_rejects_comment_or_string_only_direct_test(
+    tmp_path: Path,
+) -> None:
+    """Reject direct test_<mod>.py that has no test defs and no AST imports/references."""
+    from corporate_engineer.quality.wiring_auditor import CapabilityWiringAuditor
+
+    src_dir = tmp_path / "src" / "corporate_engineer"
+    src_dir.mkdir(parents=True)
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir(parents=True)
+
+    (src_dir / "ghost_mod.py").write_text("class GhostEngine:\n    pass\n", encoding="utf-8")
+    (src_dir / "__init__.py").write_text('__all__ = ["GhostEngine"]\n', encoding="utf-8")
+    (tests_dir / "test_ghost_mod.py").write_text(
+        '# TODO: test GhostEngine\nplaceholder = "GhostEngine"\n',
+        encoding="utf-8",
+    )
+
+    auditor = CapabilityWiringAuditor(workspace_root=tmp_path)
+    report = auditor.audit()
+
+    assert report.passed is False
+    assert any("ghost_mod" in m for m in report.unwired_modules)
+    assert any("ghost_mod" in m for m in report.missing_test_modules)
+
+
+def test_capability_wiring_auditor_accepts_real_ast_import_reference(tmp_path: Path) -> None:
+    """Accept indirect test coverage when another test imports or calls the exported symbol."""
+    from corporate_engineer.quality.wiring_auditor import CapabilityWiringAuditor
+
+    src_dir = tmp_path / "src" / "corporate_engineer"
+    src_dir.mkdir(parents=True)
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir(parents=True)
+
+    (src_dir / "ghost_mod.py").write_text("class GhostEngine:\n    pass\n", encoding="utf-8")
+    (src_dir / "__init__.py").write_text(
+        'from corporate_engineer.ghost_mod import GhostEngine\n\n__all__ = ["GhostEngine"]\n',
+        encoding="utf-8",
+    )
+    (tests_dir / "test_other.py").write_text(
+        "from corporate_engineer import GhostEngine\n\n\ndef test_ghost_engine():\n    assert GhostEngine() is not None\n",
+        encoding="utf-8",
+    )
+
+    auditor = CapabilityWiringAuditor(workspace_root=tmp_path)
+    report = auditor.audit()
+
+    assert report.passed is True
+    assert report.unwired_modules == []
+    assert report.missing_test_modules == []
+
+
+def test_capability_wiring_auditor_accepts_aliased_module_attribute_reference(
+    tmp_path: Path,
+) -> None:
+    """Accept indirect test coverage via aliased module import and attribute access."""
+    from corporate_engineer.quality.wiring_auditor import CapabilityWiringAuditor
+
+    src_dir = tmp_path / "src" / "corporate_engineer"
+    src_dir.mkdir(parents=True)
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir(parents=True)
+
+    (src_dir / "ghost_mod.py").write_text("class GhostEngine:\n    pass\n", encoding="utf-8")
+    (src_dir / "__init__.py").write_text('__all__ = ["GhostEngine"]\n', encoding="utf-8")
+    (tests_dir / "test_other.py").write_text(
+        "import corporate_engineer.ghost_mod as gm\n\n\ndef test_gm():\n    assert gm.GhostEngine is not None\n",
+        encoding="utf-8",
+    )
+
+    auditor = CapabilityWiringAuditor(workspace_root=tmp_path)
+    report = auditor.audit()
+
+    assert report.passed is True
+    assert report.unwired_modules == []
+    assert report.missing_test_modules == []
+
+
+def test_cli_parser_build_parser_registers_subcommands() -> None:
+    """Verify corporate_engineer.cli.parser.build_parser builds valid CLI subcommands."""
+    from corporate_engineer.cli.parser import build_parser
+
+    parser = build_parser()
+    args = parser.parse_args(["audit", "--wiring"])
+    assert args.command == "audit"
+    assert args.wiring is True
+
+
+def test_system_one_base_engine_abstract_contract() -> None:
+    """Verify SystemOneEngine ABC contract cannot be instantiated and is subclassed."""
+    from corporate_engineer.system_one.base import SystemOneEngine
+    from corporate_engineer.system_one.heuristic_engine import HeuristicDecisionEngine
+
+    assert issubclass(HeuristicDecisionEngine, SystemOneEngine)
+    with pytest.raises(TypeError):
+        SystemOneEngine()  # type: ignore[abstract]

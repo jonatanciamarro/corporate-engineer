@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 from corporate_engineer.mcp.hub import MCPEnterpriseHub
 from corporate_engineer.models import (
@@ -219,3 +220,172 @@ def test_swarm_cli_execution() -> None:
     assert "total_agents" in data
     assert data["total_agents"] == 2
     assert "aggregated_consensus" in data
+
+
+def test_swarm_custom_role_executor(tmp_path: Path) -> None:
+    """Verifica que role_executor injetado recebe (member, prompt, tool_records) e define a saída."""
+    hub = MCPEnterpriseHub()
+    hub.register_server(name="lint", config=MCPServerDefinition(command="echo"))
+    hub.register_tool(
+        MCPNamespacedTool(
+            server_name="lint",
+            tool_name="check",
+            namespaced_name="lint.check",
+            description="Static lint check",
+        )
+    )
+
+    captured_calls: list[tuple[SwarmMember, str, list[dict[str, object]]]] = []
+
+    def custom_executor(
+        member: SwarmMember,
+        prompt: str,
+        tool_records: list[dict[str, object]],
+    ) -> str:
+        captured_calls.append((member, prompt, tool_records))
+        return f"CUSTOM[{member.role}]::{prompt}::tools={len(tool_records)}"
+
+    coordinator = SwarmCoordinator(
+        hub=hub,
+        workspace_path=tmp_path,
+        role_executor=custom_executor,
+    )
+    member = SwarmMember(
+        agent_id="code-01",
+        role="code-reviewer",
+        task_prompt="Review code",
+        allowed_tools=["lint.check"],
+    )
+
+    result = coordinator.dispatch_task(member, "Analisar módulo X")
+    assert result.success is True
+    assert result.output == "CUSTOM[code-reviewer]::Analisar módulo X::tools=1"
+    assert len(captured_calls) == 1
+    rec_member, rec_prompt, rec_tools = captured_calls[0]
+    assert rec_member.agent_id == "code-01"
+    assert rec_prompt == "Analisar módulo X"
+    assert len(rec_tools) == 1
+    assert rec_tools[0]["tool"] == "lint.check"
+    assert rec_tools[0]["is_error"] is False
+
+    report = coordinator.run_fan_out(
+        goal="Custom execution mode verification",
+        subtasks=[{"role": "code-reviewer", "task": "Revisar"}],
+    )
+    assert any("execution_mode=custom-executor" in r for r in report.recommendations)
+
+
+def test_swarm_deterministic_security_analyzer_detects_real_secret(tmp_path: Path) -> None:
+    """Verifica que security-reviewer detecta segredo real no workspace e reprova consenso."""
+    leak_file = tmp_path / "credentials.py"
+    pfx = "AKIA"
+    leak_file.write_text(f'AWS_ACCESS_KEY = "{pfx}IOSFODNN7EXAMPLE12"\n', encoding="utf-8")
+
+    coordinator = SwarmCoordinator(workspace_path=tmp_path)
+    sec_member = SwarmMember(
+        agent_id="sec-01",
+        role="security-reviewer",
+        task_prompt="Auditar workspace",
+        allowed_tools=[],
+    )
+
+    task_result = coordinator.dispatch_task(sec_member, "Verificar segredos")
+    assert task_result.success is False
+    assert task_result.error == "1 secret(s) detected"
+    assert "1" in task_result.output
+
+    report = coordinator.run_consensus(
+        target_description="Workspace com segredo vazado",
+        reviewer_roles=["architect", "security-reviewer", "code-reviewer"],
+    )
+    assert report.failed_tasks == 1
+    assert report.successful_tasks == 2
+    assert "REJECTED" in report.aggregated_consensus
+    assert any("execution_mode=deterministic-analyzer" in r for r in report.recommendations)
+
+
+def test_swarm_consensus_rejected_message_honest(tmp_path: Path) -> None:
+    """Verifica que run_consensus não afirma aprovação quando há tarefas reprovadas."""
+    leak_file = tmp_path / "token_leak.py"
+    gh_prefix = "ghp_"
+    leak_file.write_text(f'TOKEN = "{gh_prefix}{"A" * 36}"\n', encoding="utf-8")
+
+    coordinator = SwarmCoordinator(workspace_path=tmp_path)
+    report = coordinator.run_consensus(
+        target_description="Validação honesta de falha",
+        reviewer_roles=["architect", "security-reviewer"],
+    )
+
+    assert report.failed_tasks == 1
+    assert report.aggregated_consensus.startswith("REJECTED")
+    assert "Todos os pareceres atenderam" not in report.aggregated_consensus
+    assert not any("Consenso validado" in rec for rec in report.recommendations)
+
+
+def test_swarm_deterministic_analyzers_for_architect_code_and_rag(tmp_path: Path) -> None:
+    """Verifica analisadores determinísticos reais para architect, code-reviewer e rag-pipeline-reviewer."""
+    src_pkg = tmp_path / "src" / "corporate_engineer"
+    src_pkg.mkdir(parents=True)
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir(parents=True)
+
+    (src_pkg / "widget.py").write_text(
+        "class CleanWidget:\n    def run(self, x: int) -> int:\n        return x + 1\n",
+        encoding="utf-8",
+    )
+    (src_pkg / "__init__.py").write_text('__all__ = ["CleanWidget"]\n', encoding="utf-8")
+    (tests_dir / "test_widget.py").write_text(
+        "from corporate_engineer.widget import CleanWidget\n"
+        "def test_widget() -> None:\n"
+        "    assert CleanWidget().run(1) == 2\n",
+        encoding="utf-8",
+    )
+
+    coordinator = SwarmCoordinator(workspace_path=tmp_path)
+
+    arch_res = coordinator.dispatch_task(
+        SwarmMember(agent_id="arch-01", role="architect"), "Verificar wiring"
+    )
+    assert arch_res.success is True
+    assert "1/1" in arch_res.output
+
+    code_res = coordinator.dispatch_task(
+        SwarmMember(agent_id="code-01", role="code-reviewer"), "Verificar scorecard"
+    )
+    assert code_res.success is True
+    assert "score=" in code_res.output
+    assert "grade=" in code_res.output
+    assert "violations=" in code_res.output
+
+    rag_res = coordinator.dispatch_task(
+        SwarmMember(agent_id="rag-01", role="rag-pipeline-reviewer"), "Verificar símbolos AST"
+    )
+    assert rag_res.success is True
+    assert "2" in rag_res.output or "1" in rag_res.output
+
+    # Adiciona módulo órfão com baixa qualidade para provar falha real em architect e code-reviewer
+    bad_lines = [
+        "def terrible(a, b, c, d, e, f):",
+        "    global X",
+        "    if a:",
+        "        if b:",
+        "            if c:",
+        "                if d:",
+        "                    if e:",
+        "                        if f:",
+        "                            return {'bad': 1}",
+        "    return {'bad': 2}",
+    ]
+    (src_pkg / "orphan_bad.py").write_text("\n".join(bad_lines) + "\n", encoding="utf-8")
+
+    arch_fail = coordinator.dispatch_task(
+        SwarmMember(agent_id="arch-02", role="architect"), "Verificar módulo órfão"
+    )
+    assert arch_fail.success is False
+    assert arch_fail.error is not None
+
+    code_fail = coordinator.dispatch_task(
+        SwarmMember(agent_id="code-02", role="code-reviewer"), "Verificar queda de nota"
+    )
+    assert code_fail.success is False
+    assert code_fail.error is not None

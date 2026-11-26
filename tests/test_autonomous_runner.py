@@ -166,3 +166,80 @@ def test_cli_run_markdown_output(capsys, tmp_path: Path) -> None:
     assert "# Relatório de Execução de Engenharia Autônoma" in content
     assert "CORP-MD-03" in content
     assert "DELIVER" in content
+
+
+def test_graph_run_pipeline_execution_mode_and_custom_executor(tmp_path: Path) -> None:
+    """Verifica execution_mode determinístico por padrão e suporte a code_executor customizado."""
+    from corporate_engineer.models import CodeDiff, RevisedPromptSpec
+
+    task_det = TaskInput(
+        ticket_id="CORP-EXEC-01",
+        description="Implementar validação determinística no orchestrator",
+        workspace_path=str(tmp_path),
+        max_iterations=10,
+    )
+    graph_det = AutonomousEngineeringGraph(task=task_det)
+    report_det = graph_det.run_pipeline(dry_run=True, strict_audit=False)
+
+    assert report_det.status == "SUCCESS"
+    assert report_det.details["execution_mode"] == "deterministic-pipeline"
+    assert report_det.code_changes_count >= 1
+    assert "determin" in graph_det.state.code_changes[0].explanation.lower()
+
+    captured: list[tuple[str, RevisedPromptSpec]] = []
+
+    def custom_diff_executor(target: str, spec: RevisedPromptSpec) -> list[CodeDiff]:
+        captured.append((target, spec))
+        return [
+            CodeDiff(
+                file_path="src/corporate_engineer/custom_feature.py",
+                original_content=None,
+                new_content="def run_custom() -> str:\n    return 'ok'\n",
+                explanation="Custom code executor diff 1",
+            ),
+            CodeDiff(
+                file_path="src/corporate_engineer/custom_helper.py",
+                new_content="HELPER_FLAG = True\n",
+                explanation="Custom code executor diff 2",
+            ),
+        ]
+
+    task_custom = TaskInput(
+        ticket_id="CORP-EXEC-02",
+        description="Executar implementação plugável no orchestrator",
+        workspace_path=str(tmp_path),
+        max_iterations=10,
+    )
+    graph_custom = AutonomousEngineeringGraph(task=task_custom)
+    report_custom = graph_custom.run_pipeline(
+        dry_run=True,
+        strict_audit=False,
+        code_executor=custom_diff_executor,
+    )
+
+    assert report_custom.status == "SUCCESS"
+    assert report_custom.details["execution_mode"] == "custom-code-executor"
+    assert len(captured) == 1
+    assert isinstance(captured[0][1], RevisedPromptSpec)
+    assert report_custom.code_changes_count == 2
+    assert (
+        graph_custom.state.code_changes[0].file_path == "src/corporate_engineer/custom_feature.py"
+    )
+    assert graph_custom.state.code_changes[1].new_content == "HELPER_FLAG = True\n"
+
+    graph_str = AutonomousEngineeringGraph(
+        task=TaskInput(
+            ticket_id="CORP-EXEC-03",
+            description="Executar executor retornando string",
+            workspace_path=str(tmp_path),
+            max_iterations=10,
+        )
+    )
+    report_str = graph_str.run_pipeline(
+        dry_run=True,
+        strict_audit=False,
+        code_executor=lambda target, spec: f"# Generated for {target}\nVALUE = 123\n",
+    )
+    assert report_str.details["execution_mode"] == "custom-code-executor"
+    assert report_str.code_changes_count == 1
+    assert "VALUE = 123" in graph_str.state.code_changes[0].new_content

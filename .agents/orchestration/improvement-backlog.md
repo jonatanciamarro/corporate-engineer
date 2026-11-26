@@ -62,9 +62,9 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0034` | Sincronização de Regexes Modernos de Segredos no `LoraVertexExporter` | `SECURITY` | Baixa (S) | `IMPLEMENTED` | `2026-11-25` |
 | `IMP-0035` | Hardening `shell=False` no `LocalMCPToolAdapter`, Higiene Git & `README.md` (Pacote P0) | `SECURITY` | Média (M) | `IMPLEMENTED` | `2026-11-26` |
 | `IMP-0036` | Integridade e Inferência Real nos Motores `System-One` (`ONNX`, `Outlines`, `Trainer`) | `ARCHITECTURE` | Alta (L) | `IMPLEMENTED` | `2026-11-26` |
-| `IMP-0037` | Suporte Real a `text/event-stream` (SSE) no `RemoteMCPSSEClient` | `INTEGRATION` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-26` |
-| `IMP-0038` | Executores Plugáveis Reais no `SwarmCoordinator` & `AutonomousEngineeringGraph` | `ORCHESTRATION` | Alta (L) | `SAVED_NOT_APPROVED` | `2026-11-26` |
-| `IMP-0039` | Auditoria por Imports AST Reais no `CapabilityWiringAuditor` | `QUALITY` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-26` |
+| `IMP-0037` | Suporte Real a `text/event-stream` (SSE) no `RemoteMCPSSEClient` | `INTEGRATION` | Média (M) | `IMPLEMENTED` | `2026-11-26` |
+| `IMP-0038` | Executores Plugáveis Reais no `SwarmCoordinator` & `AutonomousEngineeringGraph` | `ORCHESTRATION` | Alta (L) | `IMPLEMENTED` | `2026-11-26` |
+| `IMP-0039` | Auditoria por Imports AST Reais no `CapabilityWiringAuditor` | `QUALITY` | Baixa-Média (S-M) | `IMPLEMENTED` | `2026-11-26` |
 | `IMP-0040` | Imutabilidade Estrita (`ConfigDict(frozen=True)`) nos Modelos Pydantic v2 | `MAINTAINABILITY` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-26` |
 | `IMP-0041` | Curadoria e Enxugamento de `.agents/skills/` (DAILY vs LIBRARY) | `MAINTAINABILITY` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-26` |
 
@@ -704,7 +704,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0037: Suporte Real a `text/event-stream` (SSE) no `RemoteMCPSSEClient`
 - **Categoria**: `INTEGRATION` | `RELIABILITY`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-034`, `PR-CORP-037.md`)
 - **Data de Descoberta**: 2026-11-26
 - **Problema / Limitação Atual**: `RemoteMCPSSEClient._send_request()` envia `POST` síncrono esperando JSON puro (`json.loads`), falhando caso o servidor responda `Content-Type: text/event-stream` com frames `event:` / `data:`.
 - **Solução Proposta**: Implementar parser de frames SSE (`text/event-stream`) sobre o stream HTTP mantendo compatibilidade com respostas `application/json`.
@@ -715,7 +715,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0038: Executores Plugáveis Reais no `SwarmCoordinator` & `AutonomousEngineeringGraph`
 - **Categoria**: `ORCHESTRATION` | `ARCHITECTURE`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-034`, `PR-CORP-037.md`)
 - **Data de Descoberta**: 2026-11-26
 - **Problema / Limitação Atual**: `SwarmCoordinator.dispatch_task()` retorna strings fixas de `ROLE_SPECIALIZATIONS` e invoca ferramentas MCP com `{}`; `AutonomousEngineeringGraph.run_pipeline()` grava stub em memória na fase `IMPLEMENT` sem executar um agente/executor real.
 - **Solução Proposta**: Introduzir protocolo `AgentExecutor` / `RoleAnalyzer` plugável (com analisadores locais baseados em AST/Ruff/Mypy/SecretScanner por padrão e hook opcional para LLM), sinalizando explicitamente modo determinístico vs LLM nos relatórios.
@@ -726,7 +726,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0039: Auditoria por Imports AST Reais no `CapabilityWiringAuditor`
 - **Categoria**: `QUALITY`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-034`, `PR-CORP-037.md`)
 - **Data de Descoberta**: 2026-11-26
 - **Problema / Limitação Atual**: `CapabilityWiringAuditor.audit()` verifica cobertura de testes por busca de substring (`mod_stem in t_content`), sujeita a falsos positivos quando um nome aparece em comentário ou string.
 - **Solução Proposta**: Inspecionar nós `ast.Import` e `ast.ImportFrom` nos arquivos `tests/test_*.py` para validar vinculação semântica real.

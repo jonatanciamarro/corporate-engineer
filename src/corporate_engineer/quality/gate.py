@@ -4,6 +4,7 @@ Quality Gate Runner executing Secret Audits, Testing verification and static che
 
 from __future__ import annotations
 
+import logging
 import os
 import shlex
 import subprocess
@@ -16,7 +17,29 @@ from corporate_engineer.quality.secret_scanner import (
     CanonicalSecretScanner,
 )
 
-__all__ = ["SECRET_PATTERNS", "QualityGateRunner"]
+__all__ = ["SECRET_PATTERNS", "QualityGateRunner", "resolve_test_timeout"]
+
+logger = logging.getLogger(__name__)
+DEFAULT_TEST_TIMEOUT_SECONDS = 120.0
+
+
+def resolve_test_timeout(
+    explicit_timeout: float | None = None,
+    default_timeout: float = DEFAULT_TEST_TIMEOUT_SECONDS,
+) -> float:
+    """Resolve test command timeout from explicit arg, CORP_TEST_TIMEOUT env, or default."""
+    if explicit_timeout is not None:
+        return explicit_timeout
+    raw_env = os.environ.get("CORP_TEST_TIMEOUT", "").strip()
+    if raw_env:
+        try:
+            parsed = float(raw_env)
+            if parsed > 0:
+                return parsed
+            logger.warning("CORP_TEST_TIMEOUT must be positive (got %r); using default.", raw_env)
+        except ValueError:
+            logger.warning("Invalid CORP_TEST_TIMEOUT=%r; falling back to default.", raw_env)
+    return default_timeout
 
 
 class QualityGateRunner:
@@ -51,9 +74,11 @@ class QualityGateRunner:
     def run_tests(
         self,
         command: str | list[str] = "pytest",
-        timeout: float = 120.0,
+        timeout: float = DEFAULT_TEST_TIMEOUT_SECONDS,
     ) -> dict[str, Any]:
         """Run automated test suite with timeout and security boundaries."""
+        explicit = None if timeout == DEFAULT_TEST_TIMEOUT_SECONDS else timeout
+        effective_timeout = resolve_test_timeout(explicit)
         if isinstance(command, str):
             cmd_list = shlex.split(command, posix=(os.name != "nt"))
         else:
@@ -78,7 +103,7 @@ class QualityGateRunner:
                 cwd=str(self.project_root),
                 capture_output=True,
                 text=True,
-                timeout=timeout,
+                timeout=effective_timeout,
             )
             return {
                 "command": cmd_display,
@@ -93,7 +118,7 @@ class QualityGateRunner:
                 "passed": False,
                 "exit_code": -2,
                 "stdout": "",
-                "stderr": f"Command timed out after {timeout}s",
+                "stderr": f"Command timed out after {effective_timeout}s",
             }
         except (subprocess.SubprocessError, OSError) as e:
             return {

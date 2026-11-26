@@ -11,7 +11,7 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0031-quality-security-sandboxing` | 🟢 Repositório Git inicializado/sincronizado com `origin/main` (`5c1e331`); suíte 361/361 PASS, 0 erros Ruff/Mypy |
+| **Branch Ativa** | `feat/IMP-0035-p0-security-and-repo-hygiene` | 🟢 Sincronizada com `origin/main` (`b7635fc`, PR #34 merged); conflito em `src/corporate_engineer.egg-info/SOURCES.txt` resolvido mantendo exclusão do índice Git |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo (`--system-site-packages` + `.pth` apontando para `src/`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
 | **Testes (Pytest + Hypothesis)** | 🟢 **355/355 PASS** | Execução completa em 89.87s (inclui 3 novos casos de segurança/secrets P0 em `test_mcp_client.py` e `test_gemini_lora_pipeline.py`; removidos 9 testes de scripts pessoais Windows) |
@@ -504,6 +504,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-26T03:33:00-03:00` | Corp-Pipeline Master Orchestrator | Resolução do conflito modify/delete em `src/corporate_engineer.egg-info/SOURCES.txt` na PR #35 (`feat/IMP-0035-p0-security-and-repo-hygiene` vs `origin/main` `b7635fc`, originado pelo commit automático `af4db0f` do `self-heal.yml` na PR #34): merge de `origin/main` preservando a remoção definitiva de `src/corporate_engineer.egg-info/` do rastreamento Git. |
 | `2026-11-26T00:57:00-03:00` | Corp-Pipeline Master Orchestrator | Execução do Pacote P0 (`IMP-0034` + `IMP-0035` / `ADR-032`): hardening `shell=False` + `shlex.split` + bloqueio de metacaracteres e execução inline em `LocalMCPToolAdapter._handle_shell()` (2 novos testes em `tests/test_mcp_client.py`), unificação de `SECRET_PATTERNS` no `LoraVertexExporter` com `CanonicalSecretScanner` (1 teste de regressão em `tests/test_gemini_lora_pipeline.py`), remoção de `src/corporate_engineer.egg-info/` do Git, remoção dos 5 arquivos pessoais de otimização Windows, correção de links locais `file:///e:/...` em `.agents/orchestration/`, reescrita do `README.md` e registro formal das ondas P0–P3 (`IMP-0035`–`IMP-0041`) no backlog. Pre-Flight 100% verde (355/355 testes PASS, 0 erros Ruff/Mypy, Secret Scan PASS, Wiring Audit PASS). |
 | `2026-11-25T23:18:00-03:00` | Corp-Pipeline Master Orchestrator | Persistência de `IMP-0034` (Sincronização de Regexes Modernos de Segredos no `LoraVertexExporter`) em `.agents/orchestration/improvement-backlog.md` com status `SAVED_NOT_APPROVED` conforme opção `SAVE FOR LATER` do usuário. |
 | `2026-11-25T22:50:00-03:00` | Corp-Pipeline Master Orchestrator | Inicialização e sincronização Git local do workspace sandbox com `origin/main` (`5c1e331`), criação da branch `feat/IMP-0031-quality-security-sandboxing`, commit local das entregas do IMP-0031 e diagnóstico de bloqueio de `git push` por ausência de credenciais GitHub/SSH no Windows Sandbox (`exit 128`). |

@@ -1,5 +1,5 @@
 """
-Capability Wiring Auditor (IMP-0029 / ADR-028).
+Capability Wiring Auditor (IMP-0029 / ADR-028, IMP-0039 / ADR-034).
 Enforces continuous auto-wiring and maximum capability power across the entire repository.
 Verifies that no orphaned or disconnected modules exist without exports, tests, and integration.
 """
@@ -7,9 +7,19 @@ Verifies that no orphaned or disconnected modules exist without exports, tests, 
 from __future__ import annotations
 
 import ast
+from dataclasses import dataclass
 from pathlib import Path
 
 from corporate_engineer.models import WiringAuditReport
+
+
+@dataclass(frozen=True)
+class TestASTReferences:
+    """AST-extracted imports, identifier references, and test definition flag for a test file."""
+
+    imported_names: frozenset[str]
+    referenced_names: frozenset[str]
+    has_test_defs: bool
 
 
 class CapabilityWiringAuditor:
@@ -44,18 +54,77 @@ class CapabilityWiringAuditor:
                 continue
         return exports
 
-    def _get_test_contents(self) -> dict[str, str]:
-        """Pre-load test file contents for fast reference checks."""
-        test_files: dict[str, str] = {}
+    @staticmethod
+    def _collect_import_aliases(aliases: list[ast.alias], imported_names: set[str]) -> None:
+        """Collect imported names, trailing dotted segments, and aliases from AST import nodes."""
+        for alias in aliases:
+            if alias.name != "*":
+                imported_names.add(alias.name)
+                imported_names.add(alias.name.split(".")[-1])
+            if alias.asname:
+                imported_names.add(alias.asname)
+
+    def _extract_test_references(self, file_path: Path) -> TestASTReferences:
+        """Parse a test file via AST to extract imports, identifier references, and test defs."""
+        imported_names: set[str] = set()
+        referenced_names: set[str] = set()
+        has_test_defs = False
+
+        try:
+            tree = ast.parse(file_path.read_text(encoding="utf-8", errors="ignore"))
+        except Exception:  # noqa: BLE001
+            return TestASTReferences(
+                imported_names=frozenset(),
+                referenced_names=frozenset(),
+                has_test_defs=False,
+            )
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                self._collect_import_aliases(node.names, imported_names)
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    imported_names.add(node.module)
+                    imported_names.add(node.module.split(".")[-1])
+                self._collect_import_aliases(node.names, imported_names)
+            elif isinstance(node, ast.Name):
+                referenced_names.add(node.id)
+            elif isinstance(node, ast.Attribute):
+                referenced_names.add(node.attr)
+            elif (
+                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and node.name.startswith("test_")
+            ) or (isinstance(node, ast.ClassDef) and node.name.startswith("Test")):
+                has_test_defs = True
+
+        return TestASTReferences(
+            imported_names=frozenset(imported_names),
+            referenced_names=frozenset(referenced_names),
+            has_test_defs=has_test_defs,
+        )
+
+    def _get_test_ast_index(self) -> dict[str, TestASTReferences]:
+        """Pre-parse all test_*.py files into an AST reference index."""
+        test_index: dict[str, TestASTReferences] = {}
         if not self.tests_dir.exists():
-            return test_files
+            return test_index
 
         for t_file in self.tests_dir.glob("test_*.py"):
-            try:
-                test_files[t_file.stem] = t_file.read_text(encoding="utf-8", errors="ignore")
-            except Exception:  # noqa: BLE001, S112
-                continue
-        return test_files
+            test_index[t_file.stem] = self._extract_test_references(t_file)
+        return test_index
+
+    @staticmethod
+    def _references_module(
+        test_refs: TestASTReferences,
+        mod_stem: str,
+        symbols: list[str],
+    ) -> bool:
+        """Return True when the parsed test AST imports mod_stem or references a module symbol."""
+        if mod_stem in test_refs.imported_names:
+            return True
+        return any(
+            sym in test_refs.imported_names or sym in test_refs.referenced_names for sym in symbols
+        )
 
     def _extract_module_symbols(self, file_path: Path) -> list[str]:
         """Extract public classes and functions defined in a module."""
@@ -85,7 +154,7 @@ class CapabilityWiringAuditor:
             )
 
         known_exports = self._get_top_level_exports()
-        test_contents = self._get_test_contents()
+        test_ast_index = self._get_test_ast_index()
 
         all_modules: list[Path] = [
             f
@@ -104,17 +173,19 @@ class CapabilityWiringAuditor:
             rel_path = str(mod_path.relative_to(self.workspace_root)).replace("\\", "/")
             symbols = self._extract_module_symbols(mod_path)
 
-            # 1. Test coverage check
+            # 1. Test coverage check via genuine AST import/reference analysis
             direct_test_name = f"test_{mod_stem}"
-            has_direct_test = direct_test_name in test_contents
+            direct_refs = test_ast_index.get(direct_test_name)
+            has_direct_test = direct_refs is not None and (
+                direct_refs.has_test_defs or self._references_module(direct_refs, mod_stem, symbols)
+            )
             has_indirect_test = False
 
             if not has_direct_test:
-                # Check if symbols or module name are tested elsewhere
-                for t_content in test_contents.values():
-                    if mod_stem in t_content or any(s in t_content for s in symbols):
-                        has_indirect_test = True
-                        break
+                has_indirect_test = any(
+                    self._references_module(t_refs, mod_stem, symbols)
+                    for t_refs in test_ast_index.values()
+                )
 
             has_test = has_direct_test or has_indirect_test
             if not has_test:

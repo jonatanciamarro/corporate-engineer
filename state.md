@@ -11,14 +11,14 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0036-p1-cli-rag-system-one` | 🟢 Sincronizada com `feat/IMP-0035-p0-security-and-repo-hygiene` (`086aabe`) e `origin/main` (`b7635fc`); suíte 380/380 PASS, 0 erros Ruff/Mypy |
+| **Branch Ativa** | `feat/IMP-0037-p2-sse-swarm-wiring` | 🟢 Baseada em `feat/IMP-0036-p1-cli-rag-system-one` (`f721594`); suíte 403/403 PASS, 0 erros Ruff/Mypy |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo (`--system-site-packages` + `.pth` apontando para `src/`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **380/380 PASS** | Execução completa em 174.12s (inclui novos casos TDD P1 para `IMP-0032`, `IMP-0033`, `IMP-0036`) |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (177 arquivos formatados) |
+| **Testes (Pytest + Hypothesis)** | 🟢 **403/403 PASS** | Execução completa em 441.29s (inclui 23 novos testes TDD P2 para `IMP-0037`, `IMP-0038`, `IMP-0039`) |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (179 arquivos formatados) |
 | **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 104 arquivos fonte validados estritamente |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` e `LoraVertexExporter` unificado (`IMP-0034`) |
-| **Wiring & Scorecard EDD** | 🟢 **100% Wired** | `audit --wiring` 100% conectado (`PASS`) |
+| **Wiring & Scorecard EDD** | 🟢 **100% Wired** | `audit --wiring` 100% conectado via análise AST real (`PASS`) |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Always-On Ativo** | Frontmatter `trigger: always_on` ativo em `corp-pipeline-orchestrator.md` |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` com links relativos portáveis e ondas P0–P3 (`IMP-0034`–`IMP-0041`) |
 | **Lifecycle Hooks E2E** | 🟢 **5 Hooks Ativos com run_hook.py** | `.agents/hooks.json` com dispatch dinâmico seguro em `run_hook.py` |
@@ -27,7 +27,19 @@
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Onda P1 via Swarm: `IMP-0032` + `IMP-0033` + `IMP-0036` / `ADR-033` — CLI/Hooks, RAG/LoRA/Refiner & System-One):
+### Sessão Atual (Onda P2 via Senior Swarm: `IMP-0037` + `IMP-0038` + `IMP-0039` / `ADR-034` — SSE Real, Executores Plugáveis & Auditoria AST):
+1. **Suporte Real a `text/event-stream` (`IMP-0037` — `sse-architect`)**:
+   - `src/corporate_engineer/mcp/client.py`: implementação de `_extract_content_type`, `_looks_like_sse`, `_extract_sse_events`, `_parse_sse_payload` e `_parse_response_payload` em `RemoteMCPSSEClient` suportando respostas `application/json` e `text/event-stream` (multi-linha `data:`, comentários `:`, `[DONE]`, casamento de `id`, guarda para headers `MagicMock` e rastreamento de falhas no `CircuitBreaker`).
+   - 12 novos testes em `tests/test_mcp_client.py`.
+2. **Orquestração Plugável & Analisadores Reais (`IMP-0038` — `orch-architect`)**:
+   - `src/corporate_engineer/orchestrator/swarm.py`: protocolo `RoleExecutor`, injeção de `workspace_path` e `role_executor`, substituição de strings estáticas por analisadores determinísticos reais (`CanonicalSecretScanner`, `SemanticCodeEvaluator`, `CachedASTCodebaseIndexer`, `CapabilityWiringAuditor`), argumentos contextuais nas chamadas MCP, sinalização de `execution_mode` e honestidade de consenso `REJECTED`.
+   - `src/corporate_engineer/orchestrator/graph.py`: parâmetro `code_executor` plugável em `AutonomousEngineeringGraph.run_pipeline()` e registro explícito de `details["execution_mode"]` (`"deterministic-pipeline"` vs `"custom-code-executor"`).
+   - 5 novos testes em `tests/test_swarm_coordinator.py` e `tests/test_autonomous_runner.py`.
+3. **Auditoria de Wiring via AST Real (`IMP-0039` — `wiring-auditor`)**:
+   - `src/corporate_engineer/quality/wiring_auditor.py`: substituição de busca por substring por índice AST (`TestASTReferences`, `ast.Import`, `ast.ImportFrom`, `ast.Name`, `ast.Attribute` e definições `test_*`/`Test*`), rejeitando falsos positivos em comentários e literais string.
+   - 6 novos testes em `tests/test_auto_wiring_integrity.py` (incluindo cobertura explícita de `build_parser` e `SystemOneEngine`).
+
+### Sessão Anterior (Onda P1 via Swarm: `IMP-0032` + `IMP-0033` + `IMP-0036` / `ADR-033` — CLI/Hooks, RAG/LoRA/Refiner & System-One):
 1. **CLI & Hooks Dinâmicos (`IMP-0032` — trilha `cli-hooks`)**:
    - `.agents/orchestration/hooks/run_hook.py`: substituição da whitelist `if/elif` estática por descoberta dinâmica validada (`^[a-zA-Z0-9_]+$`) via `importlib.util` / `runpy.run_path`.
    - `src/corporate_engineer/cli/commands/rag.py`: `handle_eval()` valida `target.exists()` retornando exit code `1`; `index` e `blast-radius` isolam confirmações `--output` em `sys.stderr` no modo `--format json`.
@@ -520,6 +532,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-26T05:13:00-03:00` | Corp-Pipeline Master Orchestrator (Senior Swarm P2) | Execução da Onda P2 (`IMP-0037` + `IMP-0038` + `IMP-0039` / `ADR-034`) via Senior Swarm (`sse-architect`, `orch-architect`, `wiring-auditor`, `staff-verifier`): suporte real a `text/event-stream` no `RemoteMCPSSEClient` (12 testes), protocolo `RoleExecutor` + analisadores determinísticos reais no `SwarmCoordinator` e `code_executor` + `execution_mode` em `AutonomousEngineeringGraph.run_pipeline()` (5 testes), e auditoria AST real em `CapabilityWiringAuditor` eliminando falsos positivos de comentários/strings (6 testes). Pre-Flight aprovado com 403/403 testes PASS (441.29s), 0 erros Ruff/Mypy/Secret Scan e Wiring Audit PASS. |
 | `2026-11-26T03:40:00-03:00` | Corp-Pipeline Master Orchestrator | Sincronização da branch empilhada `feat/IMP-0036-p1-cli-rag-system-one` com `feat/IMP-0035-p0-security-and-repo-hygiene` (`086aabe`) e `origin/main` (`b7635fc`). |
 | `2026-11-26T03:33:00-03:00` | Corp-Pipeline Master Orchestrator | Resolução do conflito modify/delete em `src/corporate_engineer.egg-info/SOURCES.txt` na PR #35 (`feat/IMP-0035-p0-security-and-repo-hygiene` vs `origin/main` `b7635fc`, originado pelo commit automático `af4db0f` do `self-heal.yml` na PR #34): merge de `origin/main` preservando a remoção definitiva de `src/corporate_engineer.egg-info/` do rastreamento Git. |
 | `2026-11-26T03:03:00-03:00` | Corp-Pipeline Master Orchestrator (Swarm P1) | Execução da Onda P1 (`IMP-0032` + `IMP-0033` + `IMP-0036` / `ADR-033`) via Swarm multi-agente (`cli-hooks`, `core-rag-lora`, `system-one`, `verifier`): dispatch dinâmico seguro em `run_hook.py`, validação de alvo no `eval` e subação obrigatória no `mcp`, isolamento `sys.stderr` em `--format json --output` (`rag.py`, `prompt.py`), correção de cache starvation em `CachedASTCodebaseIndexer.get_all_symbol_names()`, suporte a generics TypeScript em `LoraSyntaxValidator`, atualização de `refiner.py` para `cli/`, acurácia por `total_runs` em `SystemOneBenchmark`, sessão ONNX/tokenizer lazy + `heuristic-fallback` honesto em `ONNXNLIDecisionEngine`, cache de modelo em `OutlinesDecisionEngine` e exportação `optimum.onnxruntime` no `SystemOneTrainer`/`train_system_one_colab.py`. Pre-Flight aprovado com 380/380 testes PASS (174.12s), 0 erros Ruff/Mypy/Secret Scan e Wiring Audit PASS. |

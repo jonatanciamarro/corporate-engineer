@@ -14,6 +14,7 @@ from corporate_engineer.models import (
     AgentState,
     CodeDiff,
     NodeExecutionResult,
+    RevisedPromptSpec,
     RunExecutionReport,
     TaskInput,
     TraceReport,
@@ -57,13 +58,22 @@ class AutonomousEngineeringGraph:
             return self.state
 
     def step_implement(
-        self, code_file: str, code: str, explanation: str = "Implementation"
+        self,
+        code_file: str,
+        code: str,
+        explanation: str = "Implementation",
+        original_content: str | None = None,
     ) -> AgentState:
         with self.tracer.span(
             "dag.node.implement", attributes={"phase": "IMPLEMENT", "code_file": code_file}
         ):
             self.record_iteration()
-            diff = CodeDiff(file_path=code_file, new_content=code, explanation=explanation)
+            diff = CodeDiff(
+                file_path=code_file,
+                original_content=original_content,
+                new_content=code,
+                explanation=explanation,
+            )
             self.state.code_changes.append(diff)
             self.state.phase = "AUDIT"
             return self.state
@@ -93,11 +103,82 @@ class AutonomousEngineeringGraph:
             return self.step_audit(True)
         return self.state
 
+    def _run_implement_phase(
+        self,
+        code_target: str,
+        spec: RevisedPromptSpec,
+        dry_run: bool,
+        code_executor: Callable[[str, RevisedPromptSpec], list[CodeDiff] | str] | None,
+        details: dict[str, Any],
+    ) -> None:
+        """Execute Phase 3 (IMPLEMENT) via custom code_executor or deterministic AST pipeline."""
+        from corporate_engineer.eval.fixer import ASTSelfHealingFixer
+
+        fixer = ASTSelfHealingFixer()
+        src_dir = self.workspace_path / "src"
+        if src_dir.exists():
+            fix_report = fixer.fix_workspace(src_dir, dry_run=dry_run)
+            details["ast_fix_report"] = fix_report.model_dump()
+        else:
+            target_file = self.workspace_path / code_target
+            if target_file.exists():
+                fix_report = fixer.fix_file(target_file, dry_run=dry_run)
+                details["ast_fix_report"] = fix_report.model_dump()
+
+        if code_executor is not None:
+            executor_result = code_executor(code_target, spec)
+            if isinstance(executor_result, list):
+                if not executor_result:
+                    self.step_implement(
+                        code_target,
+                        f"# Custom code executor returned 0 diffs for {self.task.ticket_id}",
+                        explanation=(
+                            f"Custom code executor execution for {self.task.ticket_id} (no diffs)"
+                        ),
+                    )
+                else:
+                    for diff in executor_result:
+                        self.step_implement(
+                            diff.file_path,
+                            diff.new_content,
+                            explanation=diff.explanation,
+                            original_content=diff.original_content,
+                        )
+            elif isinstance(executor_result, CodeDiff):
+                self.step_implement(
+                    executor_result.file_path,
+                    executor_result.new_content,
+                    explanation=executor_result.explanation,
+                    original_content=executor_result.original_content,
+                )
+            else:
+                self.step_implement(
+                    code_target,
+                    str(executor_result),
+                    explanation=f"Custom code executor output for {self.task.ticket_id}",
+                )
+            return
+
+        ast_fixes_count = details.get("ast_fix_report", {}).get("files_modified", 0)
+        code_desc = (
+            f"# Deterministic pipeline pass (ASTSelfHealingFixer, dry_run={dry_run}, "
+            f"files_modified={ast_fixes_count}) for {self.task.ticket_id}\n"
+            f"# Intent: {spec.core_intent}"
+        )
+        self.step_implement(
+            code_target,
+            code_desc,
+            explanation=(
+                f"Passagem determinística de pipeline (ASTSelfHealingFixer) para {self.task.ticket_id}"
+            ),
+        )
+
     def run_pipeline(
         self,
         dry_run: bool = False,
         auto_deliver: bool = True,
         strict_audit: bool = True,
+        code_executor: Callable[[str, RevisedPromptSpec], list[CodeDiff] | str] | None = None,
     ) -> RunExecutionReport:
         """Executa o ciclo de vida completo de engenharia corporativa autônoma:
 
@@ -105,11 +186,18 @@ class AutonomousEngineeringGraph:
         """
         t0 = time.perf_counter()
         checkpoints_created: list[str] = []
-        details: dict[str, Any] = {}
+        execution_mode = (
+            "custom-code-executor" if code_executor is not None else "deterministic-pipeline"
+        )
+        details: dict[str, Any] = {"execution_mode": execution_mode}
 
         with self.tracer.span(
             "dag.lifecycle.pipeline",
-            attributes={"ticket_id": self.task.ticket_id, "dry_run": dry_run},
+            attributes={
+                "ticket_id": self.task.ticket_id,
+                "dry_run": dry_run,
+                "execution_mode": execution_mode,
+            },
         ):
             # Fase 1: Planejamento & Antecipação Proativa
             from corporate_engineer.orchestrator.anticipator import ProactiveAnticipator
@@ -176,31 +264,19 @@ class AutonomousEngineeringGraph:
             cp2 = self.save_checkpoint()
             checkpoints_created.append(cp2.name)
 
-            # Fase 3: Implementação Cirúrgica & Auto-Remediação de AST
+            # Fase 3: Implementação Cirúrgica (Executor Plugável ou Pipeline AST Determinístico)
             code_target = (
                 spec.affected_modules[0]
                 if spec.affected_modules
                 else f"src/{self.task.ticket_id.lower().replace('-', '_')}.py"
             )
-            code_desc = f"# Implementation for {self.task.ticket_id}\n# Intent: {spec.core_intent}"
-            self.step_implement(
-                code_target,
-                code_desc,
-                explanation=f"Implementação referente ao ticket {self.task.ticket_id}",
+            self._run_implement_phase(
+                code_target=code_target,
+                spec=spec,
+                dry_run=dry_run,
+                code_executor=code_executor,
+                details=details,
             )
-
-            from corporate_engineer.eval.fixer import ASTSelfHealingFixer
-
-            fixer = ASTSelfHealingFixer()
-            src_dir = self.workspace_path / "src"
-            if src_dir.exists():
-                fix_report = fixer.fix_workspace(src_dir, dry_run=dry_run)
-                details["ast_fix_report"] = fix_report.model_dump()
-            else:
-                target_file = self.workspace_path / code_target
-                if target_file.exists():
-                    fix_report = fixer.fix_file(target_file, dry_run=dry_run)
-                    details["ast_fix_report"] = fix_report.model_dump()
 
             cp3 = self.save_checkpoint()
             checkpoints_created.append(cp3.name)

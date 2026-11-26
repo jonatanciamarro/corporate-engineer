@@ -4,6 +4,7 @@ Safe Storage Optimizer & Disk Hygiene Engine for Corporate Environments.
 
 import os
 import shutil
+import tempfile
 from pathlib import Path
 from typing import ClassVar
 
@@ -30,6 +31,43 @@ class SafeStorageCleaner:
         "onedrive",
         ".ssh",
         ".aws",
+        ".gnupg",
+        ".kube",
+        ".git",
+    }
+
+    CRITICAL_SYSTEM_ROOT_DIRS: ClassVar[set[str]] = {
+        "windows",
+        "system32",
+        "program files",
+        "program files (x86)",
+        "programdata",
+        "system volume information",
+        "$recycle.bin",
+        "recovery",
+        "perflogs",
+        "msocache",
+        "etc",
+        "usr",
+        "bin",
+        "sbin",
+        "lib",
+        "lib32",
+        "lib64",
+        "libx32",
+        "boot",
+        "dev",
+        "proc",
+        "sys",
+        "root",
+        "run",
+        "opt",
+        "srv",
+        "mnt",
+        "media",
+        "system",
+        "library",
+        "applications",
     }
 
     def __init__(self, workspace_path: str | Path | None = None) -> None:
@@ -40,21 +78,65 @@ class SafeStorageCleaner:
     def is_path_safe(self, target_path: str | Path) -> bool:
         """
         Determines whether a path is strictly safe to clean.
-        Rejects personal directories and current workspace paths.
+        Rejects roots, symlinks, temp roots, home/ancestors, workspace/ancestors, and OS/personal dirs.
         """
-        resolved = Path(target_path).resolve()
+        if not str(target_path).strip():
+            return False
 
-        # Reject workspace and subpaths of workspace
+        raw_candidate = Path(target_path)
         try:
-            if resolved == self.workspace_path or self.workspace_path in resolved.parents:
+            if raw_candidate.is_symlink():
+                return False
+            resolved = raw_candidate.resolve()
+        except (ValueError, OSError, RuntimeError):
+            return False
+
+        # Reject filesystem, drive, and UNC roots
+        if len(resolved.parts) <= 1 or resolved == resolved.parent:
+            return False
+
+        # Reject OS temp root itself (e.g. AppData\Local\Temp, /tmp, C:\tmp)
+        try:
+            temp_root = Path(tempfile.gettempdir()).resolve()
+        except (ValueError, OSError, RuntimeError):
+            return False
+        if resolved == temp_root or (
+            len(resolved.parts) <= 2 and resolved.parts[1].lower() == "tmp"
+        ):
+            return False
+
+        # Reject user home directory and its ancestors (e.g. C:\Users, /home, /Users)
+        try:
+            home_dir = Path.home().resolve()
+            if resolved == home_dir or resolved in home_dir.parents:
+                return False
+        except (ValueError, OSError, RuntimeError):
+            return False
+
+        # Reject workspace, its descendants, and its ancestors
+        try:
+            if (
+                resolved == self.workspace_path
+                or self.workspace_path in resolved.parents
+                or resolved in self.workspace_path.parents
+            ):
                 return False
         except (ValueError, OSError):
             return False
 
-        # Check against forbidden directory names in any part of path
-        parts_lower = [p.lower() for p in resolved.parts]
-        for forbidden in self.FORBIDDEN_DIR_NAMES:
-            if forbidden in parts_lower:
+        # Reject critical OS/system root directories and user profile roots
+        root_child = resolved.parts[1].lower()
+        if root_child in self.CRITICAL_SYSTEM_ROOT_DIRS:
+            return False
+        if root_child in {"users", "home"} and len(resolved.parts) <= 3:
+            return False
+        if root_child in {"var", "private"} and temp_root not in resolved.parents:
+            return False
+
+        # Check against forbidden directory names and corporate OneDrive prefixes in any part
+        for part in resolved.parts:
+            part_lower = part.lower()
+            if part_lower in self.FORBIDDEN_DIR_NAMES or part_lower.startswith("onedrive - "):
                 return False
 
         return True
@@ -153,9 +235,8 @@ class SafeStorageCleaner:
         """
         Cleans a single target path safely.
         """
-        target_path = Path(target.path)
-
-        if not target.is_safe or not self.is_path_safe(target_path):
+        raw_path = str(target.path).strip()
+        if not target.is_safe or not raw_path or not self.is_path_safe(raw_path):
             return StorageCleanResult(
                 target_name=target.name,
                 path=target.path,
@@ -163,6 +244,8 @@ class SafeStorageCleaner:
                 success=False,
                 error="Path deemed unsafe or forbidden for deletion.",
             )
+
+        target_path = Path(raw_path)
 
         if not target_path.exists():
             return StorageCleanResult(

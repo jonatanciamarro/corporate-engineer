@@ -56,7 +56,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0028` | Resiliência Universal de Hooks do Ciclo de Vida e Ativação Permanente de Regras Always-On | `AUTOMATION` | Baixa-Média (S-M) | `IMPLEMENTED` | `2026-11-24` |
 | `IMP-0029` | Continuous Capability Auto-Wiring & Invariante de Potência Máxima (Zero Código Órfão) | `QUALITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-24` |
 | `IMP-0030` | Resiliência de Concorrência, Sincronização & Eliminação de Erros Silenciosos (Pacote 1) | `RELIABILITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-24` |
-| `IMP-0031` | Blindagem de Qualidade, Segurança & Sandboxing de Mutação (Pacote 2) | `QUALITY` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-24` |
+| `IMP-0031` | Blindagem de Qualidade, Segurança & Sandboxing de Mutação (Pacote 2) | `QUALITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-24` |
 | `IMP-0032` | Integridade da CLI, Output Contratos & Dynamic Hook Dispatching (Pacote 3) | `ARCHITECTURE` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-24` |
 | `IMP-0033` | AI Systems, RAG Cache Starvation & Unificação de Dívidas Técnicas (Pacote 4) | `EFFICIENCY` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-24` |
 
@@ -618,14 +618,14 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0031: Blindagem de Qualidade, Segurança & Sandboxing de Mutação (Pacote 2)
 - **Categoria**: `QUALITY` | `SECURITY`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-031`, `PR-CORP-031.md`)
 - **Data de Descoberta**: 2026-11-24
-- **Problema / Limitação Atual**: O sandbox temporário de mutação omite `src/` do PYTHONPATH, testando código não-mutado; o scanner de segredos possui bypass para chaves de projeto da OpenAI (`sk-proj-...` com `_`) e Anthropic (`sk-ant-api03-...`); o Storage Cleaner julga raízes de disco (`C:\`, `/`) e diretório home como seguros para deleção; a re-verificação da Fase 1.7 Adversarial é mockada sem ataque real.
-- **Solução Proposta**: Injetar `src/` no PYTHONPATH do sandbox de mutação; corrigir regexes no scanner de segredos; bloquear estritamente raízes de sistema no Storage Cleaner; implementar re-verificação real de endurecimentos no Adversarial Red Team.
-- **Benefícios Esperados**: Blindagem contra acidentes catastróficos no SO, eficácia real dos testes de mutação e erradicação de falsos negativos em vazamentos de credenciais.
-- **Componentes Afetados**: `src/corporate_engineer/quality/mutation.py`, `src/corporate_engineer/quality/secret_scanner.py`, `src/corporate_engineer/quality/storage_cleaner.py`, `src/corporate_engineer/orchestrator/adversarial.py`.
+- **Problema / Limitação Atual**: O sandbox temporário de mutação omitia `src/` do PYTHONPATH, testando código não-mutado; o scanner de segredos possuía bypass para chaves modernas da OpenAI (`sk-proj-`, `sk-svcacct-`, `sk-live-` com `_` / `-`) e Anthropic (`sk-ant-api03-...`); o Storage Cleaner aceitava raízes de disco (`C:\`, `/`), `Path.home()`, diretórios de sistema, symlinks e prefixos OneDrive corporativos como seguros para deleção; a re-verificação da Fase 1.7 Adversarial retornava sempre `is_blocked=False` sem validação real.
+- **Solução Proposta**: Injetar `src/` prioritariamente no PYTHONPATH do sandbox de mutação com guarda PEP 420 e fallback de cópia; sincronizar regexes modernas de OpenAI/Anthropic/AWS nas 3 cópias autorizadas (`secret_scanner.py`, `tool_security_guard.py` e `.agents/skills/corp-pipeline/scripts/secret_scanner.py`); blindar `is_path_safe()` em 13 camadas no Storage Cleaner; implementar re-verificação genuína em 5 etapas na Fase 1.7 do `AdversarialRedTeam`, refinamento em loop de 2 rodadas e `arch_summary` real em `ArchitectureTranscender`.
+- **Benefícios Esperados**: Blindagem contra acidentes catastróficos no SO, eficácia real dos testes de mutação contra código mutado, erradicação de falsos negativos em vazamentos de credenciais modernas e ciclo dialético adversarial efetivo.
+- **Componentes Afetados**: `src/corporate_engineer/quality/mutation.py`, `src/corporate_engineer/quality/secret_scanner.py`, `src/corporate_engineer/quality/tool_security_guard.py`, `.agents/skills/corp-pipeline/scripts/secret_scanner.py`, `src/corporate_engineer/quality/storage_cleaner.py`, `src/corporate_engineer/orchestrator/adversarial.py`, `tests/test_imp0031_mutation_sandbox.py`, `tests/test_imp0031_security_and_storage.py`, `tests/test_imp0031_adversarial_reverification.py`.
 - **Complexidade**: Média-Alta (M-L).
-- **Critérios de Aceite**: Testes unitários validando cada guardrail de segurança com 100% PASS.
+- **Critérios de Aceite**: 52 novos casos de teste IMP-0031 PASS (361/361 testes globais PASS), 0 erros Ruff/Mypy, Secret Scan PASS e 48/48 módulos auto-wired.
 
 ---
 

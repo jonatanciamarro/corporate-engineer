@@ -85,6 +85,9 @@ tests/test_fixer.py
 tests/test_gemini_lora_pipeline.py
 tests/test_git_robustness_and_silent_errors.py
 tests/test_hook_resilience_and_rule_triggers.py
+tests/test_imp0031_adversarial_reverification.py
+tests/test_imp0031_mutation_sandbox.py
+tests/test_imp0031_security_and_storage.py
 tests/test_impact.py
 tests/test_mcp_client.py
 tests/test_mcp_hub.py

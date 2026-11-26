@@ -63,7 +63,7 @@ class TestContextAwarePromptRefiner:
                 "system_one",
             ),
             ("limpeza segura de armazenamento e secret scanner", "quality", "quality"),
-            ("adicionar novo subcomando e flags na CLI corporativa", "cli", "cli.py"),
+            ("adicionar novo subcomando e flags na CLI corporativa", "cli", "cli/"),
         ]
 
         for prompt_text, expected_domain, expected_module_substr in cases:

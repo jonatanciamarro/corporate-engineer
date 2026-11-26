@@ -219,9 +219,19 @@ class SystemOneBenchmark:
         timestamp = datetime.now(UTC).isoformat()
 
         results: dict[str, EngineBenchmarkResult] = {}
+        actual_engines: dict[str, str] = {}
 
         for engine_name in engine_names:
             router = self._create_router(engine_name)
+            actual_engine = engine_name
+            try:
+                probe_input = str(samples[0].get("input", "probe")) if samples else "probe"
+                probe_report = router.engine.evaluate(probe_input, {})
+                actual_engine = str(getattr(probe_report, "engine_name", engine_name))
+            except (RuntimeError, ValueError, KeyError, TypeError, OSError, FileNotFoundError):
+                actual_engine = f"{engine_name}-error"
+            actual_engines[engine_name] = actual_engine
+
             latencies_ms: list[float] = []
             successful_runs = 0
             failed_runs = 0
@@ -244,19 +254,20 @@ class SystemOneBenchmark:
 
             for _ in range(iterations):
                 for s in samples:
+                    category = self._infer_category(s.get("instruction", ""))
+                    per_mode_total[category] = per_mode_total.get(category, 0) + 1
                     t0 = time.perf_counter()
                     try:
-                        _, is_correct, category = self._evaluate_sample(router, s)
+                        _, is_correct, evaluated_cat = self._evaluate_sample(router, s)
                         elapsed_ms = (time.perf_counter() - t0) * 1000.0
                         latencies_ms.append(elapsed_ms)
                         successful_runs += 1
 
                         if is_correct:
                             correct_runs += 1
-
-                        per_mode_total[category] = per_mode_total.get(category, 0) + 1
-                        if is_correct:
-                            per_mode_correct[category] = per_mode_correct.get(category, 0) + 1
+                            per_mode_correct[evaluated_cat] = (
+                                per_mode_correct.get(evaluated_cat, 0) + 1
+                            )
                     except (RuntimeError, ValueError, KeyError, TypeError, OSError) as exc:
                         failed_runs += 1
                         error_summary.append(f"{type(exc).__name__}: {exc}")
@@ -268,9 +279,7 @@ class SystemOneBenchmark:
 
             total_runs = successful_runs + failed_runs
             accuracy = (
-                round((correct_runs / max(successful_runs, 1)) * 100.0, 2)
-                if successful_runs > 0
-                else 0.0
+                round((correct_runs / max(total_runs, 1)) * 100.0, 2) if total_runs > 0 else 0.0
             )
 
             per_mode_acc: dict[str, float] = {}
@@ -313,15 +322,30 @@ class SystemOneBenchmark:
                 "de altíssima frequência na DAG corporativa."
             )
         if "onnx" in results:
-            recommendations.append(
-                "O motor ONNX Runtime oferece inferência contextual local preservando 100% da "
-                "privacidade de dados corporativos sem custos de APIs externas."
-            )
+            if actual_engines.get("onnx") == "onnx-nli" and results["onnx"].successful_runs > 0:
+                recommendations.append(
+                    "O motor ONNX Runtime oferece inferência contextual local preservando 100% da "
+                    "privacidade de dados corporativos sem custos de APIs externas."
+                )
+            else:
+                recommendations.append(
+                    f"O motor ONNX operou em modo '{actual_engines.get('onnx', 'heuristic-fallback')}' "
+                    "(modelo ONNX ou runtime ausente); exporte 'models/model_int8.onnx' para habilitar inferência neural."
+                )
         if "outlines" in results:
-            recommendations.append(
-                "O motor Outlines garante saídas estritamente compatíveis com autômatos finitos "
-                "(FSM) eliminando alucinações de schema."
-            )
+            if (
+                actual_engines.get("outlines") == "outlines"
+                and results["outlines"].successful_runs > 0
+            ):
+                recommendations.append(
+                    "O motor Outlines garante saídas estritamente compatíveis com autômatos finitos "
+                    "(FSM) eliminando alucinações de schema."
+                )
+            else:
+                recommendations.append(
+                    f"O motor Outlines operou em modo '{actual_engines.get('outlines', 'heuristic-fallback')}' "
+                    "(biblioteca outlines indisponível)."
+                )
 
         return BenchmarkReport(
             timestamp=timestamp,

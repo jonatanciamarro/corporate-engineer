@@ -6,6 +6,7 @@ Modular domain command package decomposed according to ADR-026 / IMP-0023.
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -67,7 +68,8 @@ def handle_prompt(args: argparse.Namespace) -> int:
         out_p = Path(out_path)
         out_p.parent.mkdir(parents=True, exist_ok=True)
         out_p.write_text(output_str, encoding="utf-8")
-        print(f"[✓] Refined prompt specification exported to {out_path}")
+        stream = sys.stderr if fmt == "json" else sys.stdout
+        print(f"[✓] Refined prompt specification exported to {out_path}", file=stream)
 
     print(output_str)
     return 0

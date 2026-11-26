@@ -127,3 +127,88 @@ def test_hooks_json_configured_with_run_hook():
     pre_invocation = orchestrator_config.get("PreInvocation", [])
     assert len(pre_invocation) > 0
     assert "run_hook.py" in pre_invocation[0].get("command", "")
+
+
+def _load_run_hook_module():
+    """Load .agents/orchestration/hooks/run_hook.py dynamically for unit tests."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("run_hook_under_test", RUN_HOOK_SCRIPT)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_run_hook_dynamic_discovery_with_function(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Any <hook_name>.py in hooks dir with run_<hook_name>_hook() should be discovered."""
+    hooks_dir = tmp_path / ".agents" / "orchestration" / "hooks"
+    hooks_dir.mkdir(parents=True)
+    custom_hook = hooks_dir / "sample_custom.py"
+    custom_hook.write_text(
+        'def run_sample_custom_hook() -> None:\n    print(\'{"status": "custom_fn_ok"}\')\n',
+        encoding="utf-8",
+    )
+
+    run_hook_mod = _load_run_hook_module()
+    ret = run_hook_mod.run_in_process("sample_custom", tmp_path)
+    captured = capsys.readouterr()
+
+    assert ret == 0
+    assert json.loads(captured.out.strip()) == {"status": "custom_fn_ok"}
+
+
+def test_run_hook_dynamic_discovery_main_fallback(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Hooks without run_<hook_name>_hook() should execute via __main__ fallback."""
+    hooks_dir = tmp_path / ".agents" / "orchestration" / "hooks"
+    hooks_dir.mkdir(parents=True)
+    script_hook = hooks_dir / "script_only_hook.py"
+    script_hook.write_text(
+        'if __name__ == "__main__":\n    print(\'{"status": "main_fallback_ok"}\')\n',
+        encoding="utf-8",
+    )
+
+    run_hook_mod = _load_run_hook_module()
+    ret = run_hook_mod.run_in_process("script_only_hook", tmp_path)
+    captured = capsys.readouterr()
+
+    assert ret == 0
+    assert json.loads(captured.out.strip()) == {"status": "main_fallback_ok"}
+
+
+@pytest.mark.parametrize(
+    "bad_name",
+    [
+        "../evil",
+        "../../etc/passwd",
+        "sub/hook",
+        "sub\\hook",
+        "hook;whoami",
+        "hook.other",
+        "",
+    ],
+)
+def test_run_hook_blocks_path_traversal_and_invalid_names(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], bad_name: str
+) -> None:
+    """Strict regex validation must block path traversal and invalid hook names."""
+    orchestration_dir = tmp_path / ".agents" / "orchestration"
+    hooks_dir = orchestration_dir / "hooks"
+    hooks_dir.mkdir(parents=True)
+    marker = tmp_path / "pwned.txt"
+    (orchestration_dir / "evil.py").write_text(
+        f"from pathlib import Path\nPath({str(marker)!r}).write_text('pwned', encoding='utf-8')\n",
+        encoding="utf-8",
+    )
+
+    run_hook_mod = _load_run_hook_module()
+    ret = run_hook_mod.run_in_process(bad_name, tmp_path)
+    captured = capsys.readouterr()
+
+    assert ret == 1
+    assert not marker.exists()
+    assert captured.err.strip() != ""

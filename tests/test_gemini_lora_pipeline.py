@@ -303,6 +303,65 @@ def test_validator_remotion_syntax_invalid() -> None:
     assert len(errors) > 0
 
 
+def test_validator_remotion_syntax_typescript_generics_valid() -> None:
+    """IMP-0033: TypeScript generics must not be confused with unclosed JSX tags."""
+    validator = LoraSyntaxValidator()
+    tsx_with_generics = """
+import React, { useState } from 'react';
+
+interface Props {
+    title: string;
+}
+
+const identity = <T,>(value: T): T => value;
+const mergeMeta = <T extends Record<string, unknown>>(obj: T): Promise<Array<string>> => {
+    return Promise.resolve(Object.keys(obj));
+};
+
+export const DarkFactoryPanel: React.FC<Props> = ({ title }) => {
+    const [count, setCount] = useState<number>(0);
+    const items: Array<string> = identity<Array<string>>(['a', 'b']);
+    const meta: Record<string, unknown> = { count };
+    const asyncTask = async (): Promise<void> => {
+        await mergeMeta<Record<string, unknown>>(meta);
+    };
+
+    return (
+        <div style={{ opacity: count > 0 ? 1 : 0 }}>
+            <span>{title}</span>
+            <button onClick={() => setCount((c) => c + 1)} />
+            <List<string> items={items} />
+            <img src="hud.png" />
+        </div>
+    );
+};
+"""
+    is_valid, errors = validator.validate_remotion_syntax(tsx_with_generics)
+    assert is_valid is True, f"Unexpected errors: {errors}"
+    assert errors == []
+
+
+def test_validator_remotion_syntax_generics_with_invalid_jsx_still_fails() -> None:
+    """IMP-0033: Real unclosed or mismatched JSX tags must still fail when TS generics exist."""
+    validator = LoraSyntaxValidator()
+    broken_tsx = """
+import React, { useState } from 'react';
+
+export const BrokenPanel: React.FC<Props> = () => {
+    const [count] = useState<number>(0);
+    const items: Array<string> = [];
+    return (
+        <div>
+            <span>{count}
+        </div>
+    );
+};
+"""
+    is_valid, errors = validator.validate_remotion_syntax(broken_tsx)
+    assert is_valid is False
+    assert any("Mismatched JSX tag" in err or "Unclosed JSX tag" in err for err in errors)
+
+
 def test_validator_tool_call_schema_valid() -> None:
     """Checks that valid tool call JSON parses and passes validation."""
     validator = LoraSyntaxValidator()

@@ -7,10 +7,15 @@ ensures src/ is in sys.path, and dispatches execution safely in-process or via s
 
 from __future__ import annotations
 
+import importlib.util
 import os
+import re
+import runpy
 import subprocess
 import sys
 from pathlib import Path
+
+_HOOK_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9_]+$")
 
 
 def resolve_workspace_root() -> Path:
@@ -41,9 +46,29 @@ def get_venv_python(workspace_root: Path) -> Path | None:
     return None
 
 
+def _resolve_hook_script(hook_name: str, workspace_root: Path) -> tuple[str, Path] | None:
+    """Validate hook_name strictly and resolve its script path inside hooks dir."""
+    clean_name = hook_name.strip().removesuffix(".py")
+    if not _HOOK_NAME_PATTERN.fullmatch(clean_name):
+        sys.stderr.write(f"[run_hook.py] Invalid hook name (blocked): {hook_name}\n")
+        return None
+
+    hooks_dir = (workspace_root / ".agents" / "orchestration" / "hooks").resolve()
+    target_script = (hooks_dir / f"{clean_name}.py").resolve()
+    if target_script.parent != hooks_dir or not target_script.is_file():
+        sys.stderr.write(f"[run_hook.py] Hook script not found: {target_script}\n")
+        return None
+
+    return clean_name, target_script
+
+
 def run_in_process(hook_name: str, workspace_root: Path) -> int:
-    """Execute the hook in-process if compatible Python is running."""
-    # Ensure src and .agents are in sys.path
+    """Execute the hook in-process via dynamic discovery and importlib/runpy."""
+    resolved = _resolve_hook_script(hook_name, workspace_root)
+    if resolved is None:
+        return 1
+    clean_name, target_script = resolved
+
     src_dir = str(workspace_root / "src")
     agents_dir = str(workspace_root / ".agents")
     hooks_dir = str(workspace_root / ".agents" / "orchestration" / "hooks")
@@ -52,37 +77,26 @@ def run_in_process(hook_name: str, workspace_root: Path) -> int:
         if path_entry not in sys.path:
             sys.path.insert(0, path_entry)
 
-    # Normalize hook name
-    clean_name = hook_name.replace(".py", "").strip()
-
-    if clean_name == "session_start":
-        from session_start import run_session_start_hook
-
-        run_session_start_hook()
-        return 0
-    elif clean_name == "proactive_advisor":
-        from proactive_advisor import run_proactive_advisor_hook
-
-        run_proactive_advisor_hook()
-        return 0
-    elif clean_name == "pre_tool_security_guard":
-        from pre_tool_security_guard import run_pre_tool_security_guard_hook
-
-        run_pre_tool_security_guard_hook()
-        return 0
-    elif clean_name == "post_tool_auto_healer":
-        from post_tool_auto_healer import run_post_tool_auto_healer_hook
-
-        run_post_tool_auto_healer_hook()
-        return 0
-    elif clean_name == "session_turnover_gate":
-        from session_turnover_gate import run_session_turnover_gate_hook
-
-        run_session_turnover_gate_hook()
-        return 0
-    else:
-        sys.stderr.write(f"[run_hook.py] Unknown hook name: {clean_name}\n")
+    spec = importlib.util.spec_from_file_location(clean_name, target_script)
+    if spec is None or spec.loader is None:
+        sys.stderr.write(f"[run_hook.py] Unable to load hook spec: {target_script}\n")
         return 1
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    hook_fn = getattr(module, f"run_{clean_name}_hook", None)
+    if callable(hook_fn):
+        result = hook_fn()
+        return result if isinstance(result, int) else 0
+
+    try:
+        runpy.run_path(str(target_script), run_name="__main__")
+    except SystemExit as exc:
+        if exc.code is None:
+            return 0
+        return exc.code if isinstance(exc.code, int) else 1
+    return 0
 
 
 def main() -> int:
@@ -101,11 +115,10 @@ def main() -> int:
         return run_in_process(hook_name, workspace_root)
 
     # If running from a different Python (e.g., system Python 3.10), forward to .venv python
-    hooks_dir = workspace_root / ".agents" / "orchestration" / "hooks"
-    target_script = hooks_dir / f"{hook_name.replace('.py', '')}.py"
-    if not target_script.exists():
-        sys.stderr.write(f"[run_hook.py] Hook script not found: {target_script}\n")
+    resolved = _resolve_hook_script(hook_name, workspace_root)
+    if resolved is None:
         return 1
+    _, target_script = resolved
 
     try:
         proc = subprocess.run(

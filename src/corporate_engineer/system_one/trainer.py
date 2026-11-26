@@ -33,13 +33,15 @@ class SystemOneTrainer:
 # ==============================================================================
 
 # 1. Instalação das dependências gratuitas no Google Colab
-# !pip install -q transformers peft trl datasets accelerate bitsandbytes onnx onnxruntime
+# !pip install -q transformers peft trl datasets accelerate bitsandbytes onnx onnxruntime optimum[onnxruntime]
 
 import json
-import os
+import shutil
 from pathlib import Path
 
 from datasets import Dataset
+from optimum.onnxruntime import ORTModelForCausalLM, ORTQuantizer
+from optimum.onnxruntime.configuration import AutoQuantizationConfig
 from peft import LoraConfig, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
 from trl import SFTTrainer
@@ -115,9 +117,32 @@ tokenizer.save_pretrained(OUTPUT_DIR)
 print(f"[✓] Treinamento concluído com sucesso em {{OUTPUT_DIR}}.")
 
 # 4. Exportação e quantização para ONNX Int8
-print("[*] Exportando modelo consolidado para ONNX Runtime com quantização Int8...")
+print("[*] Consolidando pesos LoRA e exportando para ONNX Runtime com quantização Int8...")
+merged_dir = Path(OUTPUT_DIR) / "merged"
+merged_dir.mkdir(parents=True, exist_ok=True)
+merged_model = model.merge_and_unload()
+merged_model.save_pretrained(str(merged_dir))
+tokenizer.save_pretrained(str(merged_dir))
+
+onnx_export_dir = Path("models/onnx_export")
+onnx_export_dir.mkdir(parents=True, exist_ok=True)
+ort_model = ORTModelForCausalLM.from_pretrained(str(merged_dir), export=True)
+ort_model.save_pretrained(str(onnx_export_dir))
+tokenizer.save_pretrained(str(onnx_export_dir))
+
+quantized_dir = Path("models/onnx_int8")
+quantized_dir.mkdir(parents=True, exist_ok=True)
+quantizer = ORTQuantizer.from_pretrained(ort_model)
+qconfig = AutoQuantizationConfig.avx512_vnni(is_static=False, per_channel=False)
+quantizer.quantize(save_dir=str(quantized_dir), quantization_config=qconfig)
+
 onnx_model_path = Path("models/model_int8.onnx")
 onnx_model_path.parent.mkdir(parents=True, exist_ok=True)
+quantized_files = list(quantized_dir.glob("*quantized*.onnx")) or list(quantized_dir.glob("*.onnx"))
+if not quantized_files:
+    raise FileNotFoundError(f"Nenhum artefato ONNX quantizado gerado em {{quantized_dir}}.")
+shutil.copy2(quantized_files[0], onnx_model_path)
+tokenizer.save_pretrained(str(onnx_model_path.parent))
 print(f"[✓] Modelo quantizado exportado para {{onnx_model_path}} (Int8).")
 print("[✓] Pronto para inferência local sub-5ms no corporate-engineer decide!")
 '''
@@ -152,7 +177,7 @@ print("[✓] Pronto para inferência local sub-5ms no corporate-engineer decide!
                 "outputs": [],
                 "source": [
                     "# 1. Instalação das dependências necessárias no Google Colab\n",
-                    "!pip install -q transformers peft trl datasets accelerate bitsandbytes onnx onnxruntime\n",
+                    "!pip install -q transformers peft trl datasets accelerate bitsandbytes onnx onnxruntime optimum[onnxruntime]\n",
                 ],
             },
             {
@@ -270,13 +295,36 @@ print("[✓] Pronto para inferência local sub-5ms no corporate-engineer decide!
                 "outputs": [],
                 "source": [
                     "# 6. Exportação para ONNX e Quantização Dinâmica Int8\n",
-                    "import os\n",
+                    "import shutil\n",
                     "from pathlib import Path\n",
+                    "from optimum.onnxruntime import ORTModelForCausalLM, ORTQuantizer\n",
+                    "from optimum.onnxruntime.configuration import AutoQuantizationConfig\n",
+                    "\n",
+                    "merged_dir = Path(OUTPUT_DIR) / 'merged'\n",
+                    "merged_dir.mkdir(parents=True, exist_ok=True)\n",
+                    "merged_model = model.merge_and_unload()\n",
+                    "merged_model.save_pretrained(str(merged_dir))\n",
+                    "tokenizer.save_pretrained(str(merged_dir))\n",
+                    "\n",
+                    "onnx_export_dir = Path('models/onnx_export')\n",
+                    "onnx_export_dir.mkdir(parents=True, exist_ok=True)\n",
+                    "ort_model = ORTModelForCausalLM.from_pretrained(str(merged_dir), export=True)\n",
+                    "ort_model.save_pretrained(str(onnx_export_dir))\n",
+                    "tokenizer.save_pretrained(str(onnx_export_dir))\n",
+                    "\n",
+                    "quantized_dir = Path('models/onnx_int8')\n",
+                    "quantized_dir.mkdir(parents=True, exist_ok=True)\n",
+                    "quantizer = ORTQuantizer.from_pretrained(ort_model)\n",
+                    "qconfig = AutoQuantizationConfig.avx512_vnni(is_static=False, per_channel=False)\n",
+                    "quantizer.quantize(save_dir=str(quantized_dir), quantization_config=qconfig)\n",
                     "\n",
                     "Path('models').mkdir(exist_ok=True)\n",
-                    "# O script de conversão ONNX empacota os pesos quantizados Int8:\n",
-                    "!python -m onnxruntime.quantization.quantize_dynamic --input_model models/system_one_lora/model.onnx --output_model models/model_int8.onnx --weight_type Int8 || touch models/model_int8.onnx\n",
-                    "print('[✓] Artefato ONNX quantizado em models/model_int8.onnx.')\n",
+                    "quantized_files = list(quantized_dir.glob('*quantized*.onnx')) or list(quantized_dir.glob('*.onnx'))\n",
+                    "if not quantized_files:\n",
+                    "    raise FileNotFoundError(f'Nenhum artefato ONNX quantizado gerado em {quantized_dir}.')\n",
+                    "shutil.copy2(quantized_files[0], 'models/model_int8.onnx')\n",
+                    "tokenizer.save_pretrained('models')\n",
+                    "print('[✓] Artefato ONNX quantizado Int8 salvo em models/model_int8.onnx.')\n",
                 ],
             },
             {

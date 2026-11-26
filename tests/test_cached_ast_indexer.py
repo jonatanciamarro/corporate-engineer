@@ -83,3 +83,39 @@ def test_cached_ast_indexer_clear_cache(tmp_path: Path):
     indexer.clear_cache()
     assert not cache_file.exists()
     assert indexer.get_cache_stats()["cached_files"] == 0
+
+
+def test_get_all_symbol_names_walks_new_modified_and_deleted_files(tmp_path: Path) -> None:
+    """IMP-0033: Partial cache must not starve discovery of new, modified, or deleted files."""
+    cache_file = tmp_path / ".cache" / "ast_index_cache.json"
+    file_a = tmp_path / "alpha.py"
+    file_a.write_text("class AlphaService:\n    pass\n", encoding="utf-8")
+
+    # Populate partial cache with only alpha.py
+    indexer_1 = CachedASTCodebaseIndexer(root_path=tmp_path, cache_path=cache_file)
+    indexer_1.index_file(file_a)
+    assert indexer_1.get_all_symbol_names() == {"AlphaService"}
+
+    # Add beta.py and an excluded directory file that must be ignored
+    file_b = tmp_path / "beta.py"
+    file_b.write_text("def beta_runner() -> None:\n    pass\n", encoding="utf-8")
+    ignored_dir = tmp_path / ".venv"
+    ignored_dir.mkdir()
+    (ignored_dir / "ignored.py").write_text("class ShouldBeIgnored:\n    pass\n", encoding="utf-8")
+
+    # Fresh indexer loads partial cache (containing alpha.py) and calls get_all_symbol_names()
+    indexer_2 = CachedASTCodebaseIndexer(root_path=tmp_path, cache_path=cache_file)
+    names_after_add = indexer_2.get_all_symbol_names()
+    assert names_after_add == {"AlphaService", "beta_runner"}
+    stats = indexer_2.get_cache_stats()
+    assert stats["hits"] >= 1  # alpha.py served from O(1) SHA-256 cache
+    assert stats["misses"] >= 1  # beta.py newly indexed
+
+    # Modify beta.py and delete alpha.py -> stale cache entry pruned, updated symbols returned
+    file_b.write_text("def beta_v2() -> None:\n    pass\n", encoding="utf-8")
+    file_a.unlink()
+
+    indexer_3 = CachedASTCodebaseIndexer(root_path=tmp_path, cache_path=cache_file)
+    names_after_update = indexer_3.get_all_symbol_names()
+    assert names_after_update == {"beta_v2"}
+    assert indexer_3.get_cache_stats()["cached_files"] == 1

@@ -77,6 +77,13 @@ def register_mcp_parser(subparsers: Any) -> argparse.ArgumentParser:
 
 
 def handle_mcp(args: argparse.Namespace) -> int:
+    if not getattr(args, "mcp_action", None):
+        print(
+            "Usage: corporate-engineer mcp {ping,list-tools,call,hub} [options]",
+            file=sys.stderr,
+        )
+        return 1
+
     if args.mcp_action == "hub":
         from corporate_engineer.mcp.hub import MCPEnterpriseHub
 
@@ -197,4 +204,9 @@ def handle_mcp(args: argparse.Namespace) -> int:
 
         return 1 if res.is_error else 0
 
-    return 0
+    print(
+        f"Unknown mcp action: {args.mcp_action}. "
+        "Usage: corporate-engineer mcp {ping,list-tools,call,hub} [options]",
+        file=sys.stderr,
+    )
+    return 1

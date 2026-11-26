@@ -2,6 +2,10 @@
 Outlines-based implementation of SystemOneEngine using constrained logits decoding.
 """
 
+from __future__ import annotations
+
+import threading
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -20,12 +24,16 @@ class OutlinesDecisionEngine(SystemOneEngine):
 
     def __init__(
         self,
+        model_id: str = "Qwen/Qwen2.5-0.5B-Instruct",
         fallback_to_heuristic: bool = True,
         generator_override: Callable[..., Any] | None = None,
     ) -> None:
+        self.model_id = model_id
         self.fallback_to_heuristic = fallback_to_heuristic
         self.generator_override = generator_override
         self._heuristic = HeuristicDecisionEngine()
+        self._lock = threading.RLock()
+        self._model: Any | None = None
         self._outlines_available = self._check_availability()
 
     def _check_availability(self) -> bool:
@@ -41,43 +49,171 @@ class OutlinesDecisionEngine(SystemOneEngine):
     def is_available(self) -> bool:
         return self._outlines_available
 
+    def _get_model(self) -> Any:
+        with self._lock:
+            if self._model is None:
+                import outlines  # type: ignore[import-untyped,unused-ignore]
+
+                self._model = outlines.models.transformers(self.model_id)
+            return self._model
+
+    def _decide_choice_with_source(
+        self,
+        state: str,
+        choices: list[str] | dict[str, str],
+        instructions: str | None = None,
+    ) -> tuple[ChoiceDecision, bool]:
+        choice_list = list(choices.keys()) if isinstance(choices, dict) else choices
+
+        if self.generator_override is not None:
+            result = str(self.generator_override(state, choice_list))
+            return (
+                ChoiceDecision(
+                    choice=result,
+                    confidence=1.0,
+                    probabilities={c: (1.0 if c == result else 0.0) for c in choice_list},
+                    rationale="Determined via Outlines constrained logits",
+                ),
+                True,
+            )
+
+        if not self._outlines_available:
+            if self.fallback_to_heuristic:
+                return self._heuristic.decide_choice(state, choices, instructions), False
+            raise RuntimeError("Outlines runtime is unavailable.")
+
+        try:
+            import outlines  # type: ignore[import-untyped,unused-ignore]
+
+            model = self._get_model()
+            generator = outlines.generate.choice(model, choice_list)
+            res = str(generator(state))
+            return (
+                ChoiceDecision(
+                    choice=res,
+                    confidence=1.0,
+                    probabilities={c: (1.0 if c == res else 0.0) for c in choice_list},
+                    rationale="Outlines constrained generation",
+                ),
+                True,
+            )
+        except Exception:
+            if self.fallback_to_heuristic:
+                return self._heuristic.decide_choice(state, choices, instructions), False
+            raise
+
+    def _decide_noul_with_source(
+        self,
+        state: str,
+        hypothesis: str,
+        instructions: str | None = None,
+    ) -> tuple[NoulDecision, bool]:
+        if self.generator_override is not None:
+            raw = self.generator_override(state, hypothesis)
+            res = (
+                raw.strip().lower() in ("true", "yes", "1", "sim")
+                if isinstance(raw, str)
+                else bool(raw)
+            )
+            return (
+                NoulDecision(
+                    decision=res,
+                    probability=1.0 if res else 0.0,
+                    rationale="Determined via Outlines boolean constraint",
+                ),
+                True,
+            )
+
+        if not self._outlines_available:
+            if self.fallback_to_heuristic:
+                return self._heuristic.decide_noul(state, hypothesis, instructions), False
+            raise RuntimeError("Outlines runtime is unavailable.")
+
+        try:
+            import outlines  # type: ignore[import-untyped,unused-ignore]
+
+            model = self._get_model()
+            generator = outlines.generate.choice(model, ["True", "False"])
+            raw = str(generator(f"{state}\nHypothesis: {hypothesis}")).strip().lower()
+            res = raw in ("true", "yes", "1", "sim")
+            return (
+                NoulDecision(
+                    decision=res,
+                    probability=1.0 if res else 0.0,
+                    rationale="Outlines constrained boolean generation",
+                ),
+                True,
+            )
+        except Exception:
+            if self.fallback_to_heuristic:
+                return self._heuristic.decide_noul(state, hypothesis, instructions), False
+            raise
+
+    def _decide_score_with_source(
+        self,
+        state: str,
+        rubric: list[str] | dict[str, Any],
+        instructions: str | None = None,
+    ) -> tuple[ScoreDecision, bool]:
+        rubric_list = [
+            str(item) for item in (rubric if isinstance(rubric, list) else rubric.keys())
+        ]
+        if not rubric_list:
+            return ScoreDecision(score=0, level="N/A", confidence=1.0), self._outlines_available
+
+        if self.generator_override is not None:
+            raw_score = self.generator_override(state, rubric)
+            if isinstance(raw_score, str) and raw_score in rubric_list:
+                idx = rubric_list.index(raw_score)
+                level = raw_score
+            else:
+                idx = max(0, min(int(raw_score), len(rubric_list) - 1))
+                level = rubric_list[idx]
+            return (
+                ScoreDecision(
+                    score=idx,
+                    level=level,
+                    confidence=1.0,
+                    rationale="Determined via Outlines score",
+                ),
+                True,
+            )
+
+        if not self._outlines_available:
+            if self.fallback_to_heuristic:
+                return self._heuristic.decide_score(state, rubric, instructions), False
+            raise RuntimeError("Outlines runtime is unavailable.")
+
+        try:
+            import outlines  # type: ignore[import-untyped,unused-ignore]
+
+            model = self._get_model()
+            generator = outlines.generate.choice(model, rubric_list)
+            chosen = str(generator(state))
+            idx = rubric_list.index(chosen) if chosen in rubric_list else 0
+            level = rubric_list[idx]
+            return (
+                ScoreDecision(
+                    score=idx,
+                    level=level,
+                    confidence=1.0,
+                    rationale="Outlines constrained rubric generation",
+                ),
+                True,
+            )
+        except Exception:
+            if self.fallback_to_heuristic:
+                return self._heuristic.decide_score(state, rubric, instructions), False
+            raise
+
     def decide_choice(
         self,
         state: str,
         choices: list[str] | dict[str, str],
         instructions: str | None = None,
     ) -> ChoiceDecision:
-        choice_list = list(choices.keys()) if isinstance(choices, dict) else choices
-
-        if self.generator_override is not None:
-            result = str(self.generator_override(state, choice_list))
-            return ChoiceDecision(
-                choice=result,
-                confidence=1.0,
-                probabilities={c: (1.0 if c == result else 0.0) for c in choice_list},
-                rationale="Determined via Outlines constrained logits",
-            )
-
-        if not self._outlines_available and self.fallback_to_heuristic:
-            return self._heuristic.decide_choice(state, choices, instructions)
-
-        # Caso outlines esteja disponível em runtime
-        try:
-            import outlines  # type: ignore[import-untyped]
-
-            model = outlines.models.transformers("Qwen/Qwen2.5-0.5B-Instruct")
-            generator = outlines.generate.choice(model, choice_list)
-            res = str(generator(state))
-            return ChoiceDecision(
-                choice=res,
-                confidence=1.0,
-                probabilities={c: (1.0 if c == res else 0.0) for c in choice_list},
-                rationale="Outlines constrained generation",
-            )
-        except Exception:
-            if self.fallback_to_heuristic:
-                return self._heuristic.decide_choice(state, choices, instructions)
-            raise
+        decision, _ = self._decide_choice_with_source(state, choices, instructions)
+        return decision
 
     def decide_noul(
         self,
@@ -85,18 +221,8 @@ class OutlinesDecisionEngine(SystemOneEngine):
         hypothesis: str,
         instructions: str | None = None,
     ) -> NoulDecision:
-        if self.generator_override is not None:
-            res = bool(self.generator_override(state, hypothesis))
-            return NoulDecision(
-                decision=res,
-                probability=1.0 if res else 0.0,
-                rationale="Determined via Outlines boolean constraint",
-            )
-
-        if not self._outlines_available and self.fallback_to_heuristic:
-            return self._heuristic.decide_noul(state, hypothesis, instructions)
-
-        return self._heuristic.decide_noul(state, hypothesis, instructions)
+        decision, _ = self._decide_noul_with_source(state, hypothesis, instructions)
+        return decision
 
     def decide_score(
         self,
@@ -104,36 +230,91 @@ class OutlinesDecisionEngine(SystemOneEngine):
         rubric: list[str] | dict[str, Any],
         instructions: str | None = None,
     ) -> ScoreDecision:
-        if self.generator_override is not None:
-            res_score = self.generator_override(state, rubric)
-            return ScoreDecision(
-                score=int(res_score),
-                level=str(res_score),
-                confidence=1.0,
-                rationale="Determined via Outlines score",
-            )
-
-        return self._heuristic.decide_score(state, rubric, instructions)
+        decision, _ = self._decide_score_with_source(state, rubric, instructions)
+        return decision
 
     def evaluate(
         self,
         state: str,
         questions: dict[str, Any],
     ) -> SystemOneReport:
-        if not self._outlines_available and self.fallback_to_heuristic:
-            report = self._heuristic.evaluate(state, questions)
-            return report
+        start_time = time.perf_counter()
+        choices: dict[str, ChoiceDecision] = {}
+        nouls: dict[str, NoulDecision] = {}
+        scores: dict[str, ScoreDecision] = {}
 
-        report = self._heuristic.evaluate(state, questions)
-        # Identifica o motor utilizado no relatório
+        suggested_agent: str | None = None
+        risk_level = "LOW"
+        requires_human_approval = False
+
+        any_outlines = False
+        any_fallback = False
+
+        if not questions:
+            if self.generator_override is not None:
+                any_outlines = True
+            elif self._outlines_available:
+                try:
+                    self._get_model()
+                    any_outlines = True
+                except Exception:
+                    if not self.fallback_to_heuristic:
+                        raise
+                    any_fallback = True
+            else:
+                any_fallback = True
+
+        for q_name, q_config in questions.items():
+            q_type = str(q_config.get("type", "")).lower()
+            instructions = q_config.get("instructions")
+
+            if q_type == "choice":
+                crit = q_config.get("criteria", q_config.get("choices", []))
+                dec, used_outlines = self._decide_choice_with_source(
+                    state, crit, instructions=instructions
+                )
+                choices[q_name] = dec
+                any_outlines = any_outlines or used_outlines
+                any_fallback = any_fallback or (not used_outlines)
+                if q_name in ["agent", "target_agent", "subagent"]:
+                    suggested_agent = dec.choice
+
+            elif q_type == "noul":
+                hypo = q_config.get("hypothesis", instructions or q_name)
+                noul_dec, used_outlines = self._decide_noul_with_source(
+                    state, hypo, instructions=instructions
+                )
+                nouls[q_name] = noul_dec
+                any_outlines = any_outlines or used_outlines
+                any_fallback = any_fallback or (not used_outlines)
+                if q_name in ["requires_approval", "human_approval"] and noul_dec.decision:
+                    requires_human_approval = True
+
+            elif q_type == "score":
+                rubric = q_config.get("rubric", q_config.get("criteria", []))
+                score_dec, used_outlines = self._decide_score_with_source(
+                    state, rubric, instructions=instructions
+                )
+                scores[q_name] = score_dec
+                any_outlines = any_outlines or used_outlines
+                any_fallback = any_fallback or (not used_outlines)
+                if q_name in ["risk", "risk_level"]:
+                    if score_dec.score >= 2:
+                        risk_level = "HIGH"
+                    elif score_dec.score == 1:
+                        risk_level = "MEDIUM"
+
+        duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        engine_name = "outlines" if (any_outlines and not any_fallback) else "heuristic-fallback"
+
         return SystemOneReport(
-            task=report.task,
-            engine_name="outlines" if self.is_available() else "heuristic-fallback",
-            duration_ms=report.duration_ms,
-            choices=report.choices,
-            nouls=report.nouls,
-            scores=report.scores,
-            suggested_agent=report.suggested_agent,
-            risk_level=report.risk_level,
-            requires_human_approval=report.requires_human_approval,
+            task=state[:120],
+            engine_name=engine_name,
+            duration_ms=duration_ms,
+            choices=choices,
+            nouls=nouls,
+            scores=scores,
+            suggested_agent=suggested_agent,
+            risk_level=risk_level,
+            requires_human_approval=requires_human_approval,
         )

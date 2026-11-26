@@ -6,12 +6,15 @@
 # ==============================================================================
 
 # 1. Instalação das dependências gratuitas no Google Colab
-# !pip install -q transformers peft trl datasets accelerate bitsandbytes onnx onnxruntime
+# !pip install -q transformers peft trl datasets accelerate bitsandbytes onnx onnxruntime optimum[onnxruntime]
 
 import json
+import shutil
 from pathlib import Path
 
 from datasets import Dataset
+from optimum.onnxruntime import ORTModelForCausalLM, ORTQuantizer
+from optimum.onnxruntime.configuration import AutoQuantizationConfig
 from peft import LoraConfig, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
 from trl import SFTTrainer
@@ -25,7 +28,7 @@ print(f"[*] Iniciando Fine-Tuning de System 1 com base no modelo {MODEL_ID}...")
 # 1. Carregamento do dataset gerado pelo corporate-engineer
 samples = []
 if Path(DATASET_PATH).exists():
-    with open(DATASET_PATH, "r", encoding="utf-8") as f:
+    with open(DATASET_PATH, encoding="utf-8") as f:
         for line in f:
             if line.strip():
                 samples.append(json.loads(line))
@@ -59,7 +62,14 @@ else:
 
 
 def format_prompt(example):
-    return f"""<|im_start|>system\nVocê é o System One do corporate-engineer, um motor de decisão corporativo ultrarrápido.<|im_end|>\n<|im_start|>user\n{example["instruction"]}\nENTRADA:\n{example["input"]}<|im_end|>\n<|im_start|>assistant\n{example["output"]}<|im_end|>"""
+    return (
+        "<|im_start|>system\n"
+        "Você é o System One do corporate-engineer, um motor de decisão corporativo "
+        "ultrarrápido.<|im_end|>\n"
+        f"<|im_start|>user\n{example['instruction']}\n"
+        f"ENTRADA:\n{example['input']}<|im_end|>\n"
+        f"<|im_start|>assistant\n{example['output']}<|im_end|>"
+    )
 
 
 formatted_data = [format_prompt(s) for s in samples]
@@ -107,8 +117,31 @@ tokenizer.save_pretrained(OUTPUT_DIR)
 print(f"[✓] Treinamento concluído com sucesso em {OUTPUT_DIR}.")
 
 # 4. Exportação e quantização para ONNX Int8
-print("[*] Exportando modelo consolidado para ONNX Runtime com quantização Int8...")
+print("[*] Consolidando pesos LoRA e exportando para ONNX Runtime com quantização Int8...")
+merged_dir = Path(OUTPUT_DIR) / "merged"
+merged_dir.mkdir(parents=True, exist_ok=True)
+merged_model = model.merge_and_unload()
+merged_model.save_pretrained(str(merged_dir))
+tokenizer.save_pretrained(str(merged_dir))
+
+onnx_export_dir = Path("models/onnx_export")
+onnx_export_dir.mkdir(parents=True, exist_ok=True)
+ort_model = ORTModelForCausalLM.from_pretrained(str(merged_dir), export=True)
+ort_model.save_pretrained(str(onnx_export_dir))
+tokenizer.save_pretrained(str(onnx_export_dir))
+
+quantized_dir = Path("models/onnx_int8")
+quantized_dir.mkdir(parents=True, exist_ok=True)
+quantizer = ORTQuantizer.from_pretrained(ort_model)
+qconfig = AutoQuantizationConfig.avx512_vnni(is_static=False, per_channel=False)
+quantizer.quantize(save_dir=str(quantized_dir), quantization_config=qconfig)
+
 onnx_model_path = Path("models/model_int8.onnx")
 onnx_model_path.parent.mkdir(parents=True, exist_ok=True)
+quantized_files = list(quantized_dir.glob("*quantized*.onnx")) or list(quantized_dir.glob("*.onnx"))
+if not quantized_files:
+    raise FileNotFoundError(f"Nenhum artefato ONNX quantizado gerado em {quantized_dir}.")
+shutil.copy2(quantized_files[0], onnx_model_path)
+tokenizer.save_pretrained(str(onnx_model_path.parent))
 print(f"[✓] Modelo quantizado exportado para {onnx_model_path} (Int8).")
 print("[✓] Pronto para inferência local sub-5ms no corporate-engineer decide!")

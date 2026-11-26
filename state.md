@@ -11,23 +11,39 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0035-p0-security-and-repo-hygiene` | 🟢 Sincronizada com `origin/main` (`b7635fc`, PR #34 merged); conflito em `src/corporate_engineer.egg-info/SOURCES.txt` resolvido mantendo exclusão do índice Git |
+| **Branch Ativa** | `feat/IMP-0036-p1-cli-rag-system-one` | 🟢 Sincronizada com `feat/IMP-0035-p0-security-and-repo-hygiene` (`086aabe`) e `origin/main` (`b7635fc`); suíte 380/380 PASS, 0 erros Ruff/Mypy |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo (`--system-site-packages` + `.pth` apontando para `src/`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **355/355 PASS** | Execução completa em 89.87s (inclui 3 novos casos de segurança/secrets P0 em `test_mcp_client.py` e `test_gemini_lora_pipeline.py`; removidos 9 testes de scripts pessoais Windows) |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (check + format) |
+| **Testes (Pytest + Hypothesis)** | 🟢 **380/380 PASS** | Execução completa em 174.12s (inclui novos casos TDD P1 para `IMP-0032`, `IMP-0033`, `IMP-0036`) |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (177 arquivos formatados) |
 | **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 104 arquivos fonte validados estritamente |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` e `LoraVertexExporter` unificado (`IMP-0034`) |
 | **Wiring & Scorecard EDD** | 🟢 **100% Wired** | `audit --wiring` 100% conectado (`PASS`) |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Always-On Ativo** | Frontmatter `trigger: always_on` ativo em `corp-pipeline-orchestrator.md` |
 | **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` com links relativos portáveis e ondas P0–P3 (`IMP-0034`–`IMP-0041`) |
-| **Lifecycle Hooks E2E** | 🟢 **5 Hooks Ativos com run_hook.py** | `.agents/hooks.json` ajustado para `py orchestration/hooks/run_hook.py <hook>` (CWD `.agents/`) |
+| **Lifecycle Hooks E2E** | 🟢 **5 Hooks Ativos com run_hook.py** | `.agents/hooks.json` com dispatch dinâmico seguro em `run_hook.py` |
 
 ---
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação do Pacote P0: `IMP-0034` + `IMP-0035` / `ADR-032` — Segurança MCP, Unificação de Secrets LoRA, Higiene Git & `README.md`):
+### Sessão Atual (Onda P1 via Swarm: `IMP-0032` + `IMP-0033` + `IMP-0036` / `ADR-033` — CLI/Hooks, RAG/LoRA/Refiner & System-One):
+1. **CLI & Hooks Dinâmicos (`IMP-0032` — trilha `cli-hooks`)**:
+   - `.agents/orchestration/hooks/run_hook.py`: substituição da whitelist `if/elif` estática por descoberta dinâmica validada (`^[a-zA-Z0-9_]+$`) via `importlib.util` / `runpy.run_path`.
+   - `src/corporate_engineer/cli/commands/rag.py`: `handle_eval()` valida `target.exists()` retornando exit code `1`; `index` e `blast-radius` isolam confirmações `--output` em `sys.stderr` no modo `--format json`.
+   - `src/corporate_engineer/cli/commands/prompt.py`: confirmações `--output` em `--format json` enviadas para `sys.stderr`.
+   - `src/corporate_engineer/cli/commands/mcp.py`: subcomando `mcp_action` obrigatório (retorna exit code `1` com usage em `sys.stderr` quando omitido).
+2. **Core RAG, LoRA JSX & Prompt Refiner (`IMP-0033` — trilha `core-rag-lora`)**:
+   - `src/corporate_engineer/rag/cached_ast_indexer.py`: correção de *cache starvation* em `get_all_symbol_names()` varrendo todos `.py` do workspace via cache SHA-256 incremental e podando entradas de arquivos removidos.
+   - `src/corporate_engineer/lora/validator.py`: scanner `validate_remotion_syntax()` ciente de generics TypeScript (`React.FC<Props>`, `useState<number>`, `Array<string>`, etc.) preservando detecção de JSX desbalanceado.
+   - `src/corporate_engineer/prompt/refiner.py`: atualização de `DOMAIN_KEYWORDS["cli"]["modules"]` para `cli/parser.py` e `cli/main.py`.
+3. **Integridade System-One & Benchmark (`IMP-0033` + `IMP-0036` — trilha `system-one`)**:
+   - `src/corporate_engineer/system_one/benchmark.py`: cálculo de `accuracy_percent` sobre `max(total_runs, 1)` e recomendações honestas conforme motor efetivamente executado.
+   - `src/corporate_engineer/system_one/nli_engine.py`: lazy-loading thread-safe (`RLock`) + injeção de `session`/`tokenizer` para inferência real de logits (`engine_name="onnx-nli"`) e transparência estrita (`engine_name="heuristic-fallback"` quando cai na heurística).
+   - `src/corporate_engineer/system_one/outlines_engine.py`: cache thread-safe de `self._model` por instância e suporte a `decide_noul`/`decide_score`.
+   - `src/corporate_engineer/system_one/trainer.py` & `scripts/train_system_one_colab.py`: exportação e quantização ONNX Int8 reais com `merge_and_unload()` + `optimum.onnxruntime` (`ORTModelForCausalLM`, `ORTQuantizer`).
+
+### Sessão Anterior (Implementação do Pacote P0: `IMP-0034` + `IMP-0035` / `ADR-032` — Segurança MCP, Unificação de Secrets LoRA, Higiene Git & `README.md`):
 1. **Hardening de Execução Shell (`src/corporate_engineer/mcp/client.py`)**:
    - Substituição de `shell=True` por `shlex.split` + `shell=False` em `LocalMCPToolAdapter._handle_shell()`.
    - Bloqueio explícito de metacaracteres (`&&`, `||`, `;`, `|`, `>`, `<`, `` ` ``, `$(`, `\n`, `\r`) e flags de execução inline em interpretadores (`-c`, `-e`, `--command`, `--eval`, `-`).
@@ -504,7 +520,9 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-26T03:40:00-03:00` | Corp-Pipeline Master Orchestrator | Sincronização da branch empilhada `feat/IMP-0036-p1-cli-rag-system-one` com `feat/IMP-0035-p0-security-and-repo-hygiene` (`086aabe`) e `origin/main` (`b7635fc`). |
 | `2026-11-26T03:33:00-03:00` | Corp-Pipeline Master Orchestrator | Resolução do conflito modify/delete em `src/corporate_engineer.egg-info/SOURCES.txt` na PR #35 (`feat/IMP-0035-p0-security-and-repo-hygiene` vs `origin/main` `b7635fc`, originado pelo commit automático `af4db0f` do `self-heal.yml` na PR #34): merge de `origin/main` preservando a remoção definitiva de `src/corporate_engineer.egg-info/` do rastreamento Git. |
+| `2026-11-26T03:03:00-03:00` | Corp-Pipeline Master Orchestrator (Swarm P1) | Execução da Onda P1 (`IMP-0032` + `IMP-0033` + `IMP-0036` / `ADR-033`) via Swarm multi-agente (`cli-hooks`, `core-rag-lora`, `system-one`, `verifier`): dispatch dinâmico seguro em `run_hook.py`, validação de alvo no `eval` e subação obrigatória no `mcp`, isolamento `sys.stderr` em `--format json --output` (`rag.py`, `prompt.py`), correção de cache starvation em `CachedASTCodebaseIndexer.get_all_symbol_names()`, suporte a generics TypeScript em `LoraSyntaxValidator`, atualização de `refiner.py` para `cli/`, acurácia por `total_runs` em `SystemOneBenchmark`, sessão ONNX/tokenizer lazy + `heuristic-fallback` honesto em `ONNXNLIDecisionEngine`, cache de modelo em `OutlinesDecisionEngine` e exportação `optimum.onnxruntime` no `SystemOneTrainer`/`train_system_one_colab.py`. Pre-Flight aprovado com 380/380 testes PASS (174.12s), 0 erros Ruff/Mypy/Secret Scan e Wiring Audit PASS. |
 | `2026-11-26T00:57:00-03:00` | Corp-Pipeline Master Orchestrator | Execução do Pacote P0 (`IMP-0034` + `IMP-0035` / `ADR-032`): hardening `shell=False` + `shlex.split` + bloqueio de metacaracteres e execução inline em `LocalMCPToolAdapter._handle_shell()` (2 novos testes em `tests/test_mcp_client.py`), unificação de `SECRET_PATTERNS` no `LoraVertexExporter` com `CanonicalSecretScanner` (1 teste de regressão em `tests/test_gemini_lora_pipeline.py`), remoção de `src/corporate_engineer.egg-info/` do Git, remoção dos 5 arquivos pessoais de otimização Windows, correção de links locais `file:///e:/...` em `.agents/orchestration/`, reescrita do `README.md` e registro formal das ondas P0–P3 (`IMP-0035`–`IMP-0041`) no backlog. Pre-Flight 100% verde (355/355 testes PASS, 0 erros Ruff/Mypy, Secret Scan PASS, Wiring Audit PASS). |
 | `2026-11-25T23:18:00-03:00` | Corp-Pipeline Master Orchestrator | Persistência de `IMP-0034` (Sincronização de Regexes Modernos de Segredos no `LoraVertexExporter`) em `.agents/orchestration/improvement-backlog.md` com status `SAVED_NOT_APPROVED` conforme opção `SAVE FOR LATER` do usuário. |
 | `2026-11-25T22:50:00-03:00` | Corp-Pipeline Master Orchestrator | Inicialização e sincronização Git local do workspace sandbox com `origin/main` (`5c1e331`), criação da branch `feat/IMP-0031-quality-security-sandboxing`, commit local das entregas do IMP-0031 e diagnóstico de bloqueio de `git push` por ausência de credenciais GitHub/SSH no Windows Sandbox (`exit 128`). |

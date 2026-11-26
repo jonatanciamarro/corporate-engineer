@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -127,7 +128,8 @@ def _run_blast_radius_analysis(
         out_p = Path(output_path).resolve()
         out_p.parent.mkdir(parents=True, exist_ok=True)
         out_p.write_text(output_str, encoding="utf-8")
-        print(f"✅ Análise de Blast Radius salva em: {out_p}")
+        stream = sys.stderr if format_type == "json" else sys.stdout
+        print(f"✅ Análise de Blast Radius salva em: {out_p}", file=stream)
     else:
         print(output_str)
 
@@ -171,7 +173,8 @@ def handle_index(args: argparse.Namespace) -> int:
         out_p = Path(args.output).resolve()
         out_p.parent.mkdir(parents=True, exist_ok=True)
         out_p.write_text(output_str, encoding="utf-8")
-        print(f"✅ Índice AST salvo com sucesso em: {out_p}")
+        stream = sys.stderr if args.format == "json" else sys.stdout
+        print(f"✅ Índice AST salvo com sucesso em: {out_p}", file=stream)
     else:
         print(output_str)
 
@@ -191,8 +194,21 @@ def handle_blast_radius(args: argparse.Namespace) -> int:
 def handle_eval(args: argparse.Namespace) -> int:
     from corporate_engineer.eval.scorecard import SemanticCodeEvaluator
 
-    evaluator = SemanticCodeEvaluator()
     target = Path(args.path)
+    if not target.exists():
+        msg = f"Target path does not exist: {target}"
+        if getattr(args, "format", "text") == "json":
+            print(
+                json.dumps(
+                    {"error": msg, "target_path": str(target), "passed_gate": False},
+                    indent=2,
+                )
+            )
+        else:
+            print(f"❌ {msg}", file=sys.stderr)
+        return 1
+
+    evaluator = SemanticCodeEvaluator()
     if target.is_file():
         content = target.read_text(encoding="utf-8", errors="ignore")
         report = evaluator.evaluate_source(

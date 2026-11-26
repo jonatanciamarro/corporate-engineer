@@ -198,3 +198,92 @@ def test_benchmark_cli_execution() -> None:
     assert "engines" in data
     assert "heuristic" in data["engines"]
     assert data["winner_latency"] == "heuristic"
+
+
+def test_benchmark_accuracy_penalizes_failed_runs(tmp_path: Path) -> None:
+    """Garante que failed_runs reduza accuracy_percent dividindo por total_runs (IMP-0033)."""
+    from unittest.mock import MagicMock, patch
+
+    dataset_file = tmp_path / "fail_samples.jsonl"
+    sample_data = [
+        {
+            "instruction": "Selecione o subagente",
+            "input": "Escreva teste com pytest",
+            "output": "tdd-guide",
+        },
+        {
+            "instruction": "Selecione o subagente",
+            "input": "Revisar código e typing",
+            "output": "code-reviewer",
+        },
+    ]
+    dataset_file.write_text(
+        "\n".join(json.dumps(s) for s in sample_data) + "\n",
+        encoding="utf-8",
+    )
+
+    benchmark = SystemOneBenchmark(dataset_path=dataset_file)
+
+    call_count = 0
+
+    def _flaky_evaluate(_router: object, _sample: dict[str, str]) -> tuple[str, bool, str]:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return "tdd-guide", True, "route"
+        raise RuntimeError("Simulated inference failure")
+
+    mock_router = MagicMock()
+    mock_router.engine.evaluate.return_value = MagicMock(engine_name="heuristic")
+
+    with (
+        patch.object(benchmark, "_evaluate_sample", side_effect=_flaky_evaluate),
+        patch.object(benchmark, "_create_router", return_value=mock_router),
+    ):
+        report = benchmark.run(
+            engines=["heuristic"],
+            dataset_path=dataset_file,
+            iterations=1,
+            warmup=0,
+        )
+
+    res = report.engines["heuristic"]
+    assert res.total_samples == 2
+    assert res.successful_runs == 1
+    assert res.failed_runs == 1
+    assert res.accuracy_percent == 50.0
+
+
+def test_benchmark_recommendations_reflect_actual_engine_name() -> None:
+    """Garante que recomendações não afirmem ONNX neural quando heuristic-fallback executou."""
+    from unittest.mock import MagicMock, patch
+
+    benchmark = SystemOneBenchmark()
+    report_fallback = benchmark.run(
+        engines=["heuristic", "onnx"],
+        max_samples=3,
+        iterations=1,
+        warmup=0,
+    )
+    joined_fallback = " ".join(report_fallback.recommendations)
+    assert "heuristic-fallback" in joined_fallback
+    assert "oferece inferência contextual local" not in joined_fallback
+
+    # Quando ONNX real executa (engine_name == "onnx-nli"), recomendação neural aparece
+    mock_router_onnx = MagicMock()
+    mock_router_onnx.engine.evaluate.return_value = MagicMock(engine_name="onnx-nli")
+    mock_router_onnx.route_agent.return_value = MagicMock(choice="tdd-guide")
+    mock_router_onnx.classify_commit.return_value = MagicMock(choice="feat")
+    mock_router_onnx.assess_risk.return_value = MagicMock(decision=True)
+    mock_router_onnx.should_skip_node.return_value = MagicMock(decision=True)
+
+    bench_real = SystemOneBenchmark()
+    with patch.object(bench_real, "_create_router", return_value=mock_router_onnx):
+        report_real = bench_real.run(
+            engines=["onnx"],
+            max_samples=2,
+            iterations=1,
+            warmup=0,
+        )
+    joined_real = " ".join(report_real.recommendations)
+    assert "oferece inferência contextual local" in joined_real

@@ -97,7 +97,10 @@ class ContextAwarePromptRefiner:
         },
         "cli": {
             "keywords": ["cli", "subcomando", "argument", "flag", "terminal", "parser"],
-            "modules": ["src/corporate_engineer/cli.py"],
+            "modules": [
+                "src/corporate_engineer/cli/parser.py",
+                "src/corporate_engineer/cli/main.py",
+            ],
         },
     }
 

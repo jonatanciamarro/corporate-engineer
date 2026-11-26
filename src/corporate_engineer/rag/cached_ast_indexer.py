@@ -18,6 +18,18 @@ class CachedASTCodebaseIndexer(ASTCodebaseIndexer):
     Stores extracted symbols and metadata indexed by file SHA-256 digest in .cache/ast_index_cache.json.
     """
 
+    _EXCLUDED_DIRS: frozenset[str] = frozenset(
+        {
+            "venv",
+            ".venv",
+            "__pycache__",
+            "build",
+            "dist",
+            ".git",
+            "node_modules",
+        }
+    )
+
     def __init__(self, root_path: Path, cache_path: Path | None = None) -> None:
         super().__init__(root_path=root_path)
         self.cache_path = cache_path or self.root_path / ".cache" / "ast_index_cache.json"
@@ -122,43 +134,32 @@ class CachedASTCodebaseIndexer(ASTCodebaseIndexer):
 
     def get_all_symbol_names(self) -> set[str]:
         """
-        Scan cache (indexing all .py files in root_path if cache is empty or has no symbols)
-        and return the set of all class and function names.
+        Walk all .py files in root_path (using O(1) SHA-256 cache hits for unchanged files,
+        indexing new or modified files, and pruning stale cache entries for deleted files)
+        and return the set of all current class and function names.
         """
+        if not self.root_path.exists():
+            return set()
+
         names: set[str] = set()
-        for entry in self._cache.values():
-            if isinstance(entry, dict) and "symbols" in entry:
-                for sym in entry["symbols"]:
+        seen_keys: set[str] = set()
+
+        for root, dirs, files in os.walk(self.root_path):
+            dirs[:] = [d for d in dirs if not d.startswith(".") and d not in self._EXCLUDED_DIRS]
+            for f in sorted(files):
+                if not f.endswith(".py"):
+                    continue
+                full_p = Path(root) / f
+                seen_keys.add(self._get_cache_key(full_p))
+                for sym in self.index_file(full_p):
                     if isinstance(sym, dict) and "name" in sym:
                         names.add(sym["name"])
 
-        if not names and self.root_path.exists():
-            for root, dirs, files in os.walk(self.root_path):
-                dirs[:] = [
-                    d
-                    for d in dirs
-                    if not d.startswith(".")
-                    and d
-                    not in {
-                        "venv",
-                        ".venv",
-                        "__pycache__",
-                        "build",
-                        "dist",
-                        ".git",
-                        "node_modules",
-                    }
-                ]
-                for f in sorted(files):
-                    if f.endswith(".py"):
-                        full_p = Path(root) / f
-                        self.index_file(full_p)
-
-            for entry in self._cache.values():
-                if isinstance(entry, dict) and "symbols" in entry:
-                    for sym in entry["symbols"]:
-                        if isinstance(sym, dict) and "name" in sym:
-                            names.add(sym["name"])
+        stale_keys = [k for k in self._cache if k not in seen_keys]
+        if stale_keys:
+            for k in stale_keys:
+                del self._cache[k]
+            self.save_cache()
 
         return names
 

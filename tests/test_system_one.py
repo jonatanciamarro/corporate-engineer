@@ -2,6 +2,7 @@
 Tests for Open-Source System-One Decision Engine (IMP-0013).
 """
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -235,3 +236,179 @@ def test_system_one_router_risk_and_triage() -> None:
     )
     assert report.suggested_agent in ["architect", "refactor-cleaner", "code-reviewer"]
     assert report.risk_level in ["MEDIUM", "HIGH", "CRITICAL"]
+
+
+def _build_mock_tokenizer() -> MagicMock:
+    tok = MagicMock()
+
+    def _encode(premise: str, hypothesis: str | None = None) -> MagicMock:
+        enc = MagicMock()
+        enc.ids = [101, len(premise), len(hypothesis or ""), 102]
+        enc.attention_mask = [1, 1, 1, 1]
+        enc.type_ids = [0, 0, 1, 1]
+        return enc
+
+    tok.encode.side_effect = _encode
+    return tok
+
+
+def test_onnx_nli_engine_real_session_inference_and_honest_engine_name() -> None:
+    """Verifica inferência real com session/tokenizer injetados e engine_name honesto."""
+    mock_session = MagicMock()
+    inp_ids = MagicMock()
+    inp_ids.name = "input_ids"
+    inp_mask = MagicMock()
+    inp_mask.name = "attention_mask"
+    mock_session.get_inputs.return_value = [inp_ids, inp_mask]
+
+    # Logits 3 classes [contradiction, neutral, entailment]:
+    # Quando input length combina com a opção/hipótese esperada, retorna entailment alto
+    def _run(_output_names: object, feed: dict[str, list[list[int]]]) -> list[list[list[float]]]:
+        hypo_len = feed["input_ids"][0][2]
+        if hypo_len > 15:
+            return [[[0.1, 0.2, 6.0]]]
+        return [[[5.0, 0.2, 0.1]]]
+
+    mock_session.run.side_effect = _run
+    mock_tokenizer = _build_mock_tokenizer()
+
+    engine = ONNXNLIDecisionEngine(
+        fallback_to_heuristic=True,
+        session=mock_session,
+        tokenizer=mock_tokenizer,
+    )
+    assert engine.is_available() is True
+    assert engine.has_model() is True
+
+    choice = engine.decide_choice(
+        state="Preciso escrever testes",
+        choices={"short": "curto", "detailed_tdd_agent": "Especialista em testes unitários"},
+    )
+    assert choice.choice == "detailed_tdd_agent"
+    assert "ONNX NLI" in (choice.rationale or "")
+    assert mock_session.run.call_count == 2
+
+    noul_true = engine.decide_noul(
+        state="Alteração crítica",
+        hypothesis="Hipótese longa de alto risco estrutural",
+    )
+    assert noul_true.decision is True
+    assert noul_true.probability > 0.9
+
+    noul_false = engine.decide_noul(state="Docs", hypothesis="Curta")
+    assert noul_false.decision is False
+    assert noul_false.probability < 0.1
+
+    score = engine.decide_score(
+        state="Mudança",
+        rubric=["Baixo", "Risco Crítico Arquitetural"],
+    )
+    assert score.level == "Risco Crítico Arquitetural"
+    assert score.score == 1
+
+    report = engine.evaluate(
+        state="Avaliação completa",
+        questions={
+            "agent": {"type": "choice", "choices": {"a": "curta", "b": "descrição bem longa aqui"}},
+            "risk": {"type": "noul", "hypothesis": "Hipótese longa de risco"},
+        },
+    )
+    assert report.engine_name == "onnx-nli"
+
+    # Quando cai para fallback heurístico (sem session/tokenizer), NEVER reportar "onnx-nli"
+    fallback_engine = ONNXNLIDecisionEngine(
+        model_path="non_existent_model.onnx",
+        fallback_to_heuristic=True,
+    )
+    fallback_report = fallback_engine.evaluate(
+        state="Alteração simples",
+        questions={"agent": {"type": "choice", "choices": ["architect", "tdd-guide"]}},
+    )
+    assert fallback_report.engine_name == "heuristic-fallback"
+
+
+def test_onnx_nli_engine_lazy_loads_session_and_tokenizer(tmp_path: Path) -> None:
+    """Verifica lazy loading thread-safe de onnxruntime.InferenceSession e tokenizers.Tokenizer."""
+    import types
+
+    model_file = tmp_path / "model_int8.onnx"
+    tok_file = tmp_path / "tokenizer.json"
+    model_file.write_bytes(b"fake-onnx")
+    tok_file.write_text("{}", encoding="utf-8")
+
+    mock_session = MagicMock()
+    mock_session.get_inputs.return_value = []
+    mock_session.run.return_value = [[[0.1, 0.1, 4.5]]]
+    mock_tok = _build_mock_tokenizer()
+
+    fake_ort = types.SimpleNamespace(InferenceSession=MagicMock(return_value=mock_session))
+    fake_tokenizers = types.SimpleNamespace(
+        Tokenizer=types.SimpleNamespace(from_file=MagicMock(return_value=mock_tok))
+    )
+
+    with patch.dict("sys.modules", {"onnxruntime": fake_ort, "tokenizers": fake_tokenizers}):
+        engine = ONNXNLIDecisionEngine(model_path=model_file, fallback_to_heuristic=False)
+        assert engine.has_model() is True
+        res1 = engine.decide_noul(state="Teste", hypothesis="Hipótese")
+        res2 = engine.decide_noul(state="Teste 2", hypothesis="Hipótese 2")
+        assert res1.decision is True
+        assert res2.decision is True
+        # Lazy loaded apenas uma vez
+        fake_ort.InferenceSession.assert_called_once_with(str(model_file))
+        fake_tokenizers.Tokenizer.from_file.assert_called_once_with(str(tok_file))
+
+
+def test_outlines_engine_caches_model_and_wires_noul_score() -> None:
+    """Verifica cache de modelo sob RLock e wiring de decide_noul/decide_score no Outlines."""
+    import types
+
+    fake_model = MagicMock(name="loaded_transformers_model")
+    transformers_loader = MagicMock(return_value=fake_model)
+
+    def _choice_factory(_model: object, choices: list[str]) -> MagicMock:
+        gen = MagicMock()
+        gen.side_effect = lambda _prompt: choices[-1]
+        return gen
+
+    fake_outlines = types.SimpleNamespace(
+        models=types.SimpleNamespace(transformers=transformers_loader),
+        generate=types.SimpleNamespace(choice=MagicMock(side_effect=_choice_factory)),
+    )
+
+    with patch.dict("sys.modules", {"outlines": fake_outlines}):
+        engine = OutlinesDecisionEngine(model_id="Qwen/Qwen2.5-0.5B-Instruct")
+        assert engine.model_id == "Qwen/Qwen2.5-0.5B-Instruct"
+        assert engine.is_available() is True
+
+        c1 = engine.decide_choice("Estado 1", ["architect", "tdd-guide"])
+        n1 = engine.decide_noul("Estado 2", "Hipótese")
+        s1 = engine.decide_score("Estado 3", ["Low", "High"])
+        c2 = engine.decide_choice("Estado 4", ["architect", "tdd-guide"])
+
+        assert c1.choice == "tdd-guide"
+        assert c2.choice == "tdd-guide"
+        assert isinstance(n1, NoulDecision)
+        assert n1.decision is False  # ["True", "False"][-1] == "False"
+        assert s1.level == "High"
+        assert s1.score == 1
+        # Modelo carregado e cacheado uma única vez entre todas as chamadas
+        transformers_loader.assert_called_once_with("Qwen/Qwen2.5-0.5B-Instruct")
+
+        report = engine.evaluate(
+            state="Avaliação Outlines",
+            questions={
+                "agent": {"type": "choice", "choices": ["architect", "tdd-guide"]},
+                "risk": {"type": "noul", "hypothesis": "Risco"},
+                "level": {"type": "score", "rubric": ["Low", "High"]},
+            },
+        )
+        assert report.engine_name == "outlines"
+
+    # Quando outlines indisponível, evaluate deve reportar heuristic-fallback
+    with patch.dict("sys.modules", {"outlines": None}):
+        fallback_engine = OutlinesDecisionEngine(fallback_to_heuristic=True)
+        fb_report = fallback_engine.evaluate(
+            state="Avaliação fallback",
+            questions={"agent": {"type": "choice", "choices": ["architect", "tdd-guide"]}},
+        )
+        assert fb_report.engine_name == "heuristic-fallback"

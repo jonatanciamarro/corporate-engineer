@@ -57,11 +57,11 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0029` | Continuous Capability Auto-Wiring & Invariante de Potência Máxima (Zero Código Órfão) | `QUALITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-24` |
 | `IMP-0030` | Resiliência de Concorrência, Sincronização & Eliminação de Erros Silenciosos (Pacote 1) | `RELIABILITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-24` |
 | `IMP-0031` | Blindagem de Qualidade, Segurança & Sandboxing de Mutação (Pacote 2) | `QUALITY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-24` |
-| `IMP-0032` | Integridade da CLI, Output Contratos & Dynamic Hook Dispatching (Pacote 3) | `ARCHITECTURE` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-24` |
-| `IMP-0033` | AI Systems, RAG Cache Starvation & Unificação de Dívidas Técnicas (Pacote 4) | `EFFICIENCY` | Média-Alta (M-L) | `SAVED_NOT_APPROVED` | `2026-11-24` |
+| `IMP-0032` | Integridade da CLI, Output Contratos & Dynamic Hook Dispatching (Pacote 3) | `ARCHITECTURE` | Média (M) | `IMPLEMENTED` | `2026-11-24` |
+| `IMP-0033` | AI Systems, RAG Cache Starvation & Unificação de Dívidas Técnicas (Pacote 4) | `EFFICIENCY` | Média-Alta (M-L) | `IMPLEMENTED` | `2026-11-24` |
 | `IMP-0034` | Sincronização de Regexes Modernos de Segredos no `LoraVertexExporter` | `SECURITY` | Baixa (S) | `IMPLEMENTED` | `2026-11-25` |
 | `IMP-0035` | Hardening `shell=False` no `LocalMCPToolAdapter`, Higiene Git & `README.md` (Pacote P0) | `SECURITY` | Média (M) | `IMPLEMENTED` | `2026-11-26` |
-| `IMP-0036` | Integridade e Inferência Real nos Motores `System-One` (`ONNX`, `Outlines`, `Trainer`) | `ARCHITECTURE` | Alta (L) | `SAVED_NOT_APPROVED` | `2026-11-26` |
+| `IMP-0036` | Integridade e Inferência Real nos Motores `System-One` (`ONNX`, `Outlines`, `Trainer`) | `ARCHITECTURE` | Alta (L) | `IMPLEMENTED` | `2026-11-26` |
 | `IMP-0037` | Suporte Real a `text/event-stream` (SSE) no `RemoteMCPSSEClient` | `INTEGRATION` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-26` |
 | `IMP-0038` | Executores Plugáveis Reais no `SwarmCoordinator` & `AutonomousEngineeringGraph` | `ORCHESTRATION` | Alta (L) | `SAVED_NOT_APPROVED` | `2026-11-26` |
 | `IMP-0039` | Auditoria por Imports AST Reais no `CapabilityWiringAuditor` | `QUALITY` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-26` |
@@ -639,7 +639,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0032: Integridade da CLI, Output Contratos & Dynamic Hook Dispatching (Pacote 3)
 - **Categoria**: `ARCHITECTURE` | `AUTOMATION`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-033`, `PR-CORP-036.md`)
 - **Data de Descoberta**: 2026-11-24
 - **Problema / Limitação Atual**: O `run_hook.py` possui whitelist estática rejeitando hooks dinâmicos em `.venv`; comandos CLI vazam texto informativo no `stdout` quando `--format json` é solicitado com `--output`; o comando `eval` aprova diretórios inexistentes com nota 100%; o comando `mcp` sem ação retorna 0 silenciosamente.
 - **Solução Proposta**: Implementar descoberta dinâmica de hooks via `runpy.run_path`; redirecionar logs informativos para `sys.stderr` em saídas JSON; validar existência de alvos em `eval`; tornar subcomando `mcp` obrigatório.
@@ -652,7 +652,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0033: AI Systems, RAG Cache Starvation & Unificação de Dívidas Técnicas (Pacote 4)
 - **Categoria**: `EFFICIENCY` | `MAINTAINABILITY`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-033`, `PR-CORP-036.md`)
 - **Data de Descoberta**: 2026-11-24
 - **Problema / Limitação Atual**: Em `CachedASTCodebaseIndexer.get_all_symbol_names()`, se um arquivo está em cache, o rastreamento da base inteira é pulado; a acurácia no Benchmark divide por `successful_runs` ao invés de `total_runs`; o validador LoRA de Remotion confunde generics TS com JSX unclosed tags; `prompt/refiner.py` mantém referência ao monólito deletado `cli.py`.
 - **Solução Proposta**: Corrigir starvation de cache AST; corrigir fórmula de acurácia estatística no Benchmark; aprimorar regex de tags JSX em Remotion; limpar referências a arquivos mortos e unificar helpers de formatação CLI.
@@ -692,7 +692,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0036: Integridade e Inferência Real nos Motores `System-One` (`ONNX`, `Outlines`, `Trainer`)
 - **Categoria**: `ARCHITECTURE` | `EFFICIENCY`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-033`, `PR-CORP-036.md`)
 - **Data de Descoberta**: 2026-11-26
 - **Problema / Limitação Atual**: `ONNXNLIDecisionEngine` delega 100% ao `HeuristicDecisionEngine` mesmo quando `has_model()` é `True` (rotulando `engine_name="onnx-nli"`); `OutlinesDecisionEngine` reinstancia `Qwen/Qwen2.5-0.5B-Instruct` dentro de `decide_choice()` a cada chamada; `SystemOneTrainer.generate_colab_recipe()` apenas imprime mensagem de exportação ONNX sem converter o modelo.
 - **Solução Proposta**: Implementar carregamento lazy + inferência real via `onnxruntime` (ou explicitar `engine_name="heuristic-fallback"` sempre que heurística rodar), cachear o modelo no `OutlinesDecisionEngine` e implementar exportação ONNX real (`optimum` / `torch.onnx`) na receita Colab.

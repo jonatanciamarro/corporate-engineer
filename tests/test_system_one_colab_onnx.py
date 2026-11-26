@@ -119,3 +119,26 @@ def test_onnx_engine_strict_mode_without_model(tmp_path: Path) -> None:
             state="Teste de falha",
             choices=["a", "b"],
         )
+
+
+def test_colab_recipe_and_script_use_real_optimum_onnx_export(tmp_path: Path) -> None:
+    """Garante exportação e quantização ONNX Int8 real via optimum.onnxruntime sem placeholders."""
+    trainer = SystemOneTrainer(model_id="Qwen/Qwen2.5-0.5B-Instruct")
+    recipe = trainer.generate_colab_recipe()
+    script_content = Path("scripts/train_system_one_colab.py").read_text(encoding="utf-8")
+
+    for content in (recipe, script_content):
+        assert "optimum.onnxruntime" in content
+        assert "ORTModelForCausalLM" in content
+        assert "export=True" in content
+        assert "ORTQuantizer" in content
+        assert "AutoQuantizationConfig" in content
+        assert "merge_and_unload" in content
+        assert "model_int8.onnx" in content
+        assert "Int8" in content
+
+    nb_recipe_path = trainer.generate_notebook(output_path=tmp_path / "test_nb.ipynb")
+    nb_text = nb_recipe_path.read_text(encoding="utf-8")
+    assert "|| touch models/model_int8.onnx" not in nb_text
+    assert "ORTModelForCausalLM" in nb_text
+    assert "ORTQuantizer" in nb_text

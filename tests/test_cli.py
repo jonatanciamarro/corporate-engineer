@@ -312,3 +312,91 @@ def test_cli_decide_triage_output_file(capsys, tmp_path):
     assert "task" in data
     assert "risk_level" in data
     assert "Relatório salvo" in captured.out
+
+
+def test_cli_eval_missing_path_text(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
+    missing = tmp_path / "does_not_exist"
+    ret = main(["eval", str(missing)])
+    captured = capsys.readouterr()
+    assert ret == 1
+    assert captured.err.strip() != ""
+
+
+def test_cli_eval_missing_path_json(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
+    missing = tmp_path / "does_not_exist.py"
+    ret = main(["eval", str(missing), "--format", "json"])
+    captured = capsys.readouterr()
+    assert ret == 1
+    data = json.loads(captured.out)
+    assert "error" in data
+    assert data.get("passed_gate") is False
+
+
+def test_cli_mcp_no_subcommand(capsys: pytest.CaptureFixture[str]) -> None:
+    ret = main(["mcp"])
+    captured = capsys.readouterr()
+    assert ret != 0
+    assert "usage:" in captured.err.lower()
+
+
+def test_cli_prompt_refine_json_output_pure_stdout(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    out_file = tmp_path / "refined.json"
+    ret = main(
+        [
+            "prompt",
+            "refine",
+            "Implementar endpoint seguro",
+            "--format",
+            "json",
+            "--workspace",
+            str(tmp_path),
+            "--output",
+            str(out_file),
+        ]
+    )
+    captured = capsys.readouterr()
+    assert ret == 0
+    assert out_file.exists()
+    stdout_data = json.loads(captured.out)
+    file_data = json.loads(out_file.read_text(encoding="utf-8"))
+    assert stdout_data == file_data
+    assert str(out_file) in captured.err
+
+
+def test_cli_index_json_output_pure_stdout(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    (tmp_path / "mod.py").write_text("def foo() -> int:\n    return 1\n", encoding="utf-8")
+    out_file = tmp_path / "index.json"
+    ret = main(["index", "--path", str(tmp_path), "--format", "json", "--output", str(out_file)])
+    captured = capsys.readouterr()
+    assert ret == 0
+    assert out_file.exists()
+    assert captured.out.strip() == ""
+    assert str(out_file.resolve()) in captured.err
+
+
+def test_cli_blast_radius_json_output_pure_stdout(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    (tmp_path / "mod.py").write_text("def bar() -> int:\n    return 2\n", encoding="utf-8")
+    out_file = tmp_path / "blast.json"
+    ret = main(
+        [
+            "blast-radius",
+            "bar",
+            "--workspace",
+            str(tmp_path),
+            "--format",
+            "json",
+            "--output",
+            str(out_file),
+        ]
+    )
+    captured = capsys.readouterr()
+    assert ret == 0
+    assert out_file.exists()
+    assert captured.out.strip() == ""
+    assert str(out_file.resolve()) in captured.err

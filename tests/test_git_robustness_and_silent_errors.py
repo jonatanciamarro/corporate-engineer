@@ -24,7 +24,7 @@ from corporate_engineer.git_utils import (
     is_branch_pushed,
     push_branch_to_remote,
 )
-from corporate_engineer.quality.gate import QualityGateRunner
+from corporate_engineer.quality.gate import QualityGateRunner, resolve_test_timeout
 from corporate_engineer.quality.surgical_runner import SurgicalTestRunner
 
 
@@ -262,3 +262,36 @@ def test_quality_gate_secret_scan_ignores_hidden_and_venv_dirs(tmp_path: Path) -
     res = runner.run_secret_scan()
     assert res["passed"] is True
     assert len(res["findings"]) == 0
+
+
+def test_quality_gate_runner_default_and_env_timeout(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Verify QualityGateRunner.run_tests preserves 120s default and honors CORP_TEST_TIMEOUT."""
+    runner = QualityGateRunner(project_root=tmp_path)
+    recorded_timeouts: list[float | None] = []
+
+    def mock_run(*args, **kwargs):
+        recorded_timeouts.append(kwargs.get("timeout"))
+        return subprocess.CompletedProcess(
+            args=args[0] if args else kwargs.get("args"),
+            returncode=0,
+            stdout="ok",
+            stderr="",
+        )
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+    monkeypatch.delenv("CORP_TEST_TIMEOUT", raising=False)
+
+    runner.run_tests(command="pytest -q")
+    assert recorded_timeouts[-1] == 120.0
+    assert resolve_test_timeout(default_timeout=300.0) == 300.0
+
+    monkeypatch.setenv("CORP_TEST_TIMEOUT", "450.0")
+    runner.run_tests(command="pytest -q")
+    assert recorded_timeouts[-1] == 450.0
+    assert resolve_test_timeout(default_timeout=300.0) == 450.0
+
+    monkeypatch.setenv("CORP_TEST_TIMEOUT", "not-a-number")
+    runner.run_tests(command="pytest -q")
+    assert recorded_timeouts[-1] == 120.0

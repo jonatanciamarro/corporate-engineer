@@ -11,23 +11,39 @@
 |---|---|---|
 | **Projeto** | `corporate-engineer` | Framework Corporativo de Engenharia com Agentes AI & Orquestrador Corp-Pipeline |
 | **Versão** | `0.1.0` | Python 3.10+ (Target: Python 3.11) |
-| **Branch Ativa** | `feat/IMP-0031-quality-security-sandboxing` | 🟢 Repositório Git inicializado/sincronizado com `origin/main` (`5c1e331`); suíte 361/361 PASS, 0 erros Ruff/Mypy |
+| **Branch Ativa** | `feat/IMP-0035-p0-security-and-repo-hygiene` | 🟢 Sincronizada com `origin/main` (`b7635fc`, PR #34 merged); conflito em `src/corporate_engineer.egg-info/SOURCES.txt` resolvido mantendo exclusão do índice Git |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo (`--system-site-packages` + `.pth` apontando para `src/`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **361/361 PASS** | Execução completa em 68.50s (inclui 52 novos casos IMP-0031 em `tests/test_imp0031_*.py`) |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (175 arquivos verificados e formatados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 105 arquivos fonte validados estritamente |
-| **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` (padrões OpenAI/Anthropic/AWS sincronizados) |
-| **Wiring & Scorecard EDD** | 🟢 **48/48 Wired \| 93.1/100 (Grade A)** | `audit --wiring` 100% conectado (`passed: true`); `eval` 93.1/100 em 61 arquivos / 332 funções |
+| **Testes (Pytest + Hypothesis)** | 🟢 **355/355 PASS** | Execução completa em 89.87s (inclui 3 novos casos de segurança/secrets P0 em `test_mcp_client.py` e `test_gemini_lora_pipeline.py`; removidos 9 testes de scripts pessoais Windows) |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (check + format) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 104 arquivos fonte validados estritamente |
+| **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` e `LoraVertexExporter` unificado (`IMP-0034`) |
+| **Wiring & Scorecard EDD** | 🟢 **100% Wired** | `audit --wiring` 100% conectado (`PASS`) |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Always-On Ativo** | Frontmatter `trigger: always_on` ativo em `corp-pipeline-orchestrator.md` |
-| **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` (capabilities, agents, skills, workflows, tools, integrations, backlog) |
+| **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` com links relativos portáveis e ondas P0–P3 (`IMP-0034`–`IMP-0041`) |
 | **Lifecycle Hooks E2E** | 🟢 **5 Hooks Ativos com run_hook.py** | `.agents/hooks.json` ajustado para `py orchestration/hooks/run_hook.py <hook>` (CWD `.agents/`) |
 
 ---
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Implementação de IMP-0031 / ADR-031: Blindagem de Qualidade, Segurança & Sandboxing de Mutação — Pacote 2):
+### Sessão Atual (Implementação do Pacote P0: `IMP-0034` + `IMP-0035` / `ADR-032` — Segurança MCP, Unificação de Secrets LoRA, Higiene Git & `README.md`):
+1. **Hardening de Execução Shell (`src/corporate_engineer/mcp/client.py`)**:
+   - Substituição de `shell=True` por `shlex.split` + `shell=False` em `LocalMCPToolAdapter._handle_shell()`.
+   - Bloqueio explícito de metacaracteres (`&&`, `||`, `;`, `|`, `>`, `<`, `` ` ``, `$(`, `\n`, `\r`) e flags de execução inline em interpretadores (`-c`, `-e`, `--command`, `--eval`, `-`).
+   - Resolução determinística do binário Python via `sys.executable` e de demais comandos via `shutil.which` sobre `PATH`.
+   - 2 novos testes em `tests/test_mcp_client.py`.
+2. **Unificação de Secrets no Exportador LoRA (`IMP-0034` — `src/corporate_engineer/lora/exporter.py`)**:
+   - Remoção do regex legado isolado e adoção direta de `SECRET_PATTERNS` de `corporate_engineer.quality.secret_scanner` (Single Source of Truth).
+   - 1 novo teste de regressão em `tests/test_gemini_lora_pipeline.py` cobrindo `sk-proj-`, `sk-svcacct-`, `sk-live-` e `sk-ant-api03-`.
+3. **Higiene Git, Portabilidade & Novo `README.md`**:
+   - Remoção de `src/corporate_engineer.egg-info/` do índice Git (`git rm -r --cached`) e inclusão de `models/*.zip` no `.gitignore`.
+   - Remoção dos scripts, documentação e testes pessoais de tuning Windows (`scripts/optimize_windows_for_ai_dev.ps1`, `scripts/start_interview_mode.ps1`, `scripts/stop_interview_mode.ps1`, `docs/architecture/windows_optimization_architecture.md`, `tests/test_windows_optimization_scripts.py`).
+   - Substituição de links locais `file:///e:/projcts/...` por caminhos relativos em `.agents/orchestration/*-registry.md`.
+   - Reescrita do `README.md` com arquitetura real, instalação, CLI e matriz honesta de maturidade dos módulos.
+   - Catalogação formal das ondas P0–P3 (`IMP-0035` a `IMP-0041`) em `.agents/orchestration/improvement-backlog.md` e formalização do [ADR-032](docs/adr/ADR-032-p0-security-shell-sanitization-and-repo-hygiene.md).
+
+### Sessão Anterior (Implementação de IMP-0031 / ADR-031: Blindagem de Qualidade, Segurança & Sandboxing de Mutação — Pacote 2):
 1. **Sandboxing de Mutação Fiel ao Código Mutado (`quality/mutation.py`)**:
    - `_run_in_environment()` agora insere `effective_ws / "src"` prioritariamente no `PYTHONPATH`, seguido por `effective_ws` e pelo parent flat-layout apenas quando aplicável.
    - Adição de `.ruff_cache` e `.cache` aos ignores do `shutil.copytree`, fallback de cópia do arquivo de teste quando necessário e guarda contra shadowing da stdlib por namespace packages PEP 420.
@@ -488,6 +504,9 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-26T03:33:00-03:00` | Corp-Pipeline Master Orchestrator | Resolução do conflito modify/delete em `src/corporate_engineer.egg-info/SOURCES.txt` na PR #35 (`feat/IMP-0035-p0-security-and-repo-hygiene` vs `origin/main` `b7635fc`, originado pelo commit automático `af4db0f` do `self-heal.yml` na PR #34): merge de `origin/main` preservando a remoção definitiva de `src/corporate_engineer.egg-info/` do rastreamento Git. |
+| `2026-11-26T00:57:00-03:00` | Corp-Pipeline Master Orchestrator | Execução do Pacote P0 (`IMP-0034` + `IMP-0035` / `ADR-032`): hardening `shell=False` + `shlex.split` + bloqueio de metacaracteres e execução inline em `LocalMCPToolAdapter._handle_shell()` (2 novos testes em `tests/test_mcp_client.py`), unificação de `SECRET_PATTERNS` no `LoraVertexExporter` com `CanonicalSecretScanner` (1 teste de regressão em `tests/test_gemini_lora_pipeline.py`), remoção de `src/corporate_engineer.egg-info/` do Git, remoção dos 5 arquivos pessoais de otimização Windows, correção de links locais `file:///e:/...` em `.agents/orchestration/`, reescrita do `README.md` e registro formal das ondas P0–P3 (`IMP-0035`–`IMP-0041`) no backlog. Pre-Flight 100% verde (355/355 testes PASS, 0 erros Ruff/Mypy, Secret Scan PASS, Wiring Audit PASS). |
+| `2026-11-25T23:18:00-03:00` | Corp-Pipeline Master Orchestrator | Persistência de `IMP-0034` (Sincronização de Regexes Modernos de Segredos no `LoraVertexExporter`) em `.agents/orchestration/improvement-backlog.md` com status `SAVED_NOT_APPROVED` conforme opção `SAVE FOR LATER` do usuário. |
 | `2026-11-25T22:50:00-03:00` | Corp-Pipeline Master Orchestrator | Inicialização e sincronização Git local do workspace sandbox com `origin/main` (`5c1e331`), criação da branch `feat/IMP-0031-quality-security-sandboxing`, commit local das entregas do IMP-0031 e diagnóstico de bloqueio de `git push` por ausência de credenciais GitHub/SSH no Windows Sandbox (`exit 128`). |
 | `2026-11-25T22:36:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD e entregas de governança para IMP-0031 (Blindagem de Qualidade, Segurança & Sandboxing de Mutação — Pacote 2): injeção prioritária de `src/` no `PYTHONPATH` e guarda PEP 420 em `quality/mutation.py` (7 testes), sincronização das regexes modernas de OpenAI/Anthropic/AWS nas 3 cópias (`quality/secret_scanner.py`, `quality/tool_security_guard.py`, `.agents/skills/corp-pipeline/scripts/secret_scanner.py`) e blindagem em 13 camadas de `is_path_safe()`/`clean_target()` em `quality/storage_cleaner.py` (20 casos), e implementação da re-verificação adversarial genuína em 5 etapas na Fase 1.7 (`orchestrator/adversarial.py`) cobrindo todos os apontamentos de revisão sênior (25 casos). Formalização do ADR-031, criação de PR-CORP-031.md, atualização de `improvement-backlog.md` (`IMP-0031` -> `IMPLEMENTED`). Pre-Flight global 100% aprovado: 361/361 testes PASS (68.50s), 0 erros Ruff (175 arquivos), 0 erros Mypy (105 arquivos), Zero-Secret Scan PASS, 48/48 módulos auto-wired e Eval 93.1/100 (Grade A). Registrado ausência de `.git`/remote `origin` no ambiente sandbox (commit/push/PR link bloqueados até sincronização com repositório Git). |
 | `2026-11-24T13:05:00-03:00` | Corp-Pipeline Master Orchestrator | Conclusão do ciclo TDD para IMP-0030 (Resiliência de Concorrência, Sincronização & Eliminação de Erros Silenciosos — Pacote 1): eliminação de falso positivo em is_branch_pushed() no git_utils com verificação de exit code e correspondência exata de ref, detecção de erros JSON-RPC 2.0 no RemoteMCPSSEClient com marcação is_error=True e registro em CircuitBreaker, correção de falso sucesso em SwarmCoordinator.dispatch_task() e run_fan_out() com migração para RLock, migração de threading.local para contextvars.ContextVar no AgentTracer para isolamento assíncrono estrito de spans, e sincronização com RLock no MCPEnterpriseHub. Formalização do ADR-030 e minuta PR-CORP-030.md, 8 novos testes em tests/test_concurrency_resilience_and_silent_errors.py (309/309 testes globais PASS em 46.50s, 0 erros Ruff/Mypy e Zero-Secret Scan PASS). |

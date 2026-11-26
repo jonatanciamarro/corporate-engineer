@@ -4,18 +4,11 @@ Vertex AI JSONL dataset exporter for Gemini LoRA DarkFactory fine-tuning (ADR-02
 
 import json
 import math
-import re
 from pathlib import Path
 from typing import Any
 
 from corporate_engineer.models import LoraDatasetConfig, LoraExportResult, LoraTrainingSample
-
-SECRET_PATTERNS = [
-    re.compile(r"AKIA[0-9A-Za-z]{16,}"),
-    re.compile(r"AIza[0-9A-Za-z\-_]{35}"),
-    re.compile(r"ghp_[0-9A-Za-z]{36}"),
-    re.compile(r"sk-[0-9A-Za-z]{20,}"),
-]
+from corporate_engineer.quality.secret_scanner import SECRET_PATTERNS
 
 
 class LoraVertexExporter:
@@ -52,7 +45,7 @@ class LoraVertexExporter:
         """Scrubs hardcoded credentials and secrets, replacing with [REDACTED_SECRET]."""
         sanitized = text
         total_redacted = 0
-        for pattern in SECRET_PATTERNS:
+        for _, pattern in SECRET_PATTERNS:
             sanitized, count = pattern.subn("[REDACTED_SECRET]", sanitized)
             total_redacted += count
         return sanitized, total_redacted

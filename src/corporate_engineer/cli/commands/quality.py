@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from corporate_engineer.quality.gate import QualityGateRunner
+from corporate_engineer.quality.gate import QualityGateRunner, resolve_test_timeout
 from corporate_engineer.quality.mutation import ASTMutationEngine
 
 
@@ -142,7 +142,7 @@ def handle_audit(args: argparse.Namespace) -> int:
     test_res: dict[str, Any] | None = None
     strict_passed = True
     if args.strict:
-        test_res = runner.run_tests()
+        test_res = runner.run_tests(timeout=resolve_test_timeout(default_timeout=300.0))
         strict_passed = bool(test_res.get("passed", False))
 
     mutation_report = None

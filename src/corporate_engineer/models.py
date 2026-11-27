@@ -11,10 +11,16 @@ except ImportError:
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class TaskInput(BaseModel):
+class _FrozenDTO(BaseModel):
+    """Base contract/report/state DTO enforcing strict Pydantic v2 immutability (IMP-0040)."""
+
+    model_config = ConfigDict(frozen=True)
+
+
+class TaskInput(_FrozenDTO):
     ticket_id: str
     description: str
     workspace_path: str
@@ -22,14 +28,14 @@ class TaskInput(BaseModel):
     model_name: str = "gpt-4o"
 
 
-class CodeDiff(BaseModel):
+class CodeDiff(_FrozenDTO):
     file_path: str
     original_content: str | None = None
     new_content: str
     explanation: str
 
 
-class TestResult(BaseModel):
+class TestResult(_FrozenDTO):
     __test__ = False
     command: str
     exit_code: int
@@ -39,7 +45,7 @@ class TestResult(BaseModel):
     failures_detected: list[str] = Field(default_factory=list)
 
 
-class AgentState(BaseModel):
+class AgentState(_FrozenDTO):
     task: TaskInput
     plan: str | None = None
     contracts: dict[str, Any] = Field(default_factory=dict)
@@ -52,19 +58,19 @@ class AgentState(BaseModel):
     error: str | None = None
 
 
-class MCPToolCall(BaseModel):
+class MCPToolCall(_FrozenDTO):
     server_name: str
     tool_name: str
     arguments: dict[str, Any] = Field(default_factory=dict)
 
 
-class MCPToolResult(BaseModel):
+class MCPToolResult(_FrozenDTO):
     tool_name: str
     is_error: bool
     content: str
 
 
-class NodeExecutionResult(BaseModel):
+class NodeExecutionResult(_FrozenDTO):
     node_name: str
     success: bool
     result: Any = None
@@ -72,7 +78,7 @@ class NodeExecutionResult(BaseModel):
     duration_seconds: float = 0.0
 
 
-class Mutant(BaseModel):
+class Mutant(_FrozenDTO):
     id: str
     file_path: str
     line_number: int
@@ -83,7 +89,7 @@ class Mutant(BaseModel):
     error_message: str | None = None
 
 
-class MutationReport(BaseModel):
+class MutationReport(_FrozenDTO):
     total_mutants: int
     killed: int
     survived: int
@@ -92,7 +98,7 @@ class MutationReport(BaseModel):
     mutants: list[Mutant] = Field(default_factory=list)
 
 
-class EvaluationAxisScore(BaseModel):
+class EvaluationAxisScore(_FrozenDTO):
     axis_name: str
     score: float
     weight: float
@@ -100,7 +106,7 @@ class EvaluationAxisScore(BaseModel):
     passed: bool = True
 
 
-class SemanticEvaluationReport(BaseModel):
+class SemanticEvaluationReport(_FrozenDTO):
     target_path: str
     axes: list[EvaluationAxisScore] = Field(default_factory=list)
     total_files_evaluated: int = 0
@@ -115,24 +121,27 @@ class SemanticEvaluationReport(BaseModel):
         if self.axes:
             total_weight = sum(a.weight for a in self.axes)
             if total_weight > 0:
-                self.composite_score = round(
-                    sum(a.score * a.weight for a in self.axes) / total_weight, 2
+                object.__setattr__(
+                    self,
+                    "composite_score",
+                    round(sum(a.score * a.weight for a in self.axes) / total_weight, 2),
                 )
-            self.total_violations = sum(len(a.violations) for a in self.axes)
+            object.__setattr__(self, "total_violations", sum(len(a.violations) for a in self.axes))
 
         if self.composite_score >= 90.0:
-            self.letter_grade = "A"
+            letter = "A"
         elif self.composite_score >= 80.0:
-            self.letter_grade = "B"
+            letter = "B"
         elif self.composite_score >= 70.0:
-            self.letter_grade = "C"
+            letter = "C"
         else:
-            self.letter_grade = "F"
+            letter = "F"
 
-        self.passed_gate = self.composite_score >= self.min_passing_score
+        object.__setattr__(self, "letter_grade", letter)
+        object.__setattr__(self, "passed_gate", self.composite_score >= self.min_passing_score)
 
 
-class ImpactNode(BaseModel):
+class ImpactNode(_FrozenDTO):
     symbol: str
     file_path: str
     depth: int = 1
@@ -140,7 +149,7 @@ class ImpactNode(BaseModel):
     relationship: str = "CALLS"  # CALLS | IMPORTS | INHERITS
 
 
-class BlastRadiusReport(BaseModel):
+class BlastRadiusReport(_FrozenDTO):
     target: str
     target_type: str = "SYMBOL"  # SYMBOL | FILE
     total_impacted_files: int = 0
@@ -151,6 +160,8 @@ class BlastRadiusReport(BaseModel):
 
 
 class AgentSpan(BaseModel):
+    """Mutable runtime telemetry span handle populated between start_span() and end_span()."""
+
     trace_id: str
     span_id: str
     parent_span_id: str | None = None
@@ -164,7 +175,7 @@ class AgentSpan(BaseModel):
     error_message: str | None = None
 
 
-class TraceReport(BaseModel):
+class TraceReport(_FrozenDTO):
     trace_id: str
     root_span_name: str = "workflow.root"
     total_spans: int = 0
@@ -174,7 +185,7 @@ class TraceReport(BaseModel):
     status: str = "OK"
 
 
-class SurgicalTestReport(BaseModel):
+class SurgicalTestReport(_FrozenDTO):
     base_branch: str = "main"
     changed_files: list[str] = Field(default_factory=list)
     affected_tests: list[str] = Field(default_factory=list)
@@ -187,27 +198,27 @@ class SurgicalTestReport(BaseModel):
     passed: bool = True
 
 
-class ChoiceDecision(BaseModel):
+class ChoiceDecision(_FrozenDTO):
     choice: str
     confidence: float = Field(ge=0.0, le=1.0)
     probabilities: dict[str, float] = Field(default_factory=dict)
     rationale: str | None = None
 
 
-class NoulDecision(BaseModel):
+class NoulDecision(_FrozenDTO):
     decision: bool
     probability: float = Field(ge=0.0, le=1.0)
     rationale: str | None = None
 
 
-class ScoreDecision(BaseModel):
+class ScoreDecision(_FrozenDTO):
     score: int | float
     level: str | None = None
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     rationale: str | None = None
 
 
-class SystemOneReport(BaseModel):
+class SystemOneReport(_FrozenDTO):
     task: str
     engine_name: str = "heuristic"
     duration_ms: float = 0.0
@@ -219,7 +230,7 @@ class SystemOneReport(BaseModel):
     requires_human_approval: bool = False
 
 
-class TrainingSample(BaseModel):
+class TrainingSample(_FrozenDTO):
     instruction: str = Field(min_length=1)
     input: str = ""
     output: str = Field(min_length=1)
@@ -227,7 +238,7 @@ class TrainingSample(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
-class DatasetReport(BaseModel):
+class DatasetReport(_FrozenDTO):
     total_samples: int = 0
     task_distribution: dict[str, int] = Field(default_factory=dict)
     source: str = "corporate-engineer-synthetic"
@@ -235,20 +246,20 @@ class DatasetReport(BaseModel):
     hash_sha256: str = ""
 
 
-class DatasetExportConfig(BaseModel):
+class DatasetExportConfig(_FrozenDTO):
     format: str = "jsonl"  # jsonl | alpaca | chatml
     include_metadata: bool = True
     train_test_split: float = 0.8
 
 
-class FailureActionDecision(BaseModel):
+class FailureActionDecision(_FrozenDTO):
     action: str  # retry | rollback | dispatch_agent
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     target_agent: str | None = None
     rationale: str | None = None
 
 
-class ContextPruningReport(BaseModel):
+class ContextPruningReport(_FrozenDTO):
     original_symbols_count: int = 0
     pruned_symbols_count: int = 0
     original_tokens_estimate: int = 0
@@ -257,7 +268,7 @@ class ContextPruningReport(BaseModel):
     retained_symbols: list[str] = Field(default_factory=list)
 
 
-class MCPServerDefinition(BaseModel):
+class MCPServerDefinition(_FrozenDTO):
     command: str | None = None
     args: list[str] = Field(default_factory=list)
     env: dict[str, str] = Field(default_factory=dict)
@@ -269,11 +280,11 @@ class MCPServerDefinition(BaseModel):
     reset_timeout_seconds: float = 30.0
 
 
-class MCPConfigFile(BaseModel):
+class MCPConfigFile(_FrozenDTO):
     mcpServers: dict[str, MCPServerDefinition] = Field(default_factory=dict)
 
 
-class MCPNamespacedTool(BaseModel):
+class MCPNamespacedTool(_FrozenDTO):
     server_name: str
     tool_name: str
     namespaced_name: str
@@ -281,7 +292,7 @@ class MCPNamespacedTool(BaseModel):
     input_schema: dict[str, Any] = Field(default_factory=dict)
 
 
-class MCPHubStatus(BaseModel):
+class MCPHubStatus(_FrozenDTO):
     total_servers: int = 0
     active_servers: list[str] = Field(default_factory=list)
     circuit_states: dict[str, str] = Field(default_factory=dict)
@@ -289,7 +300,7 @@ class MCPHubStatus(BaseModel):
     tools_by_server: dict[str, int] = Field(default_factory=dict)
 
 
-class FixDetail(BaseModel):
+class FixDetail(_FrozenDTO):
     file_path: str
     rule_name: str
     line_number: int = 1
@@ -298,7 +309,7 @@ class FixDetail(BaseModel):
     fixed_snippet: str = ""
 
 
-class FixReport(BaseModel):
+class FixReport(_FrozenDTO):
     total_files_analyzed: int = 0
     files_modified: int = 0
     fixes_applied: list[FixDetail] = Field(default_factory=list)
@@ -307,7 +318,7 @@ class FixReport(BaseModel):
     success: bool = True
 
 
-class StorageTarget(BaseModel):
+class StorageTarget(_FrozenDTO):
     category: str  # "cache", "model", "audio_cache", "temp"
     name: str  # "gpt4all_model", "ollama_model", "spotify_cache", "pip_cache"
     path: str
@@ -316,7 +327,7 @@ class StorageTarget(BaseModel):
     description: str = ""
 
 
-class StorageCleanResult(BaseModel):
+class StorageCleanResult(_FrozenDTO):
     target_name: str
     path: str
     freed_bytes: int = 0
@@ -324,14 +335,14 @@ class StorageCleanResult(BaseModel):
     error: str | None = None
 
 
-class StorageOptimizationReport(BaseModel):
+class StorageOptimizationReport(_FrozenDTO):
     total_freed_bytes: int = 0
     total_freed_gb: float = 0.0
     results: list[StorageCleanResult] = Field(default_factory=list)
     dry_run: bool = False
 
 
-class EngineLatencyStats(BaseModel):
+class EngineLatencyStats(_FrozenDTO):
     p50_ms: float = 0.0
     p95_ms: float = 0.0
     p99_ms: float = 0.0
@@ -340,7 +351,7 @@ class EngineLatencyStats(BaseModel):
     max_ms: float = 0.0
 
 
-class EngineBenchmarkResult(BaseModel):
+class EngineBenchmarkResult(_FrozenDTO):
     engine_name: str
     total_samples: int = 0
     successful_runs: int = 0
@@ -353,7 +364,7 @@ class EngineBenchmarkResult(BaseModel):
     error_summary: list[str] = Field(default_factory=list)
 
 
-class BenchmarkReport(BaseModel):
+class BenchmarkReport(_FrozenDTO):
     timestamp: str
     dataset_path: str
     sample_count: int = 0
@@ -365,6 +376,8 @@ class BenchmarkReport(BaseModel):
 
 
 class SwarmMember(BaseModel):
+    """Mutable runtime worker handle updated under RLock during SwarmCoordinator dispatch."""
+
     agent_id: str
     role: str
     task_prompt: str = ""
@@ -372,7 +385,7 @@ class SwarmMember(BaseModel):
     status: str = "IDLE"  # IDLE, WORKING, COMPLETED, FAILED
 
 
-class SwarmTaskResult(BaseModel):
+class SwarmTaskResult(_FrozenDTO):
     agent_id: str
     role: str
     output: str
@@ -382,7 +395,7 @@ class SwarmTaskResult(BaseModel):
     error: str | None = None
 
 
-class SwarmGoalReport(BaseModel):
+class SwarmGoalReport(_FrozenDTO):
     goal: str
     swarm_name: str
     total_agents: int = 0
@@ -394,7 +407,7 @@ class SwarmGoalReport(BaseModel):
     recommendations: list[str] = Field(default_factory=list)
 
 
-class RevisedPromptSpec(BaseModel):
+class RevisedPromptSpec(_FrozenDTO):
     raw_prompt: str
     target_domain: str = "general"
     core_intent: str = ""
@@ -410,7 +423,7 @@ class RevisedPromptSpec(BaseModel):
     timestamp: str = ""
 
 
-class RunExecutionReport(BaseModel):
+class RunExecutionReport(_FrozenDTO):
     ticket_id: str
     task_description: str
     status: str = "SUCCESS"  # SUCCESS | FAILED | AUDIT_FAILED | BUDGET_EXCEEDED | PENDING_APPROVAL
@@ -434,7 +447,7 @@ class LoraDomain(str, Enum):
     TOOL_CALLING = "TOOL_CALLING"
 
 
-class LoraTrainingSample(BaseModel):
+class LoraTrainingSample(_FrozenDTO):
     id: str
     domain: LoraDomain
     system_instruction: str = ""
@@ -445,7 +458,7 @@ class LoraTrainingSample(BaseModel):
     syntax_errors: list[str] = Field(default_factory=list)
 
 
-class LoraDatasetConfig(BaseModel):
+class LoraDatasetConfig(_FrozenDTO):
     domains: list[LoraDomain] = Field(
         default_factory=lambda: [
             LoraDomain.MOTION_REMOTION,
@@ -461,7 +474,7 @@ class LoraDatasetConfig(BaseModel):
     darkfactory_aesthetic: bool = True
 
 
-class LoraValidationReport(BaseModel):
+class LoraValidationReport(_FrozenDTO):
     total_samples: int
     valid_samples: int
     invalid_samples: int
@@ -470,7 +483,7 @@ class LoraValidationReport(BaseModel):
     is_approved: bool = True
 
 
-class LoraExportResult(BaseModel):
+class LoraExportResult(_FrozenDTO):
     train_file: str
     validation_file: str
     train_count: int
@@ -480,7 +493,7 @@ class LoraExportResult(BaseModel):
     sanitized_secrets_count: int = 0
 
 
-class AnticipationStep(BaseModel):
+class AnticipationStep(_FrozenDTO):
     step_index: int = Field(
         ge=1, description="Index of the anticipation step (1 for immediate, 2 for subsequent)"
     )
@@ -497,7 +510,7 @@ class AnticipationStep(BaseModel):
     tdd_scenario: str = Field(default="", description="Shift-Left TDD scenario to prove behavior")
 
 
-class AnticipationPlan(BaseModel):
+class AnticipationPlan(_FrozenDTO):
     raw_prompt: str
     target_domain: str = Field(
         default="orchestrator", description="Target domain detected by context refiner"
@@ -541,7 +554,7 @@ class RedTeamThreatCategory(str, Enum):
     DATA_INTEGRITY = "DATA_INTEGRITY"
 
 
-class RedTeamVulnerability(BaseModel):
+class RedTeamVulnerability(_FrozenDTO):
     id: str = Field(description="Unique vulnerability identifier, e.g. VULN-001")
     category: RedTeamThreatCategory = Field(description="Threat classification category")
     severity: RedTeamVulnerabilitySeverity = Field(description="Vulnerability severity level")
@@ -551,7 +564,7 @@ class RedTeamVulnerability(BaseModel):
     target_component: str = Field(default="", description="Affected module, class, or function")
 
 
-class RedTeamAttackReport(BaseModel):
+class RedTeamAttackReport(_FrozenDTO):
     plan_id: str = Field(description="Identifier of the target plan or ticket")
     total_vulnerabilities: int = Field(default=0, description="Total detected flaws")
     vulnerabilities: list[RedTeamVulnerability] = Field(
@@ -567,7 +580,7 @@ class RedTeamAttackReport(BaseModel):
     timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
-class TranscendenceHardening(BaseModel):
+class TranscendenceHardening(_FrozenDTO):
     vulnerability_id: str = Field(description="Reference to targeted RedTeamVulnerability id")
     original_weakness: str = Field(description="Summary of the original vulnerability")
     transcendence_strategy: str = Field(
@@ -579,7 +592,7 @@ class TranscendenceHardening(BaseModel):
     )
 
 
-class TranscendencePlan(BaseModel):
+class TranscendencePlan(_FrozenDTO):
     plan_id: str = Field(description="Plan or ticket identifier")
     hardenings: list[TranscendenceHardening] = Field(
         default_factory=list, description="Hardening mappings"
@@ -594,7 +607,7 @@ class TranscendencePlan(BaseModel):
     timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
-class ChaosTestCase(BaseModel):
+class ChaosTestCase(_FrozenDTO):
     case_id: str = Field(description="Identifier for chaos scenario, e.g. CHAOS-001")
     vulnerability_id: str = Field(default="", description="Related vulnerability identifier")
     name: str = Field(description="Descriptive name of chaos test")
@@ -613,7 +626,7 @@ class RedTeamVerdictStatus(str, Enum):
     BYPASSED = "BYPASSED"
 
 
-class AdversarialVerdict(BaseModel):
+class AdversarialVerdict(_FrozenDTO):
     status: RedTeamVerdictStatus = Field(description="Final adversarial status")
     iterations_completed: int = Field(default=1, description="Number of dialectical rounds")
     unresolved_vulnerabilities: list[str] = Field(
@@ -628,7 +641,7 @@ class AdversarialVerdict(BaseModel):
     timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
-class DialecticalLoopResult(BaseModel):
+class DialecticalLoopResult(_FrozenDTO):
     plan_id: str = Field(description="Plan identifier")
     initial_attack: RedTeamAttackReport = Field(description="Phase 1.5 attack report")
     transcendence: TranscendencePlan | None = Field(
@@ -647,7 +660,7 @@ class DialecticalLoopResult(BaseModel):
 # ==============================================================================
 
 
-class ModuleWiringStatus(BaseModel):
+class ModuleWiringStatus(_FrozenDTO):
     module_path: str = Field(description="Relative path of the module")
     is_exported: bool = Field(default=False, description="Whether primary symbols are exported")
     has_test_coverage: bool = Field(default=False, description="Whether matching test exists")
@@ -656,7 +669,7 @@ class ModuleWiringStatus(BaseModel):
     exported_symbols: list[str] = Field(default_factory=list, description="Public exported symbols")
 
 
-class WiringAuditReport(BaseModel):
+class WiringAuditReport(_FrozenDTO):
     total_modules: int = Field(default=0, description="Total source modules audited")
     connected_modules: list[str] = Field(default_factory=list, description="Fully wired modules")
     unwired_modules: list[str] = Field(

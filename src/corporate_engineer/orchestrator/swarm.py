@@ -409,22 +409,29 @@ class SwarmCoordinator:
         )
         all_ok = bool(report.results) and all(r.success and not r.error for r in report.results)
         if all_ok:
-            report.aggregated_consensus = (
+            consensus_msg = (
                 f"APPROVED: Revisão multi-perspectiva concluída por {len(roles)} especialistas "
                 f"(execution_mode={execution_mode}). "
                 "Todos os pareceres atenderam aos critérios de aceitação corporativos."
             )
-            report.recommendations.append(
-                "Consenso validado entre todas as perspectivas avaliadas."
-            )
+            recommendations = [
+                *report.recommendations,
+                "Consenso validado entre todas as perspectivas avaliadas.",
+            ]
         else:
             failed_roles = [r.role for r in report.results if not r.success or r.error]
-            report.aggregated_consensus = (
+            consensus_msg = (
                 f"REJECTED: Revisão multi-perspectiva concluída por {len(roles)} especialistas "
                 f"(execution_mode={execution_mode}). "
                 f"{report.failed_tasks} parecer(es) reprovado(s): {', '.join(failed_roles)}."
             )
-            report.recommendations.append(
-                f"Consenso reprovado: corrigir falhas reportadas em {', '.join(failed_roles)}."
-            )
-        return report
+            recommendations = [
+                *report.recommendations,
+                f"Consenso reprovado: corrigir falhas reportadas em {', '.join(failed_roles)}.",
+            ]
+        return report.model_copy(
+            update={
+                "aggregated_consensus": consensus_msg,
+                "recommendations": recommendations,
+            }
+        )

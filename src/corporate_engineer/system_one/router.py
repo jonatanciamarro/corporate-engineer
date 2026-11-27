@@ -84,17 +84,18 @@ class SystemOneRouter:
 
         report = self.engine.evaluate(combined_state, questions)
 
-        # Ajusta propriedades convenientes de nível superior
+        # Ajusta propriedades convenientes de nível superior sem mutar o contrato original
+        updates: dict[str, Any] = {}
         if "target_agent" in report.choices:
-            report.suggested_agent = report.choices["target_agent"].choice
+            updates["suggested_agent"] = report.choices["target_agent"].choice
 
         if "is_high_risk" in report.nouls:
             is_risky = report.nouls["is_high_risk"].decision
-            report.requires_human_approval = is_risky
+            updates["requires_human_approval"] = is_risky
             if is_risky:
-                report.risk_level = "HIGH"
+                updates["risk_level"] = "HIGH"
 
-        return report
+        return report.model_copy(update=updates) if updates else report
 
     def classify_commit(self, git_diff_or_message: str) -> ChoiceDecision:
         """Classifica o tipo de commit convencional com base no diff ou na descrição da mudança."""

@@ -65,8 +65,8 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0037` | Suporte Real a `text/event-stream` (SSE) no `RemoteMCPSSEClient` | `INTEGRATION` | Média (M) | `IMPLEMENTED` | `2026-11-26` |
 | `IMP-0038` | Executores Plugáveis Reais no `SwarmCoordinator` & `AutonomousEngineeringGraph` | `ORCHESTRATION` | Alta (L) | `IMPLEMENTED` | `2026-11-26` |
 | `IMP-0039` | Auditoria por Imports AST Reais no `CapabilityWiringAuditor` | `QUALITY` | Baixa-Média (S-M) | `IMPLEMENTED` | `2026-11-26` |
-| `IMP-0040` | Imutabilidade Estrita (`ConfigDict(frozen=True)`) nos Modelos Pydantic v2 | `MAINTAINABILITY` | Média (M) | `SAVED_NOT_APPROVED` | `2026-11-26` |
-| `IMP-0041` | Curadoria e Enxugamento de `.agents/skills/` (DAILY vs LIBRARY) | `MAINTAINABILITY` | Baixa-Média (S-M) | `SAVED_NOT_APPROVED` | `2026-11-26` |
+| `IMP-0040` | Imutabilidade Estrita (`ConfigDict(frozen=True)`) nos Modelos Pydantic v2 | `MAINTAINABILITY` | Média (M) | `IMPLEMENTED` | `2026-11-26` |
+| `IMP-0041` | Curadoria e Enxugamento de `.agents/skills/` (DAILY vs LIBRARY) | `MAINTAINABILITY` | Baixa-Média (S-M) | `IMPLEMENTED` | `2026-11-26` |
 
 ---
 
@@ -737,7 +737,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0040: Imutabilidade Estrita (`ConfigDict(frozen=True)`) nos Modelos Pydantic v2
 - **Categoria**: `MAINTAINABILITY` | `QUALITY`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-035`)
 - **Data de Descoberta**: 2026-11-26
 - **Problema / Limitação Atual**: Os DTOs em `src/corporate_engineer/models.py` são mutáveis por padrão, permitindo mutação in-place em relatórios e estados, contrariando a regra de imutabilidade do projeto.
 - **Solução Proposta**: Adotar `model_config = ConfigDict(frozen=True)` nos DTOs de contrato/relatório e atualizar pontos de construção para usar `model_copy(update=...)`.
@@ -748,11 +748,11 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 ### 🔹 IMP-0041: Curadoria e Enxugamento de `.agents/skills/` (DAILY vs LIBRARY)
 - **Categoria**: `MAINTAINABILITY`
-- **Status**: `SAVED_NOT_APPROVED`
+- **Status**: `IMPLEMENTED` (Ref: `ADR-035`)
 - **Data de Descoberta**: 2026-11-26
 - **Problema / Limitação Atual**: O diretório `.agents/skills/` contém 331 pastas (em sua maioria skills genéricas de outras stacks como Perl, Yoruba, Cisco IOS, Laravel, Swift), gerando ruído visual e impressão de bloat gerado por IA na avaliação do repositório.
 - **Solução Proposta**: Manter apenas as skills core usadas pelo `corporate-engineer` (Python, TDD, Security, MCP, Corp-Pipeline, Architecture) e mover ou referenciar o catálogo externo via documentação/índice sob demanda.
-- **Componentes Afetados**: `.agents/skills/`, `.agents/orchestration/skills-registry.md`.
+- **Componentes Afetados**: `.agents/skills/`, `.agents/skills-library/`, `.agents/orchestration/skills-registry.md`, `.agents/ecc-install-state.json`.
 - **Complexidade**: Baixa-Média (S-M).
 
 

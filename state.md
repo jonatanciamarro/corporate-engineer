@@ -14,20 +14,34 @@
 | **Branch Ativa** | `feat/IMP-0037-p2-sse-swarm-wiring` | 🟢 Baseada em `feat/IMP-0036-p1-cli-rag-system-one` (`f721594`); suíte 403/403 PASS, 0 erros Ruff/Mypy |
 | **Ambiente Local** | `.venv` (Python 3.11.9) | 🟢 Ambiente virtual ativo (`--system-site-packages` + `.pth` apontando para `src/`) |
 | **Armazenamento Total** | 🟢 **74.6 GB Livres (Multi-Disco)** | C: 20.77 GB, D: 17.85 GB, E: 35.99 GB, F: 24.49 GB (+27.9 GB recuperados) |
-| **Testes (Pytest + Hypothesis)** | 🟢 **403/403 PASS** | Execução completa em 441.29s (inclui 23 novos testes TDD P2 para `IMP-0037`, `IMP-0038`, `IMP-0039`) |
-| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (179 arquivos formatados) |
-| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 104 arquivos fonte validados estritamente |
+| **Testes (Pytest + Hypothesis)** | 🟢 **409/409 PASS** | Execução completa em 127.40s (inclui 6 novos testes TDD P3 em `test_p3_immutability_and_skills_curation.py`) |
+| **Linter & Formatação (Ruff)** | 🟢 **0 Erros** | Validação 100% limpa com Ruff (182 arquivos formatados) |
+| **Tipagem Estática (Mypy)** | 🟢 **0 Erros** | 105 arquivos fonte validados estritamente |
 | **Scanner de Segredos** | 🟢 **0 Vazamentos** | Validado pelo `secret_scanner.py` e `LoraVertexExporter` unificado (`IMP-0034`) |
-| **Wiring & Scorecard EDD** | 🟢 **100% Wired** | `audit --wiring` 100% conectado via análise AST real (`PASS`) |
+| **Wiring & Scorecard EDD** | 🟢 **100% Wired** | `audit --wiring` 48/48 módulos conectados (`PASS`); Scorecard `92.34/100 (Grade A)` |
 | **Orquestrador Central** | 🟢 **Corp-Pipeline Always-On Ativo** | Frontmatter `trigger: always_on` ativo em `corp-pipeline-orchestrator.md` |
-| **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` com links relativos portáveis e ondas P0–P3 (`IMP-0034`–`IMP-0041`) |
+| **Registros de Capacidades** | 🟢 **7 Registros Canônicos** | `.agents/orchestration/` com ondas P0–P3 (`IMP-0034`–`IMP-0041` 100% `IMPLEMENTED`) e curadoria `21 DAILY / 310 LIBRARY` |
 | **Lifecycle Hooks E2E** | 🟢 **5 Hooks Ativos com run_hook.py** | `.agents/hooks.json` com dispatch dinâmico seguro em `run_hook.py` |
 
 ---
 
 ## 2. O Que Foi Feito Recentemente
 
-### Sessão Atual (Onda P2 via Senior Swarm: `IMP-0037` + `IMP-0038` + `IMP-0039` / `ADR-034` — SSE Real, Executores Plugáveis & Auditoria AST):
+### Sessão Atual (Onda P3 via `SwarmCoordinator` `RoleExecutor` & Analisadores Determinísticos: `IMP-0040` + `IMP-0041` / `ADR-035`):
+1. **Imutabilidade Estrita Pydantic v2 (`IMP-0040`)**:
+   - `src/corporate_engineer/models.py`: introdução da base `_FrozenDTO(BaseModel)` com `model_config = ConfigDict(frozen=True)` aplicada a **55 modelos** de contrato, estado e relatório; preservação intencional e documentada apenas dos 2 *handles* mutáveis de execução (`SwarmMember` e `AgentSpan`); atualização de `SemanticEvaluationReport.model_post_init()` via `object.__setattr__`.
+   - `src/corporate_engineer/orchestrator/graph.py`: atualização de `record_iteration`, `step_plan`, `step_tdd`, `step_implement`, `step_audit` e `run_pipeline` para `self.state.model_copy(update=...)`.
+   - `src/corporate_engineer/orchestrator/swarm.py`: atualização de `SwarmCoordinator.run_consensus()` para retornar `report.model_copy(update=...)`.
+   - `src/corporate_engineer/system_one/router.py`: atualização de `triage_quality_gate()` para `report.model_copy(update=...)`.
+   - `src/corporate_engineer/lora/validator.py`: remoção de mutação in-place em `validate_sample()` e adição de `validate_sample_model()` retornando cópia imutável.
+2. **Curadoria `DAILY` vs `LIBRARY` em `.agents/skills/` (`IMP-0041`)**:
+   - Execução coordenada via `SwarmCoordinator(role_executor=...)` mantendo exatamente **21 skills `DAILY`** em `.agents/skills/` (13 `DAILY` canônicas + 8 skills vinculadas diretamente a workflows/governança/RAG) e realocando **310 skills `LIBRARY`** off-stack para `.agents/skills-library/`.
+   - Sincronização de `.agents/orchestration/skills-registry.md`, `.agents/ecc-install-state.json` e `.agents/orchestration/improvement-backlog.md` (`IMP-0040` e `IMP-0041` -> `IMPLEMENTED`).
+3. **Shift-Left TDD, Governança & Verificação Swarm**:
+   - [ADR-035](docs/adr/ADR-035-p3-frozen-pydantic-dtos-and-skills-curation.md) e 6 novos testes em `tests/test_p3_immutability_and_skills_curation.py` (**409/409 PASS** em 127.40s).
+   - Consenso determinístico pós-implementação via `SwarmCoordinator` (`architect`, `security-reviewer`, `code-reviewer`, `rag-pipeline-reviewer`): **APPROVED** (`48/48` wired, `0` secrets, score `92.34/100` Grade `A`, `577` símbolos AST).
+
+### Sessão Anterior (Onda P2 via Senior Swarm: `IMP-0037` + `IMP-0038` + `IMP-0039` / `ADR-034` — SSE Real, Executores Plugáveis & Auditoria AST):
 1. **Suporte Real a `text/event-stream` (`IMP-0037` — `sse-architect`)**:
    - `src/corporate_engineer/mcp/client.py`: implementação de `_extract_content_type`, `_looks_like_sse`, `_extract_sse_events`, `_parse_sse_payload` e `_parse_response_payload` em `RemoteMCPSSEClient` suportando respostas `application/json` e `text/event-stream` (multi-linha `data:`, comentários `:`, `[DONE]`, casamento de `id`, guarda para headers `MagicMock` e rastreamento de falhas no `CircuitBreaker`).
    - 12 novos testes em `tests/test_mcp_client.py`.
@@ -532,6 +546,7 @@
 
 | Data/Hora (ISO) | Autor | Resumo da Alteração |
 |---|---|---|
+| `2026-11-27T19:49:00-03:00` | Corp-Pipeline Master Orchestrator (Swarm P3) | Conclusão da Onda P3 (`IMP-0040` + `IMP-0041` / `ADR-035`) orquestrada via `SwarmCoordinator` (`RoleExecutor` + analisadores determinísticos reais): aplicação de `ConfigDict(frozen=True)` via `_FrozenDTO` em 55 modelos Pydantic v2 de contrato/estado/relatório (`models.py`), migração de consumidores (`graph.py`, `swarm.py`, `router.py`, `validator.py`) para `model_copy(update=...)` e curadoria de `.agents/skills/` para 21 skills `DAILY` ativas + 310 `LIBRARY` em `.agents/skills-library/` com atualização de `skills-registry.md`, `ecc-install-state.json` e `improvement-backlog.md`. Pre-Flight aprovado com **409/409 testes PASS** (127.40s, incluindo 6 novos testes TDD P3), 0 erros Ruff (182 arquivos), 0 erros Mypy (105 arquivos), Secret Scan PASS, `audit --wiring` PASS (`48/48`) e consenso determinístico do `SwarmCoordinator` **APPROVED** (score `92.34/100` Grade `A`, `577` símbolos AST). |
 | `2026-11-26T05:13:00-03:00` | Corp-Pipeline Master Orchestrator (Senior Swarm P2) | Execução da Onda P2 (`IMP-0037` + `IMP-0038` + `IMP-0039` / `ADR-034`) via Senior Swarm (`sse-architect`, `orch-architect`, `wiring-auditor`, `staff-verifier`): suporte real a `text/event-stream` no `RemoteMCPSSEClient` (12 testes), protocolo `RoleExecutor` + analisadores determinísticos reais no `SwarmCoordinator` e `code_executor` + `execution_mode` em `AutonomousEngineeringGraph.run_pipeline()` (5 testes), e auditoria AST real em `CapabilityWiringAuditor` eliminando falsos positivos de comentários/strings (6 testes). Pre-Flight aprovado com 403/403 testes PASS (441.29s), 0 erros Ruff/Mypy/Secret Scan e Wiring Audit PASS. |
 | `2026-11-26T03:40:00-03:00` | Corp-Pipeline Master Orchestrator | Sincronização da branch empilhada `feat/IMP-0036-p1-cli-rag-system-one` com `feat/IMP-0035-p0-security-and-repo-hygiene` (`086aabe`) e `origin/main` (`b7635fc`). |
 | `2026-11-26T03:33:00-03:00` | Corp-Pipeline Master Orchestrator | Resolução do conflito modify/delete em `src/corporate_engineer.egg-info/SOURCES.txt` na PR #35 (`feat/IMP-0035-p0-security-and-repo-hygiene` vs `origin/main` `b7635fc`, originado pelo commit automático `af4db0f` do `self-heal.yml` na PR #34): merge de `origin/main` preservando a remoção definitiva de `src/corporate_engineer.egg-info/` do rastreamento Git. |

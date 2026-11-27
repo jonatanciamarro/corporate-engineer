@@ -49,21 +49,30 @@
       "tdd-guide.md"
     ],
     "daily_skills": [
+      "agent-sort",
+      "agentic-engineering",
+      "api-design",
+      "architecture-decision-records",
+      "content-hash-cache-pattern",
+      "conventional-commit-review",
       "corp-pipeline",
+      "ecc-guide",
       "grill-me_v2",
+      "mcp-server-patterns",
+      "orch-add-feature",
+      "orch-change-feature",
+      "orch-fix-defect",
+      "orch-refine-code",
       "plan_v2",
       "python-patterns",
       "python-testing",
-      "tdd-workflow",
       "security-review",
-      "api-design",
-      "mcp-server-patterns",
-      "agentic-engineering",
-      "conventional-commit-review",
-      "verification-loop",
-      "agent-sort"
+      "security-scan",
+      "tdd-workflow",
+      "verification-loop"
     ],
-    "library_skills_count": 318
+    "library_skills_count": 310,
+    "library_skills_path": ".agents/skills-library"
   },
   "verification_commands": {
     "test": "pytest",

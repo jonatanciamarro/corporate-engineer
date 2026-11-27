@@ -1,13 +1,13 @@
 # Registro de Skills do Ecossistema (`skills-registry.md`)
 
-> **Catálogo de Conhecimento e Procedimentos Reutilizáveis**  
-> *Mapeamento de skills essenciais para operação diária e catálogo de 318+ skills da biblioteca sob demanda.*
+> **Catálogo Curado de Conhecimento e Procedimentos Reutilizáveis (`IMP-0041` / `ADR-035`)**  
+> *Separação estrita entre 21 skills `DAILY` ativas em `.agents/skills/` e 310 skills `LIBRARY` sob demanda em `.agents/skills-library/`.*
 
 ---
 
-## 1. Skills de Operação Diária (DAILY Core Skills)
+## 1. Skills de Operação Diária (DAILY Core Skills — `.agents/skills/`)
 
-Estas skills foram selecionadas e perfiladas especificamente para o ecossistema `corporate-engineer`. São ativadas prioritariamente pelo orquestrador:
+Estas 21 skills foram selecionadas e perfiladas por evidência do repositório (`agent-sort` + workflows ativos) especificamente para o stack Python 3.11 / Pydantic v2 / TDD / Segurança / MCP / AST / Corp-Pipeline do `corporate-engineer`:
 
 | Skill | Status | Finalidade Operacional | Gatilho / Invocação | Localização |
 |---|---|---|---|---|
@@ -18,20 +18,28 @@ Estas skills foram selecionadas e perfiladas especificamente para o ecossistema 
 | `python-testing` | `AVAILABLE` | Estratégias de teste com Pytest, fixtures, mocks, parametrização e cobertura. | Contexto de Testes | [.agents/skills/python-testing](../skills/python-testing/SKILL.md) |
 | `tdd-workflow` | `AVAILABLE` | Metodologia rigorosa Test-Driven Development (Red-Green-Refactor) com 80%+ cobertura. | `/tdd` | [.agents/skills/tdd-workflow](../skills/tdd-workflow/SKILL.md) |
 | `security-review` | `AVAILABLE` | Checklist corporativo de segurança: segredos, sanitização, autenticação e autorização. | `/security-scan` | [.agents/skills/security-review](../skills/security-review/SKILL.md) |
+| `security-scan` | `AVAILABLE` | Auditoria e varredura operacional de segurança alinhada ao workflow `security-scan.md`. | `/security-scan` | [.agents/skills/security-scan](../skills/security-scan/SKILL.md) |
 | `api-design` | `AVAILABLE` | Padrões de design de APIs RESTful, contratos DTO e tratamento padronizado de erros. | Design de Interfaces | [.agents/skills/api-design](../skills/api-design/SKILL.md) |
 | `mcp-server-patterns` | `AVAILABLE` | Padrões para clientes e servidores MCP: stdio, SSE, schemas de ferramentas e validação. | Módulo MCP | [.agents/skills/mcp-server-patterns](../skills/mcp-server-patterns/SKILL.md) |
 | `agentic-engineering` | `AVAILABLE` | Engenharia orientada a agentes com decomposição de tarefas e execução orientada a evals. | Orquestração | [.agents/skills/agentic-engineering](../skills/agentic-engineering/SKILL.md) |
-| `conventional-commit-review`| `AVAILABLE` | Auditoria de diffs para redação de commits semânticos no padrão Conventional Commits. | Pré-commit | [.agents/skills/conventional-commit-review](../skills/conventional-commit-review/SKILL.md) |
+| `conventional-commit-review` | `AVAILABLE` | Auditoria de diffs para redação de commits semânticos no padrão Conventional Commits. | Pré-commit | [.agents/skills/conventional-commit-review](../skills/conventional-commit-review/SKILL.md) |
 | `verification-loop` | `AVAILABLE` | Ciclo contínuo de verificação pós-implementação com checagem estática e dinâmica. | Pós-implementação | [.agents/skills/verification-loop](../skills/verification-loop/SKILL.md) |
 | `agent-sort` | `AVAILABLE` | Auditoria e perfilamento de repositório para distribuição de skills DAILY vs LIBRARY. | `/agent-sort` | [.agents/skills/agent-sort](../skills/agent-sort/SKILL.md) |
+| `ecc-guide` | `AVAILABLE` | Guia canônico do ecossistema ECC consultando a superfície real do repositório. | Workflow `ecc-guide` | [.agents/skills/ecc-guide](../skills/ecc-guide/SKILL.md) |
+| `orch-add-feature` | `AVAILABLE` | Orquestração ponta a ponta de nova funcionalidade via agentes especializados. | Workflow `orch-add-feature` | [.agents/skills/orch-add-feature](../skills/orch-add-feature/SKILL.md) |
+| `orch-change-feature` | `AVAILABLE` | Alteração de comportamento existente com atualização prévia de especificações e testes. | Orquestração | [.agents/skills/orch-change-feature](../skills/orch-change-feature/SKILL.md) |
+| `orch-fix-defect` | `AVAILABLE` | Correção de defeitos com reprodução em teste regressivo falhando (RED→GREEN). | Workflow `orch-fix-defect` | [.agents/skills/orch-fix-defect](../skills/orch-fix-defect/SKILL.md) |
+| `orch-refine-code` | `AVAILABLE` | Refatoração preservando comportamento sob suíte verde contínua. | Workflow `orch-refine-code` | [.agents/skills/orch-refine-code](../skills/orch-refine-code/SKILL.md) |
+| `architecture-decision-records` | `AVAILABLE` | Padronização formal de ADRs em `docs/adr/ADR-<NUM>-<slug>.md`. | Governança | [.agents/skills/architecture-decision-records](../skills/architecture-decision-records/SKILL.md) |
+| `content-hash-cache-pattern` | `AVAILABLE` | Padrão de cache incremental baseado em hash SHA-256 utilizado pelo `CachedASTCodebaseIndexer`. | Módulo RAG/AST | [.agents/skills/content-hash-cache-pattern](../skills/content-hash-cache-pattern/SKILL.md) |
 
 ---
 
-## 2. Catálogo de Skills da Biblioteca Sob Demanda (LIBRARY)
+## 2. Catálogo de Skills da Biblioteca Sob Demanda (LIBRARY — `.agents/skills-library/`)
 
-O repositório possui **318 skills adicionais** instaladas em `.agents/skills/`, gerenciadas pelo Antigravity via **progressive disclosure** (apenas nomes e descrições são visíveis inicialmente; o conteúdo completo de `SKILL.md` é carregado apenas quando a skill é ativada).
+O repositório preserva **310 skills adicionais** sob demanda em [`.agents/skills-library/`](../skills-library/) (fora do diretório auto-carregado `.agents/skills/`), evitando sobrecarga de orçamento de contexto e ruído visual sem perda de capacidade.
 
-### Principais Domínios da Biblioteca:
+### Principais Domínios Disponíveis Sob Demanda:
 1. **Engenharia de Backend & APIs**:
    - `fastapi-patterns`, `django-patterns`, `django-celery`, `django-tdd`, `nestjs-patterns`, `springboot-patterns`, `springboot-tdd`, `golang-patterns`, `golang-testing`, `rust-patterns`, `rust-testing`, `dotnet-patterns`.
 2. **Dados, Persistência & Bancos**:
@@ -47,6 +55,7 @@ O repositório possui **318 skills adicionais** instaladas em `.agents/skills/`,
 
 ---
 
-## 3. Diretriz de Progressive Disclosure
+## 3. Diretriz de Progressive Disclosure & Economia de Contexto
 
-O Corp-Pipeline Orchestrator consulta o catálogo de skills conforme o domínio da tarefa, garantindo economia de tokens de contexto e precisão técnica cirúrgica.
+- Somente as **21 skills `DAILY`** residem em `.agents/skills/` para carregamento imediato.
+- Qualquer skill `LIBRARY` pode ser consultada sob demanda diretamente em `.agents/skills-library/<nome-da-skill>/SKILL.md` ou promovida via `agent-sort` caso o stack do projeto se expanda.

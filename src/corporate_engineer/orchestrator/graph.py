@@ -36,25 +36,38 @@ class AutonomousEngineeringGraph:
         return Path(self.task.workspace_path)
 
     def record_iteration(self) -> int:
-        self.state.iteration_count += 1
-        return self.state.iteration_count
+        next_count = self.state.iteration_count + 1
+        self.state = self.state.model_copy(update={"iteration_count": next_count})
+        return next_count
 
     def is_budget_exceeded(self) -> bool:
         return self.state.iteration_count >= self.task.max_iterations
 
     def step_plan(self, plan_text: str) -> AgentState:
         with self.tracer.span("dag.node.planning", attributes={"phase": "PLANNING"}):
-            self.record_iteration()
-            self.state.plan = plan_text
-            self.state.phase = "TDD"
+            self.state = self.state.model_copy(
+                update={
+                    "iteration_count": self.state.iteration_count + 1,
+                    "plan": plan_text,
+                    "phase": "TDD",
+                }
+            )
             return self.state
 
     def step_tdd(self, test_file: str) -> AgentState:
         with self.tracer.span("dag.node.tdd", attributes={"phase": "TDD", "test_file": test_file}):
-            self.record_iteration()
-            if test_file not in self.state.test_files:
-                self.state.test_files.append(test_file)
-            self.state.phase = "IMPLEMENT"
+            new_test_files = (
+                [*self.state.test_files, test_file]
+                if test_file not in self.state.test_files
+                else list(self.state.test_files)
+            )
+            self.state = self.state.model_copy(
+                update={
+                    "iteration_count": self.state.iteration_count + 1,
+                    "test_files": new_test_files,
+                    "phase": "IMPLEMENT",
+                }
+            )
             return self.state
 
     def step_implement(
@@ -67,27 +80,34 @@ class AutonomousEngineeringGraph:
         with self.tracer.span(
             "dag.node.implement", attributes={"phase": "IMPLEMENT", "code_file": code_file}
         ):
-            self.record_iteration()
             diff = CodeDiff(
                 file_path=code_file,
                 original_content=original_content,
                 new_content=code,
                 explanation=explanation,
             )
-            self.state.code_changes.append(diff)
-            self.state.phase = "AUDIT"
+            self.state = self.state.model_copy(
+                update={
+                    "iteration_count": self.state.iteration_count + 1,
+                    "code_changes": [*self.state.code_changes, diff],
+                    "phase": "AUDIT",
+                }
+            )
             return self.state
 
     def step_audit(self, all_passed: bool) -> AgentState:
         with self.tracer.span(
             "dag.node.audit", attributes={"phase": "AUDIT", "passed": all_passed}
         ):
-            self.record_iteration()
-            if all_passed:
-                self.state.phase = "DELIVER"
-                self.state.needs_human_approval = True
-            else:
-                self.state.phase = "IMPLEMENT"
+            next_phase = "DELIVER" if all_passed else "IMPLEMENT"
+            needs_approval = True if all_passed else self.state.needs_human_approval
+            self.state = self.state.model_copy(
+                update={
+                    "iteration_count": self.state.iteration_count + 1,
+                    "phase": next_phase,
+                    "needs_human_approval": needs_approval,
+                }
+            )
             return self.state
 
     def execute_step(self) -> AgentState:
@@ -258,9 +278,8 @@ class AutonomousEngineeringGraph:
 
             self.step_tdd(test_target)
             if affected_tests:
-                for t in affected_tests:
-                    if t not in self.state.test_files:
-                        self.state.test_files.append(t)
+                merged_tests = list(dict.fromkeys([*self.state.test_files, *affected_tests]))
+                self.state = self.state.model_copy(update={"test_files": merged_tests})
             cp2 = self.save_checkpoint()
             checkpoints_created.append(cp2.name)
 
@@ -332,7 +351,7 @@ class AutonomousEngineeringGraph:
 
             # Fase 5: Entrega (DELIVER)
             if auto_deliver:
-                self.state.needs_human_approval = False
+                self.state = self.state.model_copy(update={"needs_human_approval": False})
 
             import corporate_engineer.git_utils
 

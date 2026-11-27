@@ -324,7 +324,7 @@ class LoraSyntaxValidator:
         return True, []
 
     def validate_sample(self, sample: LoraTrainingSample) -> tuple[bool, list[str]]:
-        """Dispatches sample validation based on domain and updates sample state."""
+        """Dispatches sample validation based on domain without mutating frozen sample."""
         if sample.domain == LoraDomain.MOTION_REMOTION:
             is_valid, errors = self.validate_remotion_syntax(sample.target_response)
         elif sample.domain in (LoraDomain.MOTION_MANIM, LoraDomain.MOTION_BLENDER):
@@ -334,9 +334,12 @@ class LoraSyntaxValidator:
         else:
             is_valid, errors = True, []
 
-        sample.is_valid = is_valid
-        sample.syntax_errors = errors
         return is_valid, errors
+
+    def validate_sample_model(self, sample: LoraTrainingSample) -> LoraTrainingSample:
+        """Validates a sample and returns an immutable copy with updated validation fields."""
+        is_valid, errors = self.validate_sample(sample)
+        return sample.model_copy(update={"is_valid": is_valid, "syntax_errors": errors})
 
     def validate_batch(self, samples: list[LoraTrainingSample]) -> LoraValidationReport:
         """Validates a collection of samples and produces a consolidated report."""

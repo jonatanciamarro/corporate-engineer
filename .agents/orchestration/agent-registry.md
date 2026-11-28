@@ -1,35 +1,41 @@
 # Registro de Agentes Especializados (`agent-registry.md`)
 
-> **Catálogo de Agentes do Ecossistema Corp-Pipeline**  
-> *Mapeamento de especializações, responsabilidades, modelos recomendados, ferramentas e critérios de ativação.*
+> **Catálogo de Subagentes Nativos Antigravity & Personas de Papel do Workspace**  
+> *Separação explícita entre subagentes executáveis nativos do runtime Antigravity e templates de persona em `.agents/agents/*.md`.*
 
 ---
 
-## 1. Subagentes Especializados do Workspace (`.agents/agents/`)
+## 1. Subagentes Nativos da Plataforma Antigravity (Executáveis via `invoke_subagent` / `swarm`)
 
-| Identificador | Nome | Modelo | Status | Propósito & Ativação | Arquivo de Definição |
-|---|---|---|---|---|---|
-| `architect` | Enterprise Architect | `pro` | `AVAILABLE` | Design arquitetural, contratos DTOs formais via Pydantic v2, matriz de trade-offs e síntese de ADRs em `docs/adr/`. | [.agents/agents/architect.md](../agents/architect.md) |
-| `planner` | Project & Task Planner | `pro` | `AVAILABLE` | Decomposição técnica de épicos em tarefas granulares, PRDs e planejamento por fases. | [.agents/agents/planner.md](../agents/planner.md) |
-| `tdd-guide` | Shift-Left TDD Guide | `flash` | `AVAILABLE` | Condução do ciclo estrito TDD (RED→GREEN→IMPROVE) e geração de testes baseados em propriedades (PBT com Hypothesis). | [.agents/agents/tdd-guide.md](../agents/tdd-guide.md) |
-| `code-reviewer` | Senior Code Reviewer | `pro` | `AVAILABLE` | Revisão geral de pull requests, conformidade com padrões de codificação, imutabilidade e boas práticas de engenharia. | [.agents/agents/code-reviewer.md](../agents/code-reviewer.md) |
-| `python-reviewer` | Python Specialist Reviewer | `pro` | `AVAILABLE` | Auditoria detalhada de código Python 3.10/3.11+, tipagem estática rigorosa (`mypy`), linting (`ruff`) e performance. | [.agents/agents/python-reviewer.md](../agents/python-reviewer.md) |
-| `security-reviewer` | Corporate Security Auditor | `pro` | `AVAILABLE` | Verificação de vulnerabilidades (OWASP), credenciais/segredos expostos, injeção, autorização e least privilege. | [.agents/agents/security-reviewer.md](../agents/security-reviewer.md) |
-| `rag-pipeline-reviewer` | AST & RAG Pipeline Reviewer | `pro` | `AVAILABLE` | Auditoria de analisadores sintáticos AST (`ast_indexer.py`), grafos de herança, grafos de chamadas e code intelligence. | [.agents/agents/rag-pipeline-reviewer.md](../agents/rag-pipeline-reviewer.md) |
-| `build-error-resolver` | Surgical Build & Test Resolver | `flash` | `AVAILABLE` | Diagnóstico veloz e autocorreção cirúrgica de falhas de build, linter e testes (limite estrito: 3 tentativas). | [.agents/agents/build-error-resolver.md](../agents/build-error-resolver.md) |
-| `refactor-cleaner` | Safe Refactoring Specialist | `flash` | `AVAILABLE` | Limpeza e refatoração de código morto preservando 100% do comportamento funcional validado por testes. | [.agents/agents/refactor-cleaner.md](../agents/refactor-cleaner.md) |
-
----
-
-## 2. Subagentes Nativos da Plataforma Antigravity
+Estes são os únicos identificadores de subagentes nativos disponíveis diretamente no runtime Antigravity sem declaração prévia via `define_subagent`:
 
 | Identificador | Modelo Padrão | Status | Descrição de Uso |
 |---|---|---|---|
-| `self` | `inherit` | `AVAILABLE` | Subagente com herança completa de ferramentas e permissões do agente principal, para execução em contexto limpo e isolado. |
-| `research` | `inherit` | `AVAILABLE` | Subagente somente leitura para exploração profunda da base de código, documentações locais e pesquisa web. |
+| `research` | `inherit` | `AVAILABLE` | Subagente somente leitura para exploração profunda da base de código, documentações locais e pesquisa técnica. |
+| `self` | `inherit` | `AVAILABLE` | Subagente com herança completa de ferramentas e permissões do agente principal, para execução isolada com foco ou persona dedicada. |
 | `browser` | `flash` | `AVAILABLE_WITH_RESTRICTIONS` | Subagente navegador para interação com páginas web, dashboards visuais e workflows cliente. |
 | `image-generator` | `inherit` | `AVAILABLE` | Geração e manipulação de diagramas e artefatos de imagem baseados em prompts visuais. |
-| `swarm` | Multi-Agent | `AVAILABLE` | Orquestração paralela de múltiplos agentes em quadro de mensagens compartilhado. |
+| `swarm` | Multi-Agent | `AVAILABLE` | Orquestração paralela de múltiplos workers em quadro de mensagens compartilhado (`swarm` tool). |
+
+> **Extensão Dinâmica**: Para instanciar um subagente especializado com nome customizado durante uma sessão, utilize primeiro `define_subagent` ou adicione um worker no `swarm` injetando o prompt da persona desejada de `.agents/agents/`.
+
+---
+
+## 2. Personas de Papéis do Workspace (`.agents/agents/*.md`) & `SwarmCoordinator`
+
+Os arquivos `.agents/agents/*.md` são **templates de persona e checklists de especialidade** (não são nomes nativos pré-registrados para `invoke_subagent`). Em Python, `SwarmCoordinator` também suporta papéis com analisadores determinísticos reais e papéis que requerem `role_executor` / ferramentas MCP:
+
+| Persona / Papel | Status em `invoke_subagent` | Execução em `SwarmCoordinator` (sem `role_executor`) | Propósito & Arquivo de Definição |
+|---|---|---|---|
+| `architect` | `PERSONA_TEMPLATE` (usar via `self` / `define_subagent`) | Analisador determinístico (`CapabilityWiringAuditor`) | Arquitetura, Pydantic v2 `_FrozenDTO`, trade-offs e ADRs ([architect.md](../agents/architect.md)) |
+| `code-reviewer` | `PERSONA_TEMPLATE` (usar via `self` / `define_subagent`) | Analisador determinístico (`SemanticCodeEvaluator`) | Revisão geral, imutabilidade, padrões e scorecard AST ([code-reviewer.md](../agents/code-reviewer.md)) |
+| `security-reviewer` | `PERSONA_TEMPLATE` (usar via `self` / `define_subagent`) | Analisador determinístico (`CanonicalSecretScanner`) | Auditoria OWASP, segredos, sanitização e least privilege ([security-reviewer.md](../agents/security-reviewer.md)) |
+| `rag-pipeline-reviewer` | `PERSONA_TEMPLATE` (usar via `self` / `define_subagent`) | Analisador determinístico (`CachedASTCodebaseIndexer`) | Auditoria AST, grafos de herança, chamadas e code intelligence ([rag-pipeline-reviewer.md](../agents/rag-pipeline-reviewer.md)) |
+| `planner` | `PERSONA_TEMPLATE` (usar via `self` / `define_subagent`) | Requer `role_executor` ou tools MCP (caso contrário `SKIPPED`) | Decomposição técnica por fases e PRDs ([planner.md](../agents/planner.md)) |
+| `tdd-guide` | `PERSONA_TEMPLATE` (usar via `self` / `define_subagent`) | Requer `role_executor` ou tools MCP (caso contrário `SKIPPED`) | Ciclo Shift-Left TDD (`RED→GREEN→IMPROVE`) e PBT Hypothesis ([tdd-guide.md](../agents/tdd-guide.md)) |
+| `python-reviewer` | `PERSONA_TEMPLATE` (usar via `self` / `define_subagent`) | Requer `role_executor` ou tools MCP (caso contrário `SKIPPED`) | Python 3.11+, `mypy`, `ruff`, PEP 8 e performance ([python-reviewer.md](../agents/python-reviewer.md)) |
+| `build-error-resolver` | `PERSONA_TEMPLATE` (usar via `self` / `define_subagent`) | Requer `role_executor` ou tools MCP (caso contrário `SKIPPED`) | Diagnóstico e correção cirúrgica de falhas (limite: 3 tentativas) ([build-error-resolver.md](../agents/build-error-resolver.md)) |
+| `refactor-cleaner` | `PERSONA_TEMPLATE` (usar via `self` / `define_subagent`) | Requer `role_executor` ou tools MCP (caso contrário `SKIPPED`) | Remoção de dead code preservando comportamento verde ([refactor-cleaner.md](../agents/refactor-cleaner.md)) |
 
 ---
 

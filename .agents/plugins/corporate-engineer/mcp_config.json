@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "corporate-engineer-mcp": {
+      "command": ".venv/Scripts/python.exe",
+      "args": [
+        "-m",
+        "corporate_engineer.cli",
+        "mcp",
+        "serve",
+        "--workspace",
+        "."
+      ],
+      "env": {
+        "PYTHONPATH": "src",
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}

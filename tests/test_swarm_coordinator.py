@@ -134,7 +134,7 @@ def test_swarm_coordinator_dispatch_single_task() -> None:
 
 
 def test_swarm_coordinator_fan_out() -> None:
-    """Verifica a execução concorrente Fan-Out / Fan-In de múltiplas tarefas especializadas."""
+    """Verifica a execução concorrente Fan-Out / Fan-In com honestidade para papéis sem executor."""
     coordinator = SwarmCoordinator()
     subtasks = [
         {"role": "architect", "task": "Design dos contratos Pydantic v2"},
@@ -150,10 +150,49 @@ def test_swarm_coordinator_fan_out() -> None:
 
     assert isinstance(report, SwarmGoalReport)
     assert report.total_agents == 3
-    assert report.successful_tasks == 3
+    assert report.successful_tasks == 2
+    assert report.skipped_tasks == 1
     assert report.failed_tasks == 0
     assert len(report.results) == 3
     assert report.execution_time_ms > 0.0
+    assert not report.aggregated_consensus.startswith("APPROVED")
+
+    by_role = {r.role: r for r in report.results}
+    assert by_role["architect"].status == "COMPLETED"
+    assert by_role["security-reviewer"].status == "COMPLETED"
+    assert by_role["tdd-guide"].status == "SKIPPED"
+    assert by_role["tdd-guide"].success is False
+    assert "No role_executor or deterministic analyzer" in (by_role["tdd-guide"].error or "")
+
+    # Quando uma ferramenta MCP real é fornecida ao papel sem analisador, ele executa e aprova
+    hub = MCPEnterpriseHub()
+    hub.register_server(name="pytest_mcp", config=MCPServerDefinition(command="echo"))
+    hub.register_tool(
+        MCPNamespacedTool(
+            server_name="pytest_mcp",
+            tool_name="run_suite",
+            namespaced_name="pytest_mcp.run_suite",
+            description="Run pytest suite",
+        )
+    )
+    mcp_coordinator = SwarmCoordinator(hub=hub)
+    mcp_report = mcp_coordinator.run_fan_out(
+        goal="Construção com ferramenta MCP para tdd-guide",
+        subtasks=[
+            {"role": "architect", "task": "Design dos contratos Pydantic v2", "tools": []},
+            {
+                "role": "tdd-guide",
+                "task": "Executar testes com MCP",
+                "tools": ["pytest_mcp.run_suite"],
+            },
+            {"role": "security-reviewer", "task": "Auditoria de permissões e chaves", "tools": []},
+        ],
+        max_workers=3,
+    )
+    assert mcp_report.successful_tasks == 3
+    assert mcp_report.skipped_tasks == 0
+    assert mcp_report.failed_tasks == 0
+    assert mcp_report.aggregated_consensus.startswith("APPROVED")
 
 
 def test_swarm_coordinator_consensus() -> None:

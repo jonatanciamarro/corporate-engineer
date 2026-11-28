@@ -90,19 +90,29 @@ class ONNXNLIDecisionEngine(SystemOneEngine):
             return True
         return self._onnx_available and self.model_path.exists()
 
-    def _ensure_loaded(self) -> tuple[Any, Any] | None:
-        """Carrega sessão ONNX e tokenizer de forma thread-safe sob RLock."""
+    def _resolve_runtime(self) -> tuple[tuple[Any, Any] | None, str | None]:
+        """Load ONNX session and tokenizer thread-safely, returning fallback reason if unavailable."""
         with self._lock:
             if self._session is not None and self._tokenizer is not None:
-                return self._session, self._tokenizer
+                return (self._session, self._tokenizer), None
 
-            if not self.has_model():
+            if not self._onnx_available:
+                reason = "onnxruntime dependency unavailable"
                 if not self.fallback_to_heuristic:
                     raise FileNotFoundError(
                         f"Modelo ONNX não encontrado em '{self.model_path}' "
                         "ou biblioteca onnxruntime indisponível."
                     )
-                return None
+                return None, reason
+
+            if not self.model_path.exists():
+                reason = f"ONNX model artifact not found at '{self.model_path}'"
+                if not self.fallback_to_heuristic:
+                    raise FileNotFoundError(
+                        f"Modelo ONNX não encontrado em '{self.model_path}' "
+                        "ou biblioteca onnxruntime indisponível."
+                    )
+                return None, reason
 
             try:
                 if self._session is None:
@@ -120,7 +130,7 @@ class ONNXNLIDecisionEngine(SystemOneEngine):
 
                     self._tokenizer = Tokenizer.from_file(str(tokenizer_path))
 
-                return self._session, self._tokenizer
+                return (self._session, self._tokenizer), None
             except (ImportError, FileNotFoundError, RuntimeError, OSError, AttributeError) as exc:
                 if not self.fallback_to_heuristic:
                     if isinstance(exc, FileNotFoundError):
@@ -128,7 +138,12 @@ class ONNXNLIDecisionEngine(SystemOneEngine):
                     raise FileNotFoundError(
                         f"Falha ao inicializar runtime ONNX/tokenizer: {exc}"
                     ) from exc
-                return None
+                return None, f"ONNX runtime initialization failed: {exc}"
+
+    def _ensure_loaded(self) -> tuple[Any, Any] | None:
+        """Carrega sessão ONNX e tokenizer de forma thread-safe sob RLock."""
+        runtime, _ = self._resolve_runtime()
+        return runtime
 
     def _encode_pair(
         self, tokenizer: Any, premise: str, hypothesis: str
@@ -218,16 +233,17 @@ class ONNXNLIDecisionEngine(SystemOneEngine):
         probs = _softmax(logits)
         return logits[-1] - logits[0], probs[-1]
 
-    def _decide_choice_with_source(
+    def _decide_choice_detailed(
         self,
         state: str,
         choices: list[str] | dict[str, str],
         instructions: str | None = None,
-    ) -> tuple[ChoiceDecision, bool]:
-        runtime = self._ensure_loaded()
+    ) -> tuple[ChoiceDecision, bool, str | None]:
+        runtime, load_reason = self._resolve_runtime()
         choice_dict = choices if isinstance(choices, dict) else {c: c for c in choices}
         if runtime is None or not choice_dict:
-            return self._heuristic.decide_choice(state, choices, instructions), False
+            reason = load_reason or "Empty choice criteria; fell back to heuristic engine"
+            return self._heuristic.decide_choice(state, choices, instructions), False, reason
 
         session, tokenizer = runtime
         premise = f"{instructions}\n{state}" if instructions else state
@@ -250,21 +266,39 @@ class ONNXNLIDecisionEngine(SystemOneEngine):
                     rationale=f"ONNX NLI logit inference for choice '{best_choice[0]}'",
                 ),
                 True,
+                None,
             )
-        except Exception:
+        except Exception as exc:
             if self.fallback_to_heuristic:
-                return self._heuristic.decide_choice(state, choices, instructions), False
+                return (
+                    self._heuristic.decide_choice(state, choices, instructions),
+                    False,
+                    f"ONNX NLI inference error ({type(exc).__name__}): {exc}",
+                )
             raise
 
-    def _decide_noul_with_source(
+    def _decide_choice_with_source(
+        self,
+        state: str,
+        choices: list[str] | dict[str, str],
+        instructions: str | None = None,
+    ) -> tuple[ChoiceDecision, bool]:
+        decision, used_onnx, _ = self._decide_choice_detailed(state, choices, instructions)
+        return decision, used_onnx
+
+    def _decide_noul_detailed(
         self,
         state: str,
         hypothesis: str,
         instructions: str | None = None,
-    ) -> tuple[NoulDecision, bool]:
-        runtime = self._ensure_loaded()
+    ) -> tuple[NoulDecision, bool, str | None]:
+        runtime, load_reason = self._resolve_runtime()
         if runtime is None:
-            return self._heuristic.decide_noul(state, hypothesis, instructions), False
+            return (
+                self._heuristic.decide_noul(state, hypothesis, instructions),
+                False,
+                load_reason or "ONNX NLI runtime unavailable",
+            )
 
         session, tokenizer = runtime
         premise = f"{instructions}\n{state}" if instructions else state
@@ -278,22 +312,37 @@ class ONNXNLIDecisionEngine(SystemOneEngine):
                     rationale=f"ONNX NLI entailment inference (prob={prob:.2f})",
                 ),
                 True,
+                None,
             )
-        except Exception:
+        except Exception as exc:
             if self.fallback_to_heuristic:
-                return self._heuristic.decide_noul(state, hypothesis, instructions), False
+                return (
+                    self._heuristic.decide_noul(state, hypothesis, instructions),
+                    False,
+                    f"ONNX NLI inference error ({type(exc).__name__}): {exc}",
+                )
             raise
 
-    def _decide_score_with_source(
+    def _decide_noul_with_source(
+        self,
+        state: str,
+        hypothesis: str,
+        instructions: str | None = None,
+    ) -> tuple[NoulDecision, bool]:
+        decision, used_onnx, _ = self._decide_noul_detailed(state, hypothesis, instructions)
+        return decision, used_onnx
+
+    def _decide_score_detailed(
         self,
         state: str,
         rubric: list[str] | dict[str, Any],
         instructions: str | None = None,
-    ) -> tuple[ScoreDecision, bool]:
-        runtime = self._ensure_loaded()
+    ) -> tuple[ScoreDecision, bool, str | None]:
+        runtime, load_reason = self._resolve_runtime()
         rubric_list = rubric if isinstance(rubric, list) else list(rubric.keys())
         if runtime is None or not rubric_list:
-            return self._heuristic.decide_score(state, rubric, instructions), False
+            reason = load_reason or "Empty rubric criteria; fell back to heuristic engine"
+            return self._heuristic.decide_score(state, rubric, instructions), False, reason
 
         session, tokenizer = runtime
         premise = f"{instructions}\n{state}" if instructions else state
@@ -314,11 +363,25 @@ class ONNXNLIDecisionEngine(SystemOneEngine):
                     rationale=f"ONNX NLI rubric scoring assigned '{level_name}'",
                 ),
                 True,
+                None,
             )
-        except Exception:
+        except Exception as exc:
             if self.fallback_to_heuristic:
-                return self._heuristic.decide_score(state, rubric, instructions), False
+                return (
+                    self._heuristic.decide_score(state, rubric, instructions),
+                    False,
+                    f"ONNX NLI inference error ({type(exc).__name__}): {exc}",
+                )
             raise
+
+    def _decide_score_with_source(
+        self,
+        state: str,
+        rubric: list[str] | dict[str, Any],
+        instructions: str | None = None,
+    ) -> tuple[ScoreDecision, bool]:
+        decision, used_onnx, _ = self._decide_score_detailed(state, rubric, instructions)
+        return decision, used_onnx
 
     def decide_choice(
         self,
@@ -365,11 +428,14 @@ class ONNXNLIDecisionEngine(SystemOneEngine):
 
         any_onnx = False
         any_fallback = False
+        fallback_reasons: list[str] = []
 
         if not questions:
-            runtime = self._ensure_loaded()
+            runtime, load_reason = self._resolve_runtime()
             any_onnx = runtime is not None
             any_fallback = runtime is None
+            if load_reason:
+                fallback_reasons.append(load_reason)
 
         for q_name, q_config in questions.items():
             q_type = str(q_config.get("type", "")).lower()
@@ -377,34 +443,40 @@ class ONNXNLIDecisionEngine(SystemOneEngine):
 
             if q_type == "choice":
                 crit = q_config.get("criteria", q_config.get("choices", []))
-                dec, used_onnx = self._decide_choice_with_source(
+                dec, used_onnx, fb_reason = self._decide_choice_detailed(
                     state, crit, instructions=instructions
                 )
                 choices[q_name] = dec
                 any_onnx = any_onnx or used_onnx
                 any_fallback = any_fallback or (not used_onnx)
+                if fb_reason:
+                    fallback_reasons.append(fb_reason)
                 if q_name in ["agent", "target_agent", "subagent"]:
                     suggested_agent = dec.choice
 
             elif q_type == "noul":
                 hypo = q_config.get("hypothesis", instructions or q_name)
-                noul_dec, used_onnx = self._decide_noul_with_source(
+                noul_dec, used_onnx, fb_reason = self._decide_noul_detailed(
                     state, hypo, instructions=instructions
                 )
                 nouls[q_name] = noul_dec
                 any_onnx = any_onnx or used_onnx
                 any_fallback = any_fallback or (not used_onnx)
+                if fb_reason:
+                    fallback_reasons.append(fb_reason)
                 if q_name in ["requires_approval", "human_approval"] and noul_dec.decision:
                     requires_human_approval = True
 
             elif q_type == "score":
                 rubric = q_config.get("rubric", q_config.get("criteria", []))
-                score_dec, used_onnx = self._decide_score_with_source(
+                score_dec, used_onnx, fb_reason = self._decide_score_detailed(
                     state, rubric, instructions=instructions
                 )
                 scores[q_name] = score_dec
                 any_onnx = any_onnx or used_onnx
                 any_fallback = any_fallback or (not used_onnx)
+                if fb_reason:
+                    fallback_reasons.append(fb_reason)
                 if q_name in ["risk", "risk_level"]:
                     if score_dec.score >= 2:
                         risk_level = "HIGH"
@@ -412,11 +484,21 @@ class ONNXNLIDecisionEngine(SystemOneEngine):
                         risk_level = "MEDIUM"
 
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
-        engine_name = "onnx-nli" if (any_onnx and not any_fallback) else "heuristic-fallback"
+        is_real_onnx = any_onnx and not any_fallback
+        engine_name = "onnx-nli" if is_real_onnx else "heuristic-fallback"
+        fallback_reason: str | None = (
+            None
+            if is_real_onnx
+            else (
+                "; ".join(dict.fromkeys(fallback_reasons))
+                or "ONNX NLI runtime unavailable; fell back to heuristic engine"
+            )
+        )
 
         return SystemOneReport(
             task=state[:120],
             engine_name=engine_name,
+            fallback_reason=fallback_reason,
             duration_ms=duration_ms,
             choices=choices,
             nouls=nouls,

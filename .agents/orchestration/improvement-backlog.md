@@ -67,6 +67,7 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 | `IMP-0039` | Auditoria por Imports AST Reais no `CapabilityWiringAuditor` | `QUALITY` | Baixa-Média (S-M) | `IMPLEMENTED` | `2026-11-26` |
 | `IMP-0040` | Imutabilidade Estrita (`ConfigDict(frozen=True)`) nos Modelos Pydantic v2 | `MAINTAINABILITY` | Média (M) | `IMPLEMENTED` | `2026-11-26` |
 | `IMP-0041` | Curadoria e Enxugamento de `.agents/skills/` (DAILY vs LIBRARY) | `MAINTAINABILITY` | Baixa-Média (S-M) | `IMPLEMENTED` | `2026-11-26` |
+| IMP-0042 | Runtime Alignment, MCP Server Nativo & Honestidade CLI (ADR-036) | ORCHESTRATION / ARCHITECTURE / CAPABILITY | Alta (L) | IMPLEMENTED | 2026-11-27 |
 
 ---
 
@@ -767,3 +768,16 @@ Este catálogo preserva ideias e melhorias identificadas pelo **Corp-Pipeline Ma
 
 
 
+
+
+---
+
+### IMP-0042: Runtime Alignment, MCP Server Nativo & Honestidade CLI
+- **Categoria**: ORCHESTRATION / ARCHITECTURE / CAPABILITY
+- **Status**: IMPLEMENTED (Ref: ADR-036, PR-CORP-042.md)
+- **Data**: 2026-11-27
+- **Problema**: Framework reportava execucoes bem-sucedidas sem code_executor real; hooks excessivos; hooks.json usava py (inexistente como python no PATH Windows WDAG); workflows com refs legadas Claude Code; sem MCP nativo; state.md ~90 KB.
+- **Solucao**: CorporateEngineerMCPServer stdio 6 tools; honestidade de execucao (SIMULATED_NO_EXECUTOR, SKIPPED, fallback_reason); hooks enxutos (<=600 chars, short-circuit {}); limpeza completa de .agents/; state.md <12 KB.
+- **Componentes**: mcp/server.py, orchestrator/{hooks_runner,graph,swarm,adversarial}.py, system_one/, quality/{surgical_runner,wiring_auditor}.py, git_utils.py, models.py, .agents/plugins/corporate-engineer/, .agents/hooks.json, .agents/orchestration/hooks/, .agents/workflows/, docs/history/state_archive_v1.md
+- **Pre-Flight**: 436/436 PASS (239.31s), 0 erros Ruff (188 arquivos), 0 erros Mypy (108 arquivos), 0 secrets, audit --wiring 49/49, MCP RC=0/6 tools, state.md <12 KB, 0 refs legadas.
+- **Swarm**: tdd-author, mcp-engineer, cli-engineer, agents-cleaner, verifier -- Verifier Pre-Flight APPROVED.

@@ -366,8 +366,9 @@ class AdversarialRedTeam:
         highest = _compute_highest_severity(vulnerabilities)
         is_blocked = _is_blocking_severity(highest)
         narrative = (
-            f"O Red Team identificou {len(vulnerabilities)} vulnerabilidades conceituais no plano "
-            f"{plan_id}. Severidade máxima: {highest.value}. "
+            f"[analysis_mode=heuristic-pattern-matcher] O Red Team identificou "
+            f"{len(vulnerabilities)} vulnerabilidades conceituais no plano {plan_id}. "
+            f"Severidade máxima: {highest.value}. "
             f"Bloqueio de avanço para implementação: {'SIM' if is_blocked else 'NÃO'}."
         )
         return RedTeamAttackReport(
@@ -558,7 +559,10 @@ class AdversarialRedTeam:
         highest: RedTeamVulnerabilitySeverity,
         is_blocked: bool,
     ) -> str:
-        prefix = f"Re-verificação adversarial da Fase 1.7 para o plano {plan.plan_id}: "
+        prefix = (
+            f"[analysis_mode=heuristic-pattern-matcher] "
+            f"Re-verificação adversarial da Fase 1.7 para o plano {plan.plan_id}: "
+        )
         stats = f"{len(plan.hardenings)} hardenings e {len(ctx.valid_invariants)} invariantes (residual_risk={plan.residual_risk})"
         if not ctx.residual_vulns:
             return f"{prefix}{stats} auditados com 0 falhas residuais. Selo concedido."
@@ -751,13 +755,19 @@ class AdversarialLoopCoordinator:
             plan_id=plan_id,
             initial_attack=RedTeamAttackReport(
                 plan_id=plan_id,
-                attack_narrative="Fast-Path Bypass: Nenhuma vulnerabilidade avaliada.",
+                attack_narrative=(
+                    "[analysis_mode=heuristic-pattern-matcher] "
+                    "Fast-Path Bypass: Nenhuma vulnerabilidade avaliada."
+                ),
             ),
             verdict=AdversarialVerdict(
                 status=RedTeamVerdictStatus.BYPASSED,
                 iterations_completed=0,
                 bypassed=True,
-                bypass_reason="Operação rotineira de baixo risco (Fast-Path Bypass ativado)",
+                bypass_reason=(
+                    "[analysis_mode=heuristic-pattern-matcher] "
+                    "Operação rotineira de baixo risco (Fast-Path Bypass ativado)"
+                ),
                 confidence_score=1.0,
             ),
             duration_ms=round((time.perf_counter() - start_time) * 1000.0, 3),

@@ -38,6 +38,7 @@ class ContextAwarePromptRefiner:
             "modules": [
                 "src/corporate_engineer/mcp/client.py",
                 "src/corporate_engineer/mcp/hub.py",
+                "src/corporate_engineer/mcp/server.py",
             ],
         },
         "orchestrator": {

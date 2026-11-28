@@ -28,6 +28,16 @@ from corporate_engineer.system_one.router import SystemOneRouter
 
 RoleExecutor = Callable[[SwarmMember, str, list[dict[str, Any]]], str]
 
+_DETERMINISTIC_ANALYZER_ROLES: frozenset[str] = frozenset(
+    {
+        "security-reviewer",
+        "code-reviewer",
+        "python-reviewer",
+        "rag-pipeline-reviewer",
+        "architect",
+    }
+)
+
 __all__ = ["RoleExecutor", "SwarmCoordinator"]
 
 
@@ -264,6 +274,15 @@ class SwarmCoordinator:
 
             if self.role_executor is not None:
                 output = self.role_executor(member, prompt, tool_records)
+                task_status = "COMPLETED" if success else "FAILED"
+            elif member.role not in _DETERMINISTIC_ANALYZER_ROLES and not tool_records:
+                skip_reason = (
+                    f"No role_executor or deterministic analyzer for role '{member.role}'."
+                )
+                output = f"SKIPPED [{member.role}]: {skip_reason}"
+                success = False
+                error_msg = skip_reason
+                task_status = "SKIPPED"
             else:
                 output, role_ok, role_err = self._execute_deterministic_role(
                     member, prompt, tool_records
@@ -275,16 +294,18 @@ class SwarmCoordinator:
                         if error_msg and role_err
                         else (role_err or error_msg)
                     )
+                task_status = "COMPLETED" if success else "FAILED"
 
             elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 3)
             with self._lock:
-                member.status = "COMPLETED" if success else "FAILED"
+                member.status = task_status
 
             return SwarmTaskResult(
                 agent_id=member.agent_id,
                 role=member.role,
                 output=output,
                 success=success,
+                status=task_status,
                 execution_time_ms=elapsed_ms,
                 tools_called=tools_called,
                 error=error_msg,
@@ -345,6 +366,7 @@ class SwarmCoordinator:
                             role=m.role,
                             output="",
                             success=False,
+                            status="FAILED",
                             execution_time_ms=0.0,
                             error=str(exc),
                         )
@@ -352,16 +374,26 @@ class SwarmCoordinator:
 
         total_elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 3)
         successful_tasks = sum(1 for r in results if r.success and not r.error)
-        failed_tasks = len(results) - successful_tasks
+        skipped_tasks = sum(1 for r in results if r.status == "SKIPPED")
+        failed_tasks = sum(
+            1 for r in results if r.status != "SKIPPED" and (not r.success or bool(r.error))
+        )
         execution_mode = (
             "custom-executor" if self.role_executor is not None else "deterministic-analyzer"
         )
 
-        consensus = (
-            f"APPROVED: {successful_tasks}/{len(results)} tarefas concluídas com sucesso no swarm."
-            if failed_tasks == 0
-            else f"REJECTED: {failed_tasks} tarefa(s) falharam durante a execução concorrente."
-        )
+        if failed_tasks == 0 and skipped_tasks == 0:
+            consensus = f"APPROVED: {successful_tasks}/{len(results)} tarefas concluídas com sucesso no swarm."
+        elif failed_tasks == 0 and skipped_tasks > 0:
+            consensus = (
+                f"REJECTED (SKIPPED): {successful_tasks}/{len(results)} concluída(s); "
+                f"{skipped_tasks} tarefa(s) ignorada(s) sem role_executor ou analisador determinístico."
+            )
+        else:
+            consensus = (
+                f"REJECTED: {failed_tasks} tarefa(s) falharam e {skipped_tasks} ignorada(s) "
+                "durante a execução concorrente."
+            )
 
         recommendations = [
             (
@@ -377,6 +409,8 @@ class SwarmCoordinator:
             total_agents=len(results),
             successful_tasks=successful_tasks,
             failed_tasks=failed_tasks,
+            skipped_tasks=skipped_tasks,
+            execution_mode=execution_mode,
             aggregated_consensus=consensus,
             results=results,
             execution_time_ms=total_elapsed_ms,
@@ -407,7 +441,12 @@ class SwarmCoordinator:
         execution_mode = (
             "custom-executor" if self.role_executor is not None else "deterministic-analyzer"
         )
-        all_ok = bool(report.results) and all(r.success and not r.error for r in report.results)
+        all_ok = (
+            bool(report.results)
+            and report.failed_tasks == 0
+            and report.skipped_tasks == 0
+            and all(r.success and not r.error for r in report.results)
+        )
         if all_ok:
             consensus_msg = (
                 f"APPROVED: Revisão multi-perspectiva concluída por {len(roles)} especialistas "
@@ -419,15 +458,29 @@ class SwarmCoordinator:
                 "Consenso validado entre todas as perspectivas avaliadas.",
             ]
         else:
-            failed_roles = [r.role for r in report.results if not r.success or r.error]
+            failed_roles = [
+                r.role
+                for r in report.results
+                if r.status != "SKIPPED" and (not r.success or r.error)
+            ]
+            skipped_roles = [r.role for r in report.results if r.status == "SKIPPED"]
+            issue_parts: list[str] = []
+            if failed_roles:
+                issue_parts.append(
+                    f"{report.failed_tasks} parecer(es) reprovado(s): {', '.join(failed_roles)}"
+                )
+            if skipped_roles:
+                issue_parts.append(
+                    f"{report.skipped_tasks} papel(éis) ignorado(s) (SKIPPED): {', '.join(skipped_roles)}"
+                )
+            issues_text = "; ".join(issue_parts) or "nenhum parecer concluído"
             consensus_msg = (
                 f"REJECTED: Revisão multi-perspectiva concluída por {len(roles)} especialistas "
-                f"(execution_mode={execution_mode}). "
-                f"{report.failed_tasks} parecer(es) reprovado(s): {', '.join(failed_roles)}."
+                f"(execution_mode={execution_mode}). {issues_text}."
             )
             recommendations = [
                 *report.recommendations,
-                f"Consenso reprovado: corrigir falhas reportadas em {', '.join(failed_roles)}.",
+                f"Consenso reprovado: {issues_text}.",
             ]
         return report.model_copy(
             update={

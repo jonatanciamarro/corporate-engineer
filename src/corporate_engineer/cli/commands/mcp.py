@@ -73,16 +73,42 @@ def register_mcp_parser(subparsers: Any) -> argparse.ArgumentParser:
     hub_parser.add_argument("--prompt", default="", help="Prompt for System-One tool pruning")
     hub_parser.add_argument("--format", choices=["text", "json"], default="text")
 
+    # mcp serve (IMP-0042)
+    serve_parser = mcp_subparsers.add_parser(
+        "serve", help="Run native JSON-RPC 2.0 MCP server over stdio"
+    )
+    serve_parser.add_argument("--workspace", default=".", help="Workspace root path")
+    serve_parser.add_argument(
+        "--allow-mutations",
+        action="store_true",
+        help="Enable mutating tools such as fix_auto (disabled by default)",
+    )
+
     return mcp_parser
+
+
+def _handle_mcp_serve(args: argparse.Namespace) -> int:
+    from corporate_engineer.mcp.server import CorporateEngineerMCPServer
+
+    ws_root = Path(getattr(args, "workspace", ".")).resolve()
+    allow_mutations = bool(getattr(args, "allow_mutations", False))
+    server = CorporateEngineerMCPServer(
+        workspace_root=ws_root,
+        allow_mutations=allow_mutations,
+    )
+    return server.serve()
 
 
 def handle_mcp(args: argparse.Namespace) -> int:
     if not getattr(args, "mcp_action", None):
         print(
-            "Usage: corporate-engineer mcp {ping,list-tools,call,hub} [options]",
+            "Usage: corporate-engineer mcp {ping,list-tools,call,hub,serve} [options]",
             file=sys.stderr,
         )
         return 1
+
+    if args.mcp_action == "serve":
+        return _handle_mcp_serve(args)
 
     if args.mcp_action == "hub":
         from corporate_engineer.mcp.hub import MCPEnterpriseHub
@@ -206,7 +232,7 @@ def handle_mcp(args: argparse.Namespace) -> int:
 
     print(
         f"Unknown mcp action: {args.mcp_action}. "
-        "Usage: corporate-engineer mcp {ping,list-tools,call,hub} [options]",
+        "Usage: corporate-engineer mcp {ping,list-tools,call,hub,serve} [options]",
         file=sys.stderr,
     )
     return 1

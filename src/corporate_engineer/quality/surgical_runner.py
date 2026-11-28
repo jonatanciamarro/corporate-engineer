@@ -10,6 +10,7 @@ import sys
 import time
 from pathlib import Path
 
+from corporate_engineer.git_utils import _is_dubious_ownership_error, _summarize_git_stderr
 from corporate_engineer.models import NoulDecision, SurgicalTestReport
 from corporate_engineer.rag.impact import BlastRadiusAnalyzer
 
@@ -52,12 +53,28 @@ class SurgicalTestRunner:
                                 rel_file = rel_file.split(" -> ")[1].strip()
                             rel_norm = rel_file.replace("\\", "/").strip('"')
                             changed.add(rel_norm)
+                elif _is_dubious_ownership_error(proc.returncode, proc.stderr):
+                    logger.warning(
+                        "Git dubious ownership detected in %s (exit=%d); aborting git diff cascade: %s",
+                        self.root,
+                        proc.returncode,
+                        _summarize_git_stderr(proc.stderr),
+                    )
+                    return sorted(changed)
+                elif "not a git repository" in proc.stderr.lower():
+                    logger.warning(
+                        "Workspace %s is not a git repository (exit=%d); aborting git diff cascade: %s",
+                        self.root,
+                        proc.returncode,
+                        _summarize_git_stderr(proc.stderr),
+                    )
+                    return sorted(changed)
                 else:
                     logger.warning(
                         "Git command %s returned non-zero exit code %d: %s",
                         cmd,
                         proc.returncode,
-                        proc.stderr.strip(),
+                        _summarize_git_stderr(proc.stderr),
                     )
             except subprocess.TimeoutExpired as exc:
                 logger.warning("Git subprocess error in %s: %s", cmd, exc)
@@ -85,12 +102,22 @@ class SurgicalTestRunner:
                             if clean_line:
                                 changed.add(clean_line)
                         break
+                    elif _is_dubious_ownership_error(proc.returncode, proc.stderr):
+                        logger.warning(
+                            "Git dubious ownership detected in %s during %s (exit=%d); "
+                            "aborting git diff cascade: %s",
+                            self.root,
+                            diff_args,
+                            proc.returncode,
+                            _summarize_git_stderr(proc.stderr),
+                        )
+                        break
                     else:
                         logger.warning(
                             "Git command %s returned non-zero exit code %d: %s",
                             diff_args,
                             proc.returncode,
-                            proc.stderr.strip(),
+                            _summarize_git_stderr(proc.stderr),
                         )
                 except subprocess.TimeoutExpired as exc:
                     logger.warning("Git subprocess error in %s: %s", diff_args, exc)

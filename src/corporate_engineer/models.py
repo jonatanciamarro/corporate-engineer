@@ -221,6 +221,7 @@ class ScoreDecision(_FrozenDTO):
 class SystemOneReport(_FrozenDTO):
     task: str
     engine_name: str = "heuristic"
+    fallback_reason: str | None = None
     duration_ms: float = 0.0
     choices: dict[str, ChoiceDecision] = Field(default_factory=dict)
     nouls: dict[str, NoulDecision] = Field(default_factory=dict)
@@ -390,6 +391,7 @@ class SwarmTaskResult(_FrozenDTO):
     role: str
     output: str
     success: bool
+    status: str = "COMPLETED"
     execution_time_ms: float = 0.0
     tools_called: list[str] = Field(default_factory=list)
     error: str | None = None
@@ -401,6 +403,8 @@ class SwarmGoalReport(_FrozenDTO):
     total_agents: int = 0
     successful_tasks: int = 0
     failed_tasks: int = 0
+    skipped_tasks: int = 0
+    execution_mode: str = "deterministic-analyzer"
     aggregated_consensus: str = ""
     results: list[SwarmTaskResult] = Field(default_factory=list)
     execution_time_ms: float = 0.0
@@ -426,7 +430,7 @@ class RevisedPromptSpec(_FrozenDTO):
 class RunExecutionReport(_FrozenDTO):
     ticket_id: str
     task_description: str
-    status: str = "SUCCESS"  # SUCCESS | FAILED | AUDIT_FAILED | BUDGET_EXCEEDED | PENDING_APPROVAL
+    status: str = "SUCCESS"  # SUCCESS | SIMULATED_NO_EXECUTOR | FAILED | AUDIT_FAILED | BUDGET_EXCEEDED | PENDING_APPROVAL
     final_phase: str = "DELIVER"
     iterations: int = 0
     checkpoints_created: list[str] = Field(default_factory=list)
@@ -434,6 +438,8 @@ class RunExecutionReport(_FrozenDTO):
     test_files: list[str] = Field(default_factory=list)
     code_changes_count: int = 0
     audit_passed: bool = True
+    is_simulated: bool = False
+    warnings: list[str] = Field(default_factory=list)
     duration_seconds: float = 0.0
     trace_id: str | None = None
     dry_run: bool = False
@@ -686,3 +692,33 @@ class WiringAuditReport(_FrozenDTO):
         default_factory=list, description="Actionable remediation steps"
     )
     timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
+
+
+# ==============================================================================
+# IMP-0042: Native Stdio MCP Server DTO Models (ADR-036)
+# ==============================================================================
+
+
+class MCPServerToolSpec(_FrozenDTO):
+    """Specification for a single tool exposed by CorporateEngineerMCPServer."""
+
+    name: str = Field(description="MCP tool identifier")
+    description: str = Field(description="Human/agent-readable tool purpose")
+    mutating: bool = Field(default=False, description="Whether the tool can modify workspace files")
+    input_schema: dict[str, Any] = Field(
+        default_factory=dict, description="JSON Schema defining expected tool arguments"
+    )
+
+
+class MCPServerCapabilitiesReport(_FrozenDTO):
+    """Runtime capability report for CorporateEngineerMCPServer."""
+
+    server_name: str = Field(default="corporate-engineer-mcp", description="MCP server identifier")
+    protocol_version: str = Field(
+        default="2024-11-05", description="Supported MCP JSON-RPC protocol version"
+    )
+    workspace_root: str = Field(description="Confined absolute workspace root")
+    allow_mutations: bool = Field(default=False, description="Whether mutating tools are enabled")
+    registered_tools: list[str] = Field(
+        default_factory=list, description="Tool names exposed under current policy"
+    )

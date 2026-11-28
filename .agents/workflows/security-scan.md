@@ -1,92 +1,60 @@
 ---
-description: Run AgentShield against agent, hook, MCP, permission, and secret surfaces. This is the slash-command entrypoint for that audit; prefer the security-scan skill for the same AgentShield audit in conversation.
-agent: ecc:security-reviewer
-subtask: true
+description: Run corporate-engineer security audit, secret scanning, and wiring/OWASP verification.
 ---
 
 # Security Scan Command
 
-Run AgentShield against the current project or a target path, then turn the findings into a prioritized remediation plan.
+Run deterministic secret scanning, static security checks, and workspace configuration auditing using `corporate-engineer` tools and Antigravity subagents (`self` / `research` applying `.agents/agents/security-reviewer.md`).
 
 ## Usage
 
-`/security-scan [path] [--format text|json|markdown|html] [--min-severity low|medium|high|critical] [--fix]`
+`/security-scan [path]`
 
-- `path` (optional): defaults to the current project. Use a `.claude/` path, a repo root, or a checked-in template directory.
-- `--format`: output format. Use `json` for CI, `markdown` for handoffs, and `html` for standalone review reports.
-- `--min-severity`: filters lower-priority findings.
-- `--fix`: applies only AgentShield fixes explicitly marked as safe and auto-fixable.
+- `path` (optional): defaults to the workspace root (`.`).
 
-## Deterministic Engine
+## Deterministic Engines
 
-Prefer the packaged scanner:
+1. **Canonical Secret Scanner (CLI & MCP)**:
+   ```powershell
+   .venv\Scripts\python .agents/skills/corp-pipeline/scripts/secret_scanner.py .
+   ```
+   Or invoke the `secret_scan` MCP tool from `.agents/plugins/corporate-engineer/mcp_config.json` (which delegates to `CanonicalSecretScanner` and returns masked metadata only).
 
-```bash
-npx ecc-agentshield scan --path "${TARGET_PATH:-.}" --format text
-```
+2. **Strict Quality & Wiring Audit**:
+   ```powershell
+   .venv\Scripts\python -m corporate_engineer.cli audit --strict --wiring --format json
+   ```
+   Or invoke `audit_wiring` via MCP.
 
-For local AgentShield development, run from the AgentShield checkout:
+3. **Zero-Secret PreToolUse Hook Verification**:
+   Verify `.agents/hooks.json` (`pre_tool_security_guard` via `.agents/orchestration/hooks/run_hook.py`) is active when workspace is trusted.
 
-```bash
-npm run scan -- --path "${TARGET_PATH:-.}" --format text
-```
-
-Do not invent findings. Use AgentShield output as the source of truth and separate scanner facts from follow-up judgment.
+Do not invent findings. Use tool outputs and actual file inspection as the source of truth.
 
 ## Review Checklist
 
-1. Identify active runtime findings first:
-   - hardcoded secrets
-   - broad permissions
-   - executable hooks
-   - MCP servers with shell, filesystem, remote transport, or unpinned `npx`
-   - agent prompts that handle untrusted content without defenses
-2. Separate lower-confidence inventory:
-   - docs examples
-   - template examples
-   - plugin manifests
-   - project-local optional settings
-3. For each critical or high finding, return:
-   - file path
-   - severity
-   - runtime confidence
-   - why it matters
-   - exact remediation
-   - whether it is safe to auto-fix
-4. If `--fix` is requested, state the planned edits before applying fixes.
-5. Re-run the scan after fixes and report the before/after score.
+1. Check active code and runtime surfaces:
+   - Hardcoded secrets, API keys, tokens, private keys
+   - Command injection (`shell=True` must not be used; verify `shlex.split` / `shell=False`)
+   - Path traversal (`_resolve_safe_path()` confinement in MCP server / storage cleaner)
+   - MCP servers least-privilege policy (`allow_mutations=False` default in `CorporateEngineerMCPServer`)
+   - Untrusted workspace / hook execution boundaries
+2. For each critical or high finding, report:
+   - File path and line number
+   - Severity (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`)
+   - Concrete trigger/failure mode
+   - Exact remediation
 
 ## Output Contract
 
 Return:
+1. Secret scanner status (`PASS` / `FAIL` and masked finding count).
+2. Pre-flight & wiring audit status (`audit --strict --wiring`).
+3. Critical/high findings with exact paths, or explicit confirmation of zero findings.
+4. Remediation steps and commands executed.
 
-1. Security grade and score.
-2. Counts by severity and runtime confidence.
-3. Critical/high findings with exact paths.
-4. Lower-confidence findings grouped separately.
-5. A remediation order.
-6. Commands run and whether the scan was local, CI, or npx-backed.
+## References
 
-## CI Pattern
-
-Use AgentShield in GitHub Actions for enforced gates:
-
-```yaml
-- uses: affaan-m/agentshield@v1
-  with:
-    path: "."
-    min-severity: "medium"
-    fail-on-findings: true
-```
-
-## Links
-
-- Skill: `skills/security-scan/SKILL.md`
-- Agent: `agents/security-reviewer.md`
-- Scanner: <https://github.com/affaan-m/agentshield>
-
-## Arguments
-
-$ARGUMENTS:
-- optional target path
-- optional AgentShield flags
+- Skill: `.agents/skills/security-scan/SKILL.md` and `.agents/skills/security-review/SKILL.md`
+- Role Persona: `.agents/agents/security-reviewer.md` (used by `self` / `swarm`)
+- Core Scanner: `src/corporate_engineer/quality/secret_scanner.py`

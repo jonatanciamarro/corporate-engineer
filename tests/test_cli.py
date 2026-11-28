@@ -37,6 +37,7 @@ def test_cli_run(capsys, tmp_path):
             "Test task execution",
             "--workspace",
             str(tmp_path),
+            "--dry-run",
         ]
     )
     captured = capsys.readouterr()

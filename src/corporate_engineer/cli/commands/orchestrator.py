@@ -217,6 +217,11 @@ def handle_run(args: argparse.Namespace) -> int:
     if fmt == "json":
         output_str = report.model_dump_json(indent=2)
     elif fmt == "markdown":
+        warning_section = (
+            "\n## Avisos\n" + "\n".join(f"- {w}" for w in report.warnings) + "\n"
+            if report.warnings
+            else ""
+        )
         output_str = (
             f"# Relatório de Execução de Engenharia Autônoma: {report.ticket_id}\n\n"
             f"- **Ticket**: `{report.ticket_id}`\n"
@@ -224,11 +229,13 @@ def handle_run(args: argparse.Namespace) -> int:
             f"- **Fase Final**: `{report.final_phase}`\n"
             f"- **Iterações**: {report.iterations}\n"
             f"- **Modo**: {'Simulação (Dry-Run)' if report.dry_run else 'Produção (Live)'}\n"
+            f"- **Simulado**: `{report.is_simulated}`\n"
             f"- **Auditoria de Qualidade**: {'APROVADA' if report.audit_passed else 'REPROVADA'}\n"
             f"- **Duração**: {report.duration_seconds}s\n\n"
             f"## Checkpoints Salvos\n"
             + "\n".join(f"- `{cp}`" for cp in report.checkpoints_created)
-            + f"\n\n## Plano Refinado\n```text\n{report.refined_plan}\n```\n"
+            + warning_section
+            + f"\n## Plano Refinado\n```text\n{report.refined_plan}\n```\n"
         )
     else:
         lines = [
@@ -237,10 +244,12 @@ def handle_run(args: argparse.Namespace) -> int:
             "🔄 Fase Inicial: PLANNING",
             "✅ Grafo inicializado com sucesso.",
             f"⚡ Executando ciclo de vida: PLANNING -> TDD -> IMPLEMENT -> AUDIT -> {report.final_phase}",
-            f"📊 Status Final: {report.status} (Fase: {report.final_phase})",
+            f"📊 Status Final: {report.status} (Fase: {report.final_phase} | Simulado: {report.is_simulated})",
             f"⏱️ Duração: {report.duration_seconds}s | Iterações: {report.iterations}",
             f"💾 Checkpoints Gerados ({len(report.checkpoints_created)}): {', '.join(report.checkpoints_created)}",
         ]
+        for warning in report.warnings:
+            lines.append(f"⚠️ Aviso: {warning}")
         if report.audit_passed:
             lines.append("🛡️ Portão de Auditoria & Pre-Flight: PASS")
         else:
@@ -372,8 +381,12 @@ def handle_swarm(args: argparse.Namespace) -> int:
     elif args.format == "markdown":
         lines = [
             f"# Swarm Goal Report: {report.goal}",
-            f"- **Swarm**: `{report.swarm_name}`",
-            f"- **Agentes**: {report.total_agents} ({report.successful_tasks} sucessos, {report.failed_tasks} falhas)",
+            f"- **Swarm**: `{report.swarm_name}` (`{report.execution_mode}`)",
+            (
+                f"- **Agentes**: {report.total_agents} "
+                f"({report.successful_tasks} sucessos, {report.failed_tasks} falhas, "
+                f"{report.skipped_tasks} ignoradas)"
+            ),
             f"- **Tempo Total**: {report.execution_time_ms} ms",
             f"- **Consenso**: {report.aggregated_consensus}",
             "",
@@ -382,7 +395,12 @@ def handle_swarm(args: argparse.Namespace) -> int:
             "|---|---|---|---|---|",
         ]
         for res in report.results:
-            status_symbol = "✅" if res.success else "❌"
+            if res.status == "SKIPPED":
+                status_symbol = "⏭️ SKIPPED"
+            elif res.success:
+                status_symbol = "✅"
+            else:
+                status_symbol = "❌"
             lines.append(
                 f"| `{res.agent_id}` | `{res.role}` | {status_symbol} | {res.execution_time_ms} | {res.output} |"
             )
@@ -397,7 +415,11 @@ def handle_swarm(args: argparse.Namespace) -> int:
             "🐝  MULTI-AGENT SWARM COORDINATOR VIA MCP HUB (IMP-0016)",
             f"{'=' * 75}",
             f"🎯 Meta Geral      : {report.goal}",
-            f"👥 Agentes Ativos  : {report.total_agents} ({report.successful_tasks} concluídas, {report.failed_tasks} falhas)",
+            (
+                f"👥 Agentes Ativos  : {report.total_agents} "
+                f"({report.successful_tasks} concluídas, {report.failed_tasks} falhas, "
+                f"{report.skipped_tasks} skipped)"
+            ),
             f"⏱️  Tempo Total     : {report.execution_time_ms} ms",
             f"⚖️  Consenso        : {report.aggregated_consensus}",
             f"{'-' * 75}",
@@ -405,7 +427,12 @@ def handle_swarm(args: argparse.Namespace) -> int:
             f"{'-' * 75}",
         ]
         for res in report.results:
-            status_text = "OK" if res.success else "ERRO"
+            if res.status == "SKIPPED":
+                status_text = "SKIPPED"
+            elif res.success:
+                status_text = "OK"
+            else:
+                status_text = "ERRO"
             short_out = (res.output[:45] + "...") if len(res.output) > 45 else res.output
             lines.append(
                 f"{res.agent_id:<10} {res.role:<20} {status_text:<8} {res.execution_time_ms:<12.3f} {short_out}"

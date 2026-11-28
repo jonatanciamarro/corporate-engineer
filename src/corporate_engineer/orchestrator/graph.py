@@ -206,10 +206,25 @@ class AutonomousEngineeringGraph:
         """
         t0 = time.perf_counter()
         checkpoints_created: list[str] = []
+        no_executor = (not dry_run) and (code_executor is None)
+        is_simulated = dry_run or no_executor
+        warnings: list[str] = []
+        if dry_run:
+            warnings.append(
+                "Dry-run simulation mode active: source mutations and remote git push are disabled."
+            )
+        if no_executor:
+            warnings.append(
+                "No code_executor provided for live run (dry_run=False); "
+                "delivery blocked (SIMULATED_NO_EXECUTOR)."
+            )
         execution_mode = (
             "custom-code-executor" if code_executor is not None else "deterministic-pipeline"
         )
-        details: dict[str, Any] = {"execution_mode": execution_mode}
+        details: dict[str, Any] = {
+            "execution_mode": execution_mode,
+            "is_simulated": is_simulated,
+        }
 
         with self.tracer.span(
             "dag.lifecycle.pipeline",
@@ -217,6 +232,7 @@ class AutonomousEngineeringGraph:
                 "ticket_id": self.task.ticket_id,
                 "dry_run": dry_run,
                 "execution_mode": execution_mode,
+                "is_simulated": is_simulated,
             },
         ):
             # Fase 1: Planejamento & Antecipação Proativa
@@ -292,7 +308,7 @@ class AutonomousEngineeringGraph:
             self._run_implement_phase(
                 code_target=code_target,
                 spec=spec,
-                dry_run=dry_run,
+                dry_run=dry_run or no_executor,
                 code_executor=code_executor,
                 details=details,
             )
@@ -325,6 +341,9 @@ class AutonomousEngineeringGraph:
             if strict_audit and not eval_report.passed_gate:
                 audit_passed = False
 
+            if no_executor:
+                audit_passed = False
+
             self.step_audit(audit_passed)
             cp4 = self.save_checkpoint()
             checkpoints_created.append(cp4.name)
@@ -332,11 +351,12 @@ class AutonomousEngineeringGraph:
             t1 = time.perf_counter()
             duration = round(t1 - t0, 4)
 
-            if not audit_passed:
+            if no_executor or not audit_passed:
+                blocked_status = "SIMULATED_NO_EXECUTOR" if no_executor else "AUDIT_FAILED"
                 return RunExecutionReport(
                     ticket_id=self.task.ticket_id,
                     task_description=self.task.description,
-                    status="AUDIT_FAILED",
+                    status=blocked_status,
                     final_phase=self.state.phase,
                     iterations=self.state.iteration_count,
                     checkpoints_created=checkpoints_created,
@@ -344,6 +364,8 @@ class AutonomousEngineeringGraph:
                     test_files=self.state.test_files,
                     code_changes_count=len(self.state.code_changes),
                     audit_passed=False,
+                    is_simulated=is_simulated,
+                    warnings=warnings,
                     duration_seconds=duration,
                     dry_run=dry_run,
                     details=details,
@@ -355,22 +377,24 @@ class AutonomousEngineeringGraph:
 
             import corporate_engineer.git_utils
 
+            pr_url: str | None = None
             try:
                 pr_result = corporate_engineer.git_utils.generate_pr_url(
                     repo_path=self.workspace_path,
-                    ensure_pushed=False,
+                    ensure_pushed=not dry_run,
                 )
                 if isinstance(pr_result, dict):
-                    pr_url = (
-                        pr_result.get("url")
-                        or f"https://github.com/org/repo/compare/main...{self.task.ticket_id}?quick_pull=1"
-                    )
+                    raw_url = pr_result.get("url")
+                    pr_url = str(raw_url) if raw_url else None
+                    if not pr_url:
+                        warnings.append("generate_pr_url returned no PR URL; pr_url set to None.")
+                elif isinstance(pr_result, str) and pr_result.strip():
+                    pr_url = pr_result.strip()
                 else:
-                    pr_url = str(pr_result)
-            except Exception:  # noqa: BLE001
-                pr_url = (
-                    f"https://github.com/org/repo/compare/main...{self.task.ticket_id}?quick_pull=1"
-                )
+                    warnings.append("generate_pr_url returned empty result; pr_url set to None.")
+            except Exception as exc:  # noqa: BLE001
+                pr_url = None
+                warnings.append(f"Failed to generate PR URL during DELIVER: {exc}")
 
             details["pr_url"] = pr_url
 
@@ -385,6 +409,8 @@ class AutonomousEngineeringGraph:
                 test_files=self.state.test_files,
                 code_changes_count=len(self.state.code_changes),
                 audit_passed=True,
+                is_simulated=is_simulated,
+                warnings=warnings,
                 duration_seconds=duration,
                 dry_run=dry_run,
                 details=details,

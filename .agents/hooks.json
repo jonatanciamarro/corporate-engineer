@@ -4,14 +4,14 @@
     "SessionStart": [
       {
         "type": "command",
-        "command": "py orchestration/hooks/run_hook.py session_start",
+        "command": "py orchestration/hooks/run_hook.py session_start || python3 orchestration/hooks/run_hook.py session_start || python orchestration/hooks/run_hook.py session_start",
         "timeout": 15
       }
     ],
     "PreInvocation": [
       {
         "type": "command",
-        "command": "py orchestration/hooks/run_hook.py proactive_advisor",
+        "command": "py orchestration/hooks/run_hook.py proactive_advisor || python3 orchestration/hooks/run_hook.py proactive_advisor || python orchestration/hooks/run_hook.py proactive_advisor",
         "timeout": 15
       }
     ],
@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "py orchestration/hooks/run_hook.py pre_tool_security_guard",
+            "command": "py orchestration/hooks/run_hook.py pre_tool_security_guard || python3 orchestration/hooks/run_hook.py pre_tool_security_guard || python orchestration/hooks/run_hook.py pre_tool_security_guard",
             "timeout": 15
           }
         ]
@@ -33,7 +33,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "py orchestration/hooks/run_hook.py post_tool_auto_healer",
+            "command": "py orchestration/hooks/run_hook.py post_tool_auto_healer || python3 orchestration/hooks/run_hook.py post_tool_auto_healer || python orchestration/hooks/run_hook.py post_tool_auto_healer",
             "timeout": 15
           }
         ]
@@ -42,7 +42,7 @@
     "Stop": [
       {
         "type": "command",
-        "command": "py orchestration/hooks/run_hook.py session_turnover_gate",
+        "command": "py orchestration/hooks/run_hook.py session_turnover_gate || python3 orchestration/hooks/run_hook.py session_turnover_gate || python orchestration/hooks/run_hook.py session_turnover_gate",
         "timeout": 15
       }
     ]

@@ -1,0 +1,11 @@
+{
+  "name": "corporate-engineer",
+  "displayName": "Corporate Engineer MCP",
+  "version": "0.1.0",
+  "description": "Deterministic Corporate Engineer MCP tools for AST symbols, blast radius, EDD scorecard, capability wiring audit, secret scanning, and surgical test planning.",
+  "suggestedPrompts": [
+    "Run audit_wiring and eval_scorecard on src/corporate_engineer",
+    "Analyze blast_radius for a modified module and plan surgical tests",
+    "Scan the workspace with secret_scan before committing"
+  ]
+}

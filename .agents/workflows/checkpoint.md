@@ -1,78 +1,63 @@
 ---
-description: Create, verify, or list workflow checkpoints after running verification checks.
+description: Create, verify, or list DAG and Git workflow checkpoints after running verification checks.
 ---
 
 # Checkpoint Command
 
-Create or verify a checkpoint in your workflow.
+Inspect, create, or verify checkpoints in `corporate-engineer` using the DAG checkpoint engine (`.checkpoints/`) and Git state.
 
 ## Usage
 
 `/checkpoint [create|verify|list] [name]`
 
-## Create Checkpoint
+## List DAG Checkpoints
 
-When creating a checkpoint:
+Inspect FSM phases, transitions, and persisted DAG checkpoints:
 
-1. Run `/verify quick` to ensure current state is clean
-2. Create a git stash or commit with checkpoint name
-3. Log checkpoint to `.claude/checkpoints.log`:
-
-```bash
-echo "$(date +%Y-%m-%d-%H:%M) | $CHECKPOINT_NAME | $(git rev-parse --short HEAD)" >> .claude/checkpoints.log
+```powershell
+.venv\Scripts\python -m corporate_engineer.cli dag --show-phases --checkpoints --format json
 ```
 
-4. Report checkpoint created
+To visualize the DAG topology as Mermaid:
+
+```powershell
+.venv\Scripts\python -m corporate_engineer.cli dag --mermaid
+```
+
+## Create Checkpoint
+
+When creating a Git / state checkpoint:
+
+1. Run `/preflight` (or `.venv\Scripts\python -m corporate_engineer.cli audit --strict --wiring`) to ensure current state is clean
+2. Record progress in `state.md` (Section 2 & Section 5)
+3. Create a clean commit or named Git stash:
+   ```powershell
+   git -c "safe.directory=*" status -s
+   git -c "safe.directory=*" stash push -m "checkpoint: $CHECKPOINT_NAME"
+   ```
+4. Optionally run the autonomous pipeline checkpoint generator in dry-run simulation mode:
+   ```powershell
+   .venv\Scripts\python -m corporate_engineer.cli run --ticket CORP-CHK --task "$CHECKPOINT_NAME" --dry-run
+   ```
 
 ## Verify Checkpoint
 
-When verifying against a checkpoint:
+When verifying current state against baseline:
 
-1. Read checkpoint from log
-2. Compare current state to checkpoint:
-   - Files added since checkpoint
-   - Files modified since checkpoint
-   - Test pass rate now vs then
-   - Coverage now vs then
-
-3. Report:
-```
-CHECKPOINT COMPARISON: $NAME
-============================
-Files changed: X
-Tests: +Y passed / -Z failed
-Coverage: +X% / -Y%
-Build: [PASS/FAIL]
-```
-
-## List Checkpoints
-
-Show all checkpoints with:
-- Name
-- Timestamp
-- Git SHA
-- Status (current, behind, ahead)
-
-## Workflow
-
-Typical checkpoint flow:
-
-```
-[Start] --> /checkpoint create "feature-start"
-   |
-[Implement] --> /checkpoint create "core-done"
-   |
-[Test] --> /checkpoint verify "core-done"
-   |
-[Refactor] --> /checkpoint create "refactor-done"
-   |
-[PR] --> /checkpoint verify "feature-start"
-```
+1. Check modified files and current tests/wiring:
+   ```powershell
+   git -c "safe.directory=*" diff --stat HEAD
+   .venv\Scripts\pytest -q
+   .venv\Scripts\python -m corporate_engineer.cli audit --wiring
+   ```
+2. Report:
+   - Files changed
+   - Pytest pass/fail summary
+   - Ruff, Mypy, Secret Scan, and Wiring status
 
 ## Arguments
 
 $ARGUMENTS:
-- `create <name>` - Create named checkpoint
-- `verify <name>` - Verify against named checkpoint
-- `list` - Show all checkpoints
-- `clear` - Remove old checkpoints (keeps last 5)
+- `create <name>` - Create named Git/DAG checkpoint after pre-flight checks
+- `verify <name>` - Verify current workspace against clean pre-flight baseline
+- `list` - List persisted DAG checkpoints via `corporate-engineer dag --checkpoints`

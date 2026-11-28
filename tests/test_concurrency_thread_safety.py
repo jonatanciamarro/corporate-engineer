@@ -402,6 +402,13 @@ def test_swarm_coordinator_concurrent_dispatch_task() -> None:
         results = [f.result() for f in concurrent.futures.as_completed(futures)]
 
     assert len(results) == 16
-    assert all(r.success is True for r in results)
+    for res in results:
+        if res.role == "tdd-guide":
+            assert res.success is False
+            assert res.status == "SKIPPED"
+        else:
+            assert res.success is True
+            assert res.status == "COMPLETED"
     for m in members:
-        assert m.status == "COMPLETED"
+        expected_status = "SKIPPED" if m.role == "tdd-guide" else "COMPLETED"
+        assert m.status == expected_status

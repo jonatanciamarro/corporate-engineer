@@ -15,6 +15,28 @@ logger = logging.getLogger(__name__)
 DEFAULT_GIT_TIMEOUT: float = 15.0
 
 
+def _is_dubious_ownership_error(returncode: int, stderr: str) -> bool:
+    """Return True when git fails with exit 128 due to dubious ownership."""
+    return returncode == 128 and "dubious ownership" in stderr.lower()
+
+
+def _summarize_git_stderr(stderr: str) -> str:
+    """Strip noisy raw git usage dumps and return concise diagnostic text."""
+    cleaned: list[str] = []
+    for raw_line in stderr.splitlines():
+        stripped = raw_line.strip()
+        if not stripped:
+            continue
+        if stripped.lower().startswith("usage:"):
+            break
+        cleaned.append(stripped)
+    if cleaned:
+        return " | ".join(cleaned[:3])
+    if "usage:" in stderr.lower():
+        return "git command error (raw usage output suppressed)"
+    return stderr.strip()
+
+
 def _resolve_git_timeout(timeout: float | None = None) -> float:
     """Resolve Git timeout preferring explicit argument, then CORP_GIT_TIMEOUT env var, default 15.0."""
     env_val = os.getenv("CORP_GIT_TIMEOUT")
@@ -65,6 +87,12 @@ def get_current_branch(repo_path: Path | str = ".", timeout: float | None = None
         )
         if proc.returncode == 0 and proc.stdout.strip():
             return proc.stdout.strip()
+        if _is_dubious_ownership_error(proc.returncode, proc.stderr):
+            logger.warning(
+                "Git dubious ownership detected in %s: %s",
+                repo_path,
+                _summarize_git_stderr(proc.stderr),
+            )
     except subprocess.TimeoutExpired as exc:
         logger.warning("Git rev-parse timed out in get_current_branch: %s", exc)
     except (OSError, subprocess.SubprocessError):
@@ -99,12 +127,19 @@ def get_remote_url(
         )
         if proc.returncode == 0 and proc.stdout.strip():
             return proc.stdout.strip()
-        logger.warning(
-            "Git remote get-url for '%s' returned non-zero code %d: %s",
-            remote_name,
-            proc.returncode,
-            proc.stderr.strip(),
-        )
+        if _is_dubious_ownership_error(proc.returncode, proc.stderr):
+            logger.warning(
+                "Git dubious ownership detected in get_remote_url(%s): %s",
+                remote_name,
+                _summarize_git_stderr(proc.stderr),
+            )
+        else:
+            logger.warning(
+                "Git remote get-url for '%s' returned non-zero code %d: %s",
+                remote_name,
+                proc.returncode,
+                _summarize_git_stderr(proc.stderr),
+            )
     except subprocess.TimeoutExpired as exc:
         logger.warning("Git remote get-url timed out in get_remote_url: %s", exc)
     except (OSError, subprocess.SubprocessError) as exc:
@@ -133,6 +168,21 @@ def is_branch_pushed(
             cwd=str(resolved_path),
             timeout=effective_timeout,
         )
+        if _is_dubious_ownership_error(proc_remote.returncode, proc_remote.stderr):
+            logger.warning(
+                "Git dubious ownership detected in %s while checking remotes (exit=%d): %s",
+                resolved_path,
+                proc_remote.returncode,
+                _summarize_git_stderr(proc_remote.stderr),
+            )
+            return False
+        if proc_remote.returncode != 0:
+            logger.warning(
+                "Git remote check failed (exit=%d): %s",
+                proc_remote.returncode,
+                _summarize_git_stderr(proc_remote.stderr),
+            )
+            return False
         if remote_name not in proc_remote.stdout.split():
             logger.warning("Remote '%s' not found in repository at %s", remote_name, resolved_path)
             return False
@@ -159,6 +209,13 @@ def is_branch_pushed(
             timeout=effective_timeout,
             env=git_env,
         )
+        if _is_dubious_ownership_error(proc.returncode, proc.stderr):
+            logger.warning(
+                "Git dubious ownership detected in ls-remote (%s): %s",
+                target_branch,
+                _summarize_git_stderr(proc.stderr),
+            )
+            return False
         if proc.returncode != 0 or not proc.stdout.strip():
             return False
 
@@ -189,7 +246,7 @@ def is_branch_pushed(
                 "Local git rev-parse failed for branch %s (exit=%d): %s",
                 target_branch,
                 proc_head.returncode,
-                proc_head.stderr.strip(),
+                _summarize_git_stderr(proc_head.stderr),
             )
             return False
 
@@ -237,11 +294,18 @@ def push_branch_to_remote(
             env=git_env,
         )
         if proc.returncode != 0:
-            logger.warning(
-                "git push failed with exit code %d: %s",
-                proc.returncode,
-                proc.stderr.strip(),
-            )
+            if _is_dubious_ownership_error(proc.returncode, proc.stderr):
+                logger.warning(
+                    "Git dubious ownership detected in git push (exit=%d): %s",
+                    proc.returncode,
+                    _summarize_git_stderr(proc.stderr),
+                )
+            else:
+                logger.warning(
+                    "git push failed with exit code %d: %s",
+                    proc.returncode,
+                    _summarize_git_stderr(proc.stderr),
+                )
         return proc.returncode == 0
     except subprocess.TimeoutExpired as exc:
         logger.warning(

@@ -37,7 +37,7 @@ Use these files as the canonical map:
 - `commands/` for maintained slash-command shims
 - `skills/*/SKILL.md` for reusable skill workflows
 - `agents/*.md` for delegated agent roles
-- `hooks/README.md` and `hooks/hooks.json` for hook behavior
+- `.agents/hooks.json` and `.agents/orchestration/hooks/run_hook.py` for lifecycle hook behavior
 - `manifests/install-*.json` for selective install modules, components, and profiles
 - `scripts/ci/catalog.js --json` for live catalog counts when running inside ECC
 
@@ -90,4 +90,4 @@ For a specific feature name:
 - `/harness-audit` for deterministic repo readiness scoring
 - `/skill-health` for skill quality checks
 - `/skill-create` for extracting a new skill from local git history
-- `/security-scan` for Claude/OpenCode configuration security review
+- `/security-scan` for corporate-engineer secret, wiring, and security surface review

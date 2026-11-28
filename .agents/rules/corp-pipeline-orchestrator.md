@@ -16,9 +16,9 @@ The **Corp-Pipeline Orchestrator** is the permanent central intelligence and coo
 
 For **EVERY** incoming user request:
 1. **Never wait for explicit orchestration commands**: Orchestration, capability discovery, intelligent routing, and pipeline execution apply automatically by default.
-2. **Context Recovery**: Read `state.md` to restore living state, open backlog items, test health, and architectural context.
-3. **Capability Awareness**: Discover and coordinate the real ecosystem resources documented in `.agents/orchestration/capability-registry.md`.
-4. **Senior-Level Engineering**: Enforce Shift-Left TDD, strict Pydantic v2 typing, immutability, zero secret leaks, and pre-flight validation.
+2. **Context Recovery**: Read `state.md` to restore living state, open backlog items, test health, and architectural context (archived older waves reside in `docs/history/state_archive_v1.md`).
+3. **Capability Awareness**: Discover and coordinate the real ecosystem resources documented in `.agents/orchestration/capability-registry.md`, including the workspace MCP plugin tools in `.agents/plugins/corporate-engineer/mcp_config.json` (`blast_radius`, `eval_scorecard`, `audit_wiring`, `secret_scan`, `surgical_tests_plan`, `ast_symbols`).
+4. **Senior-Level Engineering**: Enforce Shift-Left TDD, strict Pydantic v2 `_FrozenDTO` typing, immutability, zero secret leaks, and pre-flight validation.
 5. **Continuous Improvement Governance**: Proactively detect potential enhancements, present them without modifying architecture unilaterally, offer to save them into `.agents/orchestration/improvement-backlog.md`, and implement only when explicitly authorized.
 
 ---
@@ -52,12 +52,12 @@ Every request must flow through this structured pipeline:
                  │
                  ▼
 ┌─────────────────────────────────┐
-│ PHASE 4: Execution & Delegation │ ◄── Shift-Left TDD, specialized agents / skills
+│ PHASE 4: Execution & Delegation │ ◄── Shift-Left TDD, native subagents / skills
 └────────────────┬────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────┐
-│ PHASE 5: Verification & Quality │ ◄── Pre-Flight: pytest, ruff, mypy, secrets
+│ PHASE 5: Verification & Quality │ ◄── Pre-Flight: pytest, ruff, mypy, secrets, wiring
 └────────────────┬────────────────┘
                  │
                  ▼
@@ -68,10 +68,11 @@ Every request must flow through this structured pipeline:
 
 ---
 
-## 3. Delegation Contract
+## 3. Delegation Contract (Antigravity Native Subagents vs Role Personas)
 
-When delegating subtasks to specialized subagents (`architect`, `tdd-guide`, `code-reviewer`, `python-reviewer`, `security-reviewer`, `build-error-resolver`, etc.):
-- Provide a complete delegation packet:
+- **Native Antigravity Subagents**: Use `invoke_subagent` with built-in subagents (`research` for read-only codebase/docs exploration, `self` for isolated full-tool execution, `browser`, `image-generator`), `swarm` for multi-agent parallel work, or `define_subagent` to create custom session-scoped subagents.
+- **Role Personas (`.agents/agents/*.md`)**: Files in `.agents/agents/` (`architect`, `planner`, `tdd-guide`, `code-reviewer`, `python-reviewer`, `security-reviewer`, `rag-pipeline-reviewer`, `build-error-resolver`, `refactor-cleaner`) are reusable role prompt templates — **not** built-in `invoke_subagent` names by default. Inject their instructions into `self` / `research` / `swarm` workers (or register them via `define_subagent`), or run `SwarmCoordinator` with deterministic analyzers / an explicit `role_executor`.
+- Every delegation packet must specify:
   - **TASK**: Precise objective.
   - **CONTEXT**: Architectural decisions and context.
   - **SCOPE**: Allowed and prohibited file modifications.
@@ -131,4 +132,3 @@ Action:
 2. **Pre-Filled PR Links**:
    - Always synthesize `docs/pull_requests/PR-CORP-xxx.md` with full demand identification, executive summary, TDD evidence, and pre-flight results.
    - The generated PR link must carry the URL-encoded title and markdown body (`quick_pull=1`) so the user can submit the PR with a single click.
-

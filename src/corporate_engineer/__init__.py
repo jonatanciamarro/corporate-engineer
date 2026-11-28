@@ -9,6 +9,7 @@ from corporate_engineer.git_utils import (
     is_branch_pushed,
     push_branch_to_remote,
 )
+from corporate_engineer.mcp.server import CorporateEngineerMCPServer
 from corporate_engineer.orchestrator.adversarial import (
     AdversarialLoopCoordinator,
     AdversarialRedTeam,
@@ -35,6 +36,7 @@ __all__ = [
     "CachedASTCodebaseIndexer",
     "CanonicalSecretScanner",
     "CapabilityWiringAuditor",
+    "CorporateEngineerMCPServer",
     "ProactiveAnticipator",
     "QualityGateRunner",
     "SurgicalTestRunner",

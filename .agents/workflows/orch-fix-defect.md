@@ -26,7 +26,7 @@ Invoke the `orch-fix-defect` skill with `$ARGUMENTS` as the request. The skill
 (via the shared `orch-pipeline` engine) will:
 
 1. Classify size (default floor: small, often trivial); scope root cause with
-   `code-explorer` if unclear.
+   the Antigravity `research` subagent (and `blast_radius` / `ast_symbols`) if unclear.
 2. **Write a new failing regression test** reproducing the bug, then fix until
    it goes green. (Proving the bug first is what makes this a fix, not a tweak.)
 3. `code-reviewer` (+ `security-reviewer` if the defect sits in a sensitive path).

@@ -202,8 +202,8 @@ The reviewer checks for:
 
 ## Related
 
-- Agent: `agents/python-reviewer.md`
-- Skills: `skills/python-patterns/`, `skills/python-testing/`
+- Role Persona: `.agents/agents/python-reviewer.md` (used via `self` / `swarm`)
+- Skills: `.agents/skills/python-patterns/SKILL.md`, `.agents/skills/python-testing/SKILL.md`
 
 ## Common Fixes
 

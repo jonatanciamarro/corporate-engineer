@@ -9,8 +9,26 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from corporate_engineer.git_utils import generate_pr_url, get_current_branch
+from corporate_engineer import git_utils
 from corporate_engineer.orchestrator.anticipator import ProactiveAnticipator
+
+_MAX_TURN1_HOOK_CHARS = 300
+
+
+def _parse_invocation_num(payload: dict[str, Any]) -> int:
+    raw = payload.get("invocationNum", 1)
+    if isinstance(raw, bool):
+        return 1
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return 1
+
+
+def _truncate_hook_message(message: str, limit: int = _MAX_TURN1_HOOK_CHARS) -> str:
+    if len(message) <= limit:
+        return message
+    return message[: limit - 3].rstrip() + "..."
 
 
 def generate_pre_invocation_hook_output(
@@ -19,47 +37,36 @@ def generate_pre_invocation_hook_output(
 ) -> dict[str, Any]:
     """
     Gera a carga útil de injeção protojson para o evento PreInvocation do Antigravity.
-    Injeta o plano proativo 2 passos à frente e a URL de PR 1-clique (se em feature branch).
+    No turno 1 injeta resumo compacto (<=300 chars); nos turnos seguintes retorna {}.
     """
+    if _parse_invocation_num(payload) > 1:
+        return {}
+
     root = Path(workspace_root).resolve() if workspace_root else Path.cwd().resolve()
-    last_user_input = payload.get("lastUserInput", "").strip()
+    last_user_input = str(payload.get("lastUserInput", "")).strip()
 
-    messages: list[str] = []
+    branch_suffix = ""
+    try:
+        branch = git_utils.get_current_branch(root)
+        if branch.startswith(("feat/", "fix/", "chore/", "refactor/")):
+            branch_suffix = f" [{branch}]"
+    except Exception:  # noqa: BLE001, S110
+        pass
 
-    # 1. Inteligência Proativa Antecipatória (2 Passos à Frente)
+    header = f"[CORP-PIPELINE / PROACTIVE INTELLIGENCE]{branch_suffix}"
     if last_user_input:
         try:
             anticipator = ProactiveAnticipator(workspace_path=root)
             plan = anticipator.anticipate(last_user_input)
-            messages.append(anticipator.format_markdown(plan))
-        except Exception as e:  # noqa: BLE001
-            messages.append(
-                f"🧠 **[CORP-PIPELINE / PROACTIVE INTELLIGENCE]**: Ativo (análise preliminar: {e})"
+            agents = ",".join(plan.recommended_agents[:2]) or "architect"
+            action = " ".join(plan.step_immediate_1.action.split())
+            summary = (
+                f"{header} {plan.target_domain.upper()}({plan.risk_level})[{agents}]: {action}"
             )
+        except Exception as exc:  # noqa: BLE001
+            summary = f"{header} Active (fallback: {exc})"
+    else:
+        summary = f"{header} Ready."
 
-    # 2. Injeção de 1-Click PR Link se em branch de desenvolvimento
-    try:
-        branch = get_current_branch(root)
-        if branch.startswith(("feat/", "fix/", "chore/", "refactor/")):
-            pr_info = generate_pr_url(repo_path=root, branch=branch, ensure_pushed=False)
-            push_status = (
-                "✅ Sincronizado no origin"
-                if pr_info.get("pushed")
-                else "⚠️ Local apenas (push pendente)"
-            )
-            pr_block = (
-                "\n🔗 **[1-CLICK GITHUB PR LINK ACTIVE]**:\n"
-                f"• Branch: `{pr_info['branch']}` ➔ `{pr_info['base']}` | Ticket: `{pr_info['ticket_id']}`\n"
-                f"• Push Status: {push_status}\n"
-                f"• URL Pré-Preenchida: {pr_info['url']}\n"
-                "• *Invariante Mandatória: Efetuar `git push -u origin <branch>` antes de fornecer a URL final ao usuário.*"
-            )
-            messages.append(pr_block)
-    except Exception:  # noqa: BLE001, S110
-        pass
-
-    full_system_message = (
-        "\n\n".join(messages) if messages else "🟢 Corp-Pipeline Master Orchestrator: READY"
-    )
-
-    return {"injectSteps": [{"systemMessage": {"systemMessage": full_system_message}}]}
+    compact_message = _truncate_hook_message(summary)
+    return {"injectSteps": [{"systemMessage": {"systemMessage": compact_message}}]}

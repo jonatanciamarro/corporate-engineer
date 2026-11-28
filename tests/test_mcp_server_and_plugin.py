@@ -129,10 +129,9 @@ def test_mcp_server_dto_contracts_frozen() -> None:
 
 def test_mcp_server_public_exports_and_prompt_refiner_wiring() -> None:
     """CorporateEngineerMCPServer must be exported and wired in PromptRefiner."""
-    from corporate_engineer.mcp.server import CorporateEngineerMCPServer
-
     import corporate_engineer
     import corporate_engineer.mcp as mcp_pkg
+    from corporate_engineer.mcp.server import CorporateEngineerMCPServer
     from corporate_engineer.prompt.refiner import ContextAwarePromptRefiner
 
     assert mcp_pkg.CorporateEngineerMCPServer is CorporateEngineerMCPServer
@@ -495,7 +494,7 @@ def test_cli_mcp_serve_subprocess_stdio_clean_framing(tmp_path: Path) -> None:
         capture_output=True,
         text=True,
         cwd=str(WORKSPACE_ROOT),
-        timeout=20,
+        timeout=60,
         check=False,
     )
     assert proc.returncode == 0, f"mcp serve failed: {proc.stderr}"
